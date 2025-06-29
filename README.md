@@ -1,4 +1,3 @@
-*****❤️❤️❤️ Would you like to support me so I can create more free prompts? Buy me a coffee: https://www.buymeacoffee.com/asktojk ❤️❤️❤️*****
 
 # 🧠 SoulCare – Online Stress and Depression Detection System
 
