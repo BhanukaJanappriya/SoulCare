@@ -4,7 +4,7 @@ import TopBar from './TopBar'
 import MoodTracker from './MoodTracker'
 import Activity from './Activity'
 import HabbitTracker from './HabbitTracker';
-import DailyProgress from './dailyProgress';
+import DailyProgress from './DailyProgress';
 import Meditation from './Meditation';
 
 const UserDashboard: React.FC = () => {
