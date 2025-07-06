@@ -20,8 +20,8 @@ const TopBar: React.FC = () => {
           </span>
         </div>
         <img
-          src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face&auto=format"
-          className="w-8 h-8 rounded-full"
+          src="/soulCare/src/assets/user.jpg"
+          className="w-10 h-10 rounded-full"
           alt="user"
         />
       </div>

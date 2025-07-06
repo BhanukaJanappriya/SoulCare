@@ -2,12 +2,12 @@ import React from "react";
 
 const DailyProgress: React.FC = () => {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
+    <div className="bg-pageBg p-6 rounded-2xl shadow-sm text-center">
       <h3 className="text-lg font-semibold text-slate-700 mb-4">
         Daily progress
       </h3>
       <div className="relative w-32 h-32 mx-auto mb-4">
-        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 36 36">
+        <svg className="w-32 h-32 transform -rotate-180" viewBox="0 0 36 36">
           <path
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
