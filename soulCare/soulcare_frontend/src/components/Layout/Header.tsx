@@ -4,8 +4,8 @@ import { Search, Bell, MessageCircle } from "lucide-react";
 const Header: React.FC = () => {
   return (
     <header className="bg-primary-50 mx-10 mt-4 rounded-xl p-6 flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <div className="w-14 h-14 rounded-lg flex items-center justify-center">
+      <div className="flex items-center space-x-1">
+        <div className="w-16 h-16 rounded-lg flex items-center justify-center">
           <img
             src="/assets/SoulCare.png"
             alt="SoulCare Logo"
