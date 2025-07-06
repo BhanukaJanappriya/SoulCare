@@ -4,10 +4,10 @@ import { Search, Bell, MessageCircle } from "lucide-react";
 const Header: React.FC = () => {
   return (
     <header className="bg-primary-50 mx-10 mt-4 rounded-xl p-6 flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <div className="w-14 h-14 rounded-lg flex items-center justify-center">
+      <div className="flex items-center space-x-1">
+        <div className="w-16 h-16 rounded-lg flex items-center justify-center">
           <img
-            src="D:/My Projects/web/SoulCare/SoulCare/src/assets/SoulCare.png"
+            src="/assets/SoulCare.png"
             alt="SoulCare Logo"
             className="w-full h-full object-cover"
           />
@@ -35,7 +35,7 @@ const Header: React.FC = () => {
 
         <div className="w-10 h-10 rounded-full overflow-hidden">
           <img
-            src="D:/My Projects/web/SoulCare/SoulCare/src/assets/user1.jpg"
+            src="/assets/user4.jpg"
             alt="User Avatar"
             className="w-full h-full object-cover"
           />
