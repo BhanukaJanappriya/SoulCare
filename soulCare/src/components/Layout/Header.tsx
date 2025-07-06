@@ -7,7 +7,7 @@ const Header: React.FC = () => {
       <div className="flex items-center space-x-2">
         <div className="w-14 h-14 rounded-lg flex items-center justify-center">
           <img
-            src="/SoulCare/src/assets/SoulCare.png"
+            src="D:/My Projects/web/SoulCare/SoulCare/src/assets/SoulCare.png"
             alt="SoulCare Logo"
             className="w-full h-full object-cover"
           />
@@ -35,7 +35,7 @@ const Header: React.FC = () => {
 
         <div className="w-10 h-10 rounded-full overflow-hidden">
           <img
-            src="https://static.codia.ai/custom_image/2025-07-06/144325/user-avatar.png"
+            src="D:/My Projects/web/SoulCare/SoulCare/src/assets/user1.jpg"
             alt="User Avatar"
             className="w-full h-full object-cover"
           />
