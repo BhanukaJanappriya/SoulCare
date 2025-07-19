@@ -27,6 +27,7 @@ class PatientRegisterView(generics.CreateAPIView):
             "role": user.role,
             "profile": {
                 "nic": user.patientprofile.nic,
+                "full_name":user.patientprofile.full_name,
                 "contact_number": user.patientprofile.contact_number,
                 "address": user.patientprofile.address,
                 "dob": user.patientprofile.dob,
@@ -50,6 +51,7 @@ class DoctorRegisterView(generics.CreateAPIView):
             "role": user.role,
             "profile": {
                 "nic": user.doctorprofile.nic,
+                "full_name":user.doctorprofile.full_name,
                 "contact_number": user.doctorprofile.contact_number,
                 "specialization": user.doctorprofile.specialization,
                 "availability":user.doctorprofile.availability,
@@ -72,6 +74,7 @@ class CounselorRegisterView(generics.CreateAPIView):
             "role": user.role,
             "profile": {
                 "nic": user.counselorprofile.nic,
+                "full_name":user.counselorprofile.full_name,
                 "contact_number": user.counselorprofile.contact_number,
                 "expertise": user.counselorprofile.expertise, 
             }

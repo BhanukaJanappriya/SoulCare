@@ -24,6 +24,7 @@ class LoginSerializer(serializers.Serializer):
 
 class PatientRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only = True)
+    full_name = serializers.CharField()
     nic = serializers.CharField()
     contact_number =serializers.CharField()
     address = serializers.CharField()
@@ -32,11 +33,12 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'nic', 'contact_number', 'address', 'dob', 'health_issues']
+        fields = ['username', 'email', 'password','full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues']
     
     def create(self, validated_data):
         
         nic = validated_data.pop('nic')
+        full_name = validated_data.pop("full_name")
         contact_number = validated_data.pop('contact_number')
         address = validated_data.pop('address')
         dob = validated_data.pop('dob')
@@ -51,6 +53,7 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
 
         PatientProfile.objects.create(
             user=user,
+            full_name = full_name,
             nic=nic,
             contact_number=contact_number,
             address=address,
@@ -62,6 +65,7 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
 
 class DoctorRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    full_name = serializers.CharField()
     nic = serializers.CharField()
     contact_number = serializers.CharField()
     specialization = serializers.CharField()
@@ -69,11 +73,12 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password','nic', 'contact_number','specialization','availability']
+        fields = ['username', 'email', 'password','full_name','nic', 'contact_number','specialization','availability']
 
     def create(self, validated_data):
         # Pop DoctorProfile-specific fields
         nic = validated_data.pop('nic')
+        full_name = validated_data.pop('full_name')
         contact_number = validated_data.pop('contact_number')
         specialization = validated_data.pop('specialization')
         availability = validated_data.pop('availability')
@@ -87,6 +92,7 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
 
         DoctorProfile.objects.create(
             user=user,
+            full_name=full_name,
             nic=nic,
             specialization=specialization,
             contact_number=contact_number,
@@ -97,17 +103,19 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
 
 class CounselorRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    full_name = serializers.CharField()
     nic = serializers.CharField()
     expertise = serializers.CharField()
     contact_number = serializers.CharField()
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password','nic', 'expertise', 'contact_number']
+        fields = ['username', 'email', 'password','full_name','nic', 'expertise', 'contact_number']
 
     def create(self, validated_data):
         # Pop CounselorProfile-specific fields
         nic = validated_data.pop('nic') 
+        full_name = validated_data.pop('full_name')
         expertise = validated_data.pop('expertise')
         contact_number = validated_data.pop('contact_number')
 
@@ -120,6 +128,7 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
         
         CounselorProfile.objects.create(
             user=user,
+            full_name = full_name,
             nic = nic,
             expertise=expertise,
             contact_number=contact_number,
