@@ -55,6 +55,7 @@ class DoctorRegisterView(generics.CreateAPIView):
                 "contact_number": user.doctorprofile.contact_number,
                 "specialization": user.doctorprofile.specialization,
                 "availability":user.doctorprofile.availability,
+                "license_number":user.doctorprofile.license_number,
             }
         }
         return Response(response_data,status=status.HTTP_201_CREATED)
@@ -77,6 +78,7 @@ class CounselorRegisterView(generics.CreateAPIView):
                 "full_name":user.counselorprofile.full_name,
                 "contact_number": user.counselorprofile.contact_number,
                 "expertise": user.counselorprofile.expertise, 
+                "license_number": user.counselorprofile.license_number,
             }
         }
         return Response(response_data,status=status.HTTP_201_CREATED)
