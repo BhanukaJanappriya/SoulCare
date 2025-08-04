@@ -1,28 +1,28 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { RightSidebar } from '@/components/layout/RightSidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Star, Edit, Save, Camera } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { RightSidebar } from "@/components/layout/RightSidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Star, Edit, Save, Camera } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    specialization: user?.specialization || '',
+    name: user?.name || "",
+    email: user?.email || "",
+    specialization: user?.specialization || "",
     experience: user?.experience || 0,
-    bio: user?.bio || '',
-    phone: user?.phone || '',
-    certifications: user?.certifications?.join(', ') || '',
+    bio: user?.bio || "",
+    phone: user?.phone || "",
+    certifications: user?.certifications?.join(", ") || "",
   });
 
   const handleSave = () => {
@@ -35,7 +35,7 @@ export default function Profile() {
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -44,7 +44,9 @@ export default function Profile() {
         <div className="container mx-auto px-6 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-text-dark mb-2">Profile</h1>
-            <p className="text-text-muted">Manage your professional profile and information</p>
+            <p className="text-text-muted">
+              Manage your professional profile and information
+            </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -55,7 +57,11 @@ export default function Profile() {
                   <Avatar className="w-24 h-24 mx-auto mb-4">
                     <AvatarImage src={user?.avatar} />
                     <AvatarFallback className="text-2xl bg-primary text-white">
-                      {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      {user?.name
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <Button
@@ -77,15 +83,21 @@ export default function Profile() {
               <CardContent>
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-sm font-medium text-text-muted">Specialization</Label>
+                    <Label className="text-sm font-medium text-text-muted">
+                      Specialization
+                    </Label>
                     <p className="text-sm">{user?.specialization}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-text-muted">Experience</Label>
+                    <Label className="text-sm font-medium text-text-muted">
+                      Experience
+                    </Label>
                     <p className="text-sm">{user?.experience} years</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-text-muted">Patients Treated</Label>
+                    <Label className="text-sm font-medium text-text-muted">
+                      Patients Treated
+                    </Label>
                     <p className="text-sm">342</p>
                   </div>
                 </div>
@@ -121,7 +133,9 @@ export default function Profile() {
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("name", e.target.value)
+                      }
                       disabled={!isEditing}
                     />
                   </div>
@@ -131,7 +145,9 @@ export default function Profile() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
                       disabled={!isEditing}
                     />
                   </div>
@@ -140,7 +156,9 @@ export default function Profile() {
                     <Input
                       id="phone"
                       value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
                       disabled={!isEditing}
                     />
                   </div>
@@ -149,7 +167,9 @@ export default function Profile() {
                     <Input
                       id="specialization"
                       value={formData.specialization}
-                      onChange={(e) => handleInputChange('specialization', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("specialization", e.target.value)
+                      }
                       disabled={!isEditing}
                     />
                   </div>
@@ -159,27 +179,36 @@ export default function Profile() {
                       id="experience"
                       type="number"
                       value={formData.experience}
-                      onChange={(e) => handleInputChange('experience', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "experience",
+                          parseInt(e.target.value)
+                        )
+                      }
                       disabled={!isEditing}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="certifications">Certifications (comma separated)</Label>
+                    <Label htmlFor="certifications">
+                      Certifications (comma separated)
+                    </Label>
                     <Input
                       id="certifications"
                       value={formData.certifications}
-                      onChange={(e) => handleInputChange('certifications', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("certifications", e.target.value)
+                      }
                       disabled={!isEditing}
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="bio">Professional Bio</Label>
                   <Textarea
                     id="bio"
                     value={formData.bio}
-                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                    onChange={(e) => handleInputChange("bio", e.target.value)}
                     disabled={!isEditing}
                     rows={4}
                     placeholder="Tell patients about your background, approach, and expertise..."

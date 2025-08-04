@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { RightSidebar } from '@/components/layout/RightSidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { RightSidebar } from "@/components/layout/RightSidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Video,
   VideoOff,
   Mic,
@@ -19,9 +25,9 @@ import {
   Users,
   Calendar,
   Clock,
-  Monitor
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+  Monitor,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface VideoSession {
   id: string;
@@ -29,28 +35,28 @@ interface VideoSession {
   patientId: string;
   scheduledTime: Date;
   duration: number;
-  status: 'scheduled' | 'active' | 'completed' | 'missed';
+  status: "scheduled" | "active" | "completed" | "missed";
   roomId: string;
 }
 
 const mockSessions: VideoSession[] = [
   {
-    id: '1',
-    patientName: 'Sarah Johnson',
-    patientId: '1',
+    id: "1",
+    patientName: "Sarah Johnson",
+    patientId: "1",
     scheduledTime: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
     duration: 60,
-    status: 'scheduled',
-    roomId: 'room-sarah-123',
+    status: "scheduled",
+    roomId: "room-sarah-123",
   },
   {
-    id: '2',
-    patientName: 'Michael Chen',
-    patientId: '2',
+    id: "2",
+    patientName: "Michael Chen",
+    patientId: "2",
     scheduledTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
     duration: 45,
-    status: 'scheduled',
-    roomId: 'room-michael-456',
+    status: "scheduled",
+    roomId: "room-michael-456",
   },
 ];
 
@@ -73,11 +79,11 @@ export default function VideoCall() {
 
   const handleEndCall = () => {
     if (activeCall) {
-      setSessions(sessions.map(s => 
-        s.id === activeCall.id 
-          ? { ...s, status: 'completed' as const }
-          : s
-      ));
+      setSessions(
+        sessions.map((s) =>
+          s.id === activeCall.id ? { ...s, status: "completed" as const } : s
+        )
+      );
       setActiveCall(null);
       toast({
         title: "Call Ended",
@@ -90,7 +96,9 @@ export default function VideoCall() {
     setIsVideoEnabled(!isVideoEnabled);
     toast({
       title: isVideoEnabled ? "Camera Off" : "Camera On",
-      description: `Your camera has been turned ${isVideoEnabled ? 'off' : 'on'}.`,
+      description: `Your camera has been turned ${
+        isVideoEnabled ? "off" : "on"
+      }.`,
     });
   };
 
@@ -98,7 +106,9 @@ export default function VideoCall() {
     setIsAudioEnabled(!isAudioEnabled);
     toast({
       title: isAudioEnabled ? "Microphone Muted" : "Microphone Unmuted",
-      description: `Your microphone has been ${isAudioEnabled ? 'muted' : 'unmuted'}.`,
+      description: `Your microphone has been ${
+        isAudioEnabled ? "muted" : "unmuted"
+      }.`,
     });
   };
 
@@ -106,25 +116,32 @@ export default function VideoCall() {
     setIsScreenSharing(!isScreenSharing);
     toast({
       title: isScreenSharing ? "Screen Share Stopped" : "Screen Share Started",
-      description: `Screen sharing has been ${isScreenSharing ? 'stopped' : 'started'}.`,
+      description: `Screen sharing has been ${
+        isScreenSharing ? "stopped" : "started"
+      }.`,
     });
   };
 
-  const getStatusColor = (status: VideoSession['status']) => {
+  const getStatusColor = (status: VideoSession["status"]) => {
     switch (status) {
-      case 'scheduled': return 'bg-blue-100 text-blue-800';
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'completed': return 'bg-gray-100 text-gray-800';
-      case 'missed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "scheduled":
+        return "bg-blue-100 text-blue-800";
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "completed":
+        return "bg-gray-100 text-gray-800";
+      case "missed":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -132,10 +149,10 @@ export default function VideoCall() {
     const now = new Date();
     const diff = scheduledTime.getTime() - now.getTime();
     const minutes = Math.floor(diff / (1000 * 60));
-    
-    if (minutes < 0) return 'Overdue';
+
+    if (minutes < 0) return "Overdue";
     if (minutes < 60) return `${minutes}m`;
-    
+
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return `${hours}h ${remainingMinutes}m`;
@@ -148,8 +165,12 @@ export default function VideoCall() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-text-dark mb-2">Video Calls</h1>
-              <p className="text-text-muted">Conduct secure video sessions with your patients</p>
+              <h1 className="text-3xl font-bold text-text-dark mb-2">
+                Video Calls
+              </h1>
+              <p className="text-text-muted">
+                Conduct secure video sessions with your patients
+              </p>
             </div>
             <div className="flex gap-3">
               <Button variant="outline">
@@ -185,11 +206,15 @@ export default function VideoCall() {
                       <div className="absolute inset-0 flex items-center justify-center text-white">
                         <div className="text-center">
                           <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                          <p className="text-lg">Video Stream with {activeCall.patientName}</p>
-                          <p className="text-sm opacity-75">Room ID: {activeCall.roomId}</p>
+                          <p className="text-lg">
+                            Video Stream with {activeCall.patientName}
+                          </p>
+                          <p className="text-sm opacity-75">
+                            Room ID: {activeCall.roomId}
+                          </p>
                         </div>
                       </div>
-                      
+
                       {/* Self Video (Picture-in-Picture) */}
                       <div className="absolute top-4 right-4 w-32 h-24 bg-gray-800 rounded-lg border-2 border-white">
                         <div className="flex items-center justify-center h-full text-white text-xs">
@@ -216,7 +241,7 @@ export default function VideoCall() {
                               <MicOff className="w-4 h-4" />
                             )}
                           </Button>
-                          
+
                           <Button
                             variant={isVideoEnabled ? "default" : "destructive"}
                             size="sm"
@@ -229,7 +254,7 @@ export default function VideoCall() {
                               <VideoOff className="w-4 h-4" />
                             )}
                           </Button>
-                          
+
                           <Button
                             variant={isScreenSharing ? "default" : "outline"}
                             size="sm"
@@ -238,7 +263,7 @@ export default function VideoCall() {
                           >
                             <Monitor className="w-4 h-4" />
                           </Button>
-                          
+
                           <Button
                             variant="outline"
                             size="sm"
@@ -246,7 +271,7 @@ export default function VideoCall() {
                           >
                             <MessageSquare className="w-4 h-4" />
                           </Button>
-                          
+
                           <Button
                             variant="destructive"
                             size="sm"
@@ -264,24 +289,34 @@ export default function VideoCall() {
                   <div className="space-y-4">
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-lg">Session Details</CardTitle>
+                        <CardTitle className="text-lg">
+                          Session Details
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex justify-between">
                           <span className="text-text-muted">Patient:</span>
-                          <span className="font-medium">{activeCall.patientName}</span>
+                          <span className="font-medium">
+                            {activeCall.patientName}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-text-muted">Duration:</span>
-                          <span className="font-medium">{activeCall.duration} min</span>
+                          <span className="font-medium">
+                            {activeCall.duration} min
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-text-muted">Started:</span>
-                          <span className="font-medium">{formatTime(new Date())}</span>
+                          <span className="font-medium">
+                            {formatTime(new Date())}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-text-muted">Room ID:</span>
-                          <span className="font-mono text-sm">{activeCall.roomId}</span>
+                          <span className="font-mono text-sm">
+                            {activeCall.roomId}
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
@@ -291,15 +326,24 @@ export default function VideoCall() {
                         <CardTitle className="text-lg">Quick Actions</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        <Button variant="outline" className="w-full justify-start">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
                           <Share className="w-4 h-4 mr-2" />
                           Share Files
                         </Button>
-                        <Button variant="outline" className="w-full justify-start">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
                           <MessageSquare className="w-4 h-4 mr-2" />
                           Open Chat
                         </Button>
-                        <Button variant="outline" className="w-full justify-start">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
                           <Users className="w-4 h-4 mr-2" />
                           Invite Supervisor
                         </Button>
@@ -317,23 +361,33 @@ export default function VideoCall() {
               <CardTitle>Upcoming Video Sessions</CardTitle>
             </CardHeader>
             <CardContent>
-              {sessions.filter(s => s.status === 'scheduled').length === 0 ? (
+              {sessions.filter((s) => s.status === "scheduled").length === 0 ? (
                 <div className="text-center py-8">
                   <Video className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                  <p className="text-text-muted">No upcoming video sessions scheduled.</p>
+                  <p className="text-text-muted">
+                    No upcoming video sessions scheduled.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {sessions
-                    .filter(s => s.status === 'scheduled')
+                    .filter((s) => s.status === "scheduled")
                     .map((session) => (
-                      <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                      >
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                            {session.patientName.split(' ').map(n => n[0]).join('')}
+                            {session.patientName
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
                           </div>
                           <div>
-                            <div className="font-medium">{session.patientName}</div>
+                            <div className="font-medium">
+                              {session.patientName}
+                            </div>
                             <div className="flex items-center gap-4 text-sm text-text-muted">
                               <div className="flex items-center gap-1">
                                 <Clock className="w-4 h-4" />
@@ -346,7 +400,7 @@ export default function VideoCall() {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                           <Badge className={getStatusColor(session.status)}>
                             In {getTimeUntilSession(session.scheduledTime)}
@@ -374,17 +428,26 @@ export default function VideoCall() {
             <CardContent>
               <div className="space-y-3">
                 {sessions
-                  .filter(s => s.status === 'completed')
+                  .filter((s) => s.status === "completed")
                   .map((session) => (
-                    <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={session.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium">
-                          {session.patientName.split(' ').map(n => n[0]).join('')}
+                          {session.patientName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
                         </div>
                         <div>
-                          <div className="font-medium">{session.patientName}</div>
+                          <div className="font-medium">
+                            {session.patientName}
+                          </div>
                           <div className="text-sm text-text-muted">
-                            {session.scheduledTime.toLocaleDateString()} - {session.duration} minutes
+                            {session.scheduledTime.toLocaleDateString()} -{" "}
+                            {session.duration} minutes
                           </div>
                         </div>
                       </div>

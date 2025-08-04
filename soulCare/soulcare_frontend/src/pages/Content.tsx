@@ -1,19 +1,31 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { RightSidebar } from '@/components/layout/RightSidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Plus, 
-  Search, 
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { RightSidebar } from "@/components/layout/RightSidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Plus,
+  Search,
   Filter,
   Upload,
   Play,
@@ -27,51 +39,53 @@ import {
   Music,
   Image,
   Eye,
-  Users
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { ContentItem } from '@/types';
+  Users,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ContentItem } from "@/types";
 
 const mockContent: ContentItem[] = [
   {
-    id: '1',
-    authorId: '1',
-    title: 'Breathing Exercises for Anxiety',
-    description: 'A guided video showing various breathing techniques to help manage anxiety and stress.',
-    type: 'video',
-    url: '/videos/breathing-exercises.mp4',
-    tags: ['anxiety', 'breathing', 'relaxation', 'guided'],
-    patientIds: ['1', '2'],
-    createdAt: new Date('2024-02-15'),
+    id: "1",
+    authorId: "1",
+    title: "Breathing Exercises for Anxiety",
+    description:
+      "A guided video showing various breathing techniques to help manage anxiety and stress.",
+    type: "video",
+    url: "/videos/breathing-exercises.mp4",
+    tags: ["anxiety", "breathing", "relaxation", "guided"],
+    patientIds: ["1", "2"],
+    createdAt: new Date("2024-02-15"),
   },
   {
-    id: '2',
-    authorId: '1',
-    title: 'Mindfulness Meditation Audio',
-    description: '20-minute guided mindfulness meditation for daily practice.',
-    type: 'audio',
-    url: '/audio/mindfulness-meditation.mp3',
-    tags: ['mindfulness', 'meditation', 'daily-practice'],
-    patientIds: ['1', '3'],
-    createdAt: new Date('2024-02-10'),
+    id: "2",
+    authorId: "1",
+    title: "Mindfulness Meditation Audio",
+    description: "20-minute guided mindfulness meditation for daily practice.",
+    type: "audio",
+    url: "/audio/mindfulness-meditation.mp3",
+    tags: ["mindfulness", "meditation", "daily-practice"],
+    patientIds: ["1", "3"],
+    createdAt: new Date("2024-02-10"),
   },
   {
-    id: '3',
-    authorId: '1',
-    title: 'CBT Worksheet: Thought Challenging',
-    description: 'Interactive worksheet for cognitive behavioral therapy exercises.',
-    type: 'document',
-    url: '/documents/cbt-worksheet.pdf',
-    tags: ['cbt', 'worksheet', 'cognitive-therapy'],
-    patientIds: ['2'],
-    createdAt: new Date('2024-02-05'),
+    id: "3",
+    authorId: "1",
+    title: "CBT Worksheet: Thought Challenging",
+    description:
+      "Interactive worksheet for cognitive behavioral therapy exercises.",
+    type: "document",
+    url: "/documents/cbt-worksheet.pdf",
+    tags: ["cbt", "worksheet", "cognitive-therapy"],
+    patientIds: ["2"],
+    createdAt: new Date("2024-02-05"),
   },
 ];
 
 const mockPatients = [
-  { id: '1', name: 'Sarah Johnson' },
-  { id: '2', name: 'Michael Chen' },
-  { id: '3', name: 'Emma Wilson' },
+  { id: "1", name: "Sarah Johnson" },
+  { id: "2", name: "Michael Chen" },
+  { id: "3", name: "Emma Wilson" },
 ];
 
 export default function Content() {
@@ -79,16 +93,16 @@ export default function Content() {
   const { toast } = useToast();
   const [content, setContent] = useState<ContentItem[]>(mockContent);
   const [isCreating, setIsCreating] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState('all');
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("all");
+
   const [newContent, setNewContent] = useState({
-    title: '',
-    description: '',
-    type: 'video' as ContentItem['type'],
-    url: '',
-    tags: '',
+    title: "",
+    description: "",
+    type: "video" as ContentItem["type"],
+    url: "",
+    tags: "",
     patientIds: [] as string[],
   });
 
@@ -104,35 +118,36 @@ export default function Content() {
 
     const contentItem: ContentItem = {
       id: Date.now().toString(),
-      authorId: user?.id || '1',
+      authorId: user?.id || "1",
       title: newContent.title,
       description: newContent.description,
       type: newContent.type,
-      url: newContent.url || '#',
-      tags: newContent.tags.split(',').map(tag => tag.trim()),
+      url: newContent.url || "#",
+      tags: newContent.tags.split(",").map((tag) => tag.trim()),
       patientIds: newContent.patientIds,
       createdAt: new Date(),
     };
 
     setContent([contentItem, ...content]);
     setNewContent({
-      title: '',
-      description: '',
-      type: 'video',
-      url: '',
-      tags: '',
+      title: "",
+      description: "",
+      type: "video",
+      url: "",
+      tags: "",
       patientIds: [],
     });
     setIsCreating(false);
-    
+
     toast({
       title: "Content Created",
-      description: "Your content has been successfully created and is ready to share.",
+      description:
+        "Your content has been successfully created and is ready to share.",
     });
   };
 
   const handleDeleteContent = (id: string) => {
-    setContent(content.filter(item => item.id !== id));
+    setContent(content.filter((item) => item.id !== id));
     toast({
       title: "Content Deleted",
       description: "The content item has been successfully deleted.",
@@ -146,41 +161,55 @@ export default function Content() {
     });
   };
 
-  const getTypeIcon = (type: ContentItem['type']) => {
+  const getTypeIcon = (type: ContentItem["type"]) => {
     switch (type) {
-      case 'video': return <Video className="w-5 h-5" />;
-      case 'audio': return <Music className="w-5 h-5" />;
-      case 'document': return <FileText className="w-5 h-5" />;
-      case 'image': return <Image className="w-5 h-5" />;
-      default: return <FileText className="w-5 h-5" />;
+      case "video":
+        return <Video className="w-5 h-5" />;
+      case "audio":
+        return <Music className="w-5 h-5" />;
+      case "document":
+        return <FileText className="w-5 h-5" />;
+      case "image":
+        return <Image className="w-5 h-5" />;
+      default:
+        return <FileText className="w-5 h-5" />;
     }
   };
 
-  const getTypeColor = (type: ContentItem['type']) => {
+  const getTypeColor = (type: ContentItem["type"]) => {
     switch (type) {
-      case 'video': return 'bg-blue-100 text-blue-800';
-      case 'audio': return 'bg-green-100 text-green-800';
-      case 'document': return 'bg-orange-100 text-orange-800';
-      case 'image': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "video":
+        return "bg-blue-100 text-blue-800";
+      case "audio":
+        return "bg-green-100 text-green-800";
+      case "document":
+        return "bg-orange-100 text-orange-800";
+      case "image":
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const filteredContent = content.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesType = selectedType === 'all' || item.type === selectedType;
-    const matchesTab = activeTab === 'all' || 
-                      (activeTab === 'shared' && item.patientIds.length > 0) ||
-                      (activeTab === 'unshared' && item.patientIds.length === 0);
-    
+  const filteredContent = content.filter((item) => {
+    const matchesSearch =
+      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.tags.some((tag) =>
+        tag.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    const matchesType = selectedType === "all" || item.type === selectedType;
+    const matchesTab =
+      activeTab === "all" ||
+      (activeTab === "shared" && item.patientIds.length > 0) ||
+      (activeTab === "unshared" && item.patientIds.length === 0);
+
     return matchesSearch && matchesType && matchesTab;
   });
 
   const getPatientName = (patientId: string) => {
-    const patient = mockPatients.find(p => p.id === patientId);
-    return patient?.name || 'Unknown Patient';
+    const patient = mockPatients.find((p) => p.id === patientId);
+    return patient?.name || "Unknown Patient";
   };
 
   return (
@@ -190,8 +219,12 @@ export default function Content() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-text-dark mb-2">Content Library</h1>
-              <p className="text-text-muted">Manage and share therapeutic content with your patients</p>
+              <h1 className="text-3xl font-bold text-text-dark mb-2">
+                Content Library
+              </h1>
+              <p className="text-text-muted">
+                Manage and share therapeutic content with your patients
+              </p>
             </div>
             <Dialog open={isCreating} onOpenChange={setIsCreating}>
               <DialogTrigger asChild>
@@ -211,7 +244,12 @@ export default function Content() {
                       <Input
                         id="title"
                         value={newContent.title}
-                        onChange={(e) => setNewContent({...newContent, title: e.target.value})}
+                        onChange={(e) =>
+                          setNewContent({
+                            ...newContent,
+                            title: e.target.value,
+                          })
+                        }
                         placeholder="Content title..."
                       />
                     </div>
@@ -219,8 +257,8 @@ export default function Content() {
                       <Label htmlFor="type">Content Type</Label>
                       <Select
                         value={newContent.type}
-                        onValueChange={(value: ContentItem['type']) => 
-                          setNewContent({...newContent, type: value})
+                        onValueChange={(value: ContentItem["type"]) =>
+                          setNewContent({ ...newContent, type: value })
                         }
                       >
                         <SelectTrigger>
@@ -235,13 +273,18 @@ export default function Content() {
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
                       value={newContent.description}
-                      onChange={(e) => setNewContent({...newContent, description: e.target.value})}
+                      onChange={(e) =>
+                        setNewContent({
+                          ...newContent,
+                          description: e.target.value,
+                        })
+                      }
                       placeholder="Describe the content and its purpose..."
                       rows={3}
                     />
@@ -251,8 +294,12 @@ export default function Content() {
                     <Label htmlFor="file">Upload File</Label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                       <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-text-muted">Click to upload or drag and drop</p>
-                      <p className="text-sm text-text-muted">Support for videos, audio, documents, and images</p>
+                      <p className="text-text-muted">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-sm text-text-muted">
+                        Support for videos, audio, documents, and images
+                      </p>
                       <Button variant="outline" className="mt-2">
                         Choose File
                       </Button>
@@ -264,7 +311,9 @@ export default function Content() {
                     <Input
                       id="tags"
                       value={newContent.tags}
-                      onChange={(e) => setNewContent({...newContent, tags: e.target.value})}
+                      onChange={(e) =>
+                        setNewContent({ ...newContent, tags: e.target.value })
+                      }
                       placeholder="anxiety, meditation, breathing..."
                     />
                   </div>
@@ -273,7 +322,10 @@ export default function Content() {
                     <Label>Share with Patients (optional)</Label>
                     <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
                       {mockPatients.map((patient) => (
-                        <div key={patient.id} className="flex items-center space-x-2">
+                        <div
+                          key={patient.id}
+                          className="flex items-center space-x-2"
+                        >
                           <Checkbox
                             id={`patient-${patient.id}`}
                             checked={newContent.patientIds.includes(patient.id)}
@@ -281,29 +333,37 @@ export default function Content() {
                               if (checked) {
                                 setNewContent({
                                   ...newContent,
-                                  patientIds: [...newContent.patientIds, patient.id]
+                                  patientIds: [
+                                    ...newContent.patientIds,
+                                    patient.id,
+                                  ],
                                 });
                               } else {
                                 setNewContent({
                                   ...newContent,
-                                  patientIds: newContent.patientIds.filter(id => id !== patient.id)
+                                  patientIds: newContent.patientIds.filter(
+                                    (id) => id !== patient.id
+                                  ),
                                 });
                               }
                             }}
                           />
-                          <Label htmlFor={`patient-${patient.id}`}>{patient.name}</Label>
+                          <Label htmlFor={`patient-${patient.id}`}>
+                            {patient.name}
+                          </Label>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="flex justify-end gap-3">
-                    <Button variant="outline" onClick={() => setIsCreating(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreating(false)}
+                    >
                       Cancel
                     </Button>
-                    <Button onClick={handleCreateContent}>
-                      Add Content
-                    </Button>
+                    <Button onClick={handleCreateContent}>Add Content</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -352,21 +412,32 @@ export default function Content() {
                 <Card>
                   <CardContent className="text-center py-12">
                     <Upload className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                    <p className="text-text-muted">No content found matching your criteria.</p>
+                    <p className="text-text-muted">
+                      No content found matching your criteria.
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredContent.map((item) => (
-                    <Card key={item.id} className="hover:shadow-md transition-shadow">
+                    <Card
+                      key={item.id}
+                      className="hover:shadow-md transition-shadow"
+                    >
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${getTypeColor(item.type)}`}>
+                            <div
+                              className={`p-2 rounded-lg ${getTypeColor(
+                                item.type
+                              )}`}
+                            >
                               {getTypeIcon(item.type)}
                             </div>
                             <div className="flex-1">
-                              <CardTitle className="text-lg line-clamp-1">{item.title}</CardTitle>
+                              <CardTitle className="text-lg line-clamp-1">
+                                {item.title}
+                              </CardTitle>
                               <Badge className={getTypeColor(item.type)}>
                                 {item.type}
                               </Badge>
@@ -379,8 +450,8 @@ export default function Content() {
                             <Button variant="ghost" size="sm">
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteContent(item.id)}
                             >
@@ -393,10 +464,14 @@ export default function Content() {
                         <p className="text-text-muted text-sm mb-4 line-clamp-2">
                           {item.description}
                         </p>
-                        
+
                         <div className="flex flex-wrap gap-1 mb-4">
                           {item.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs"
+                            >
                               #{tag}
                             </Badge>
                           ))}
@@ -405,20 +480,23 @@ export default function Content() {
                         <div className="space-y-3">
                           {item.patientIds.length > 0 && (
                             <div>
-                              <Label className="text-xs text-text-muted">Shared with:</Label>
+                              <Label className="text-xs text-text-muted">
+                                Shared with:
+                              </Label>
                               <div className="flex items-center gap-1 mt-1">
                                 <Users className="w-4 h-4 text-text-muted" />
                                 <span className="text-sm">
-                                  {item.patientIds.length} patient{item.patientIds.length !== 1 ? 's' : ''}
+                                  {item.patientIds.length} patient
+                                  {item.patientIds.length !== 1 ? "s" : ""}
                                 </span>
                               </div>
                             </div>
                           )}
-                          
+
                           <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="flex-1"
                               onClick={() => handleShareContent(item)}
                             >
@@ -428,12 +506,12 @@ export default function Content() {
                             <Button variant="outline" size="sm">
                               <Download className="w-4 h-4" />
                             </Button>
-                            {item.type === 'video' && (
+                            {item.type === "video" && (
                               <Button variant="outline" size="sm">
                                 <Play className="w-4 h-4" />
                               </Button>
                             )}
-                            {item.type === 'audio' && (
+                            {item.type === "audio" && (
                               <Button variant="outline" size="sm">
                                 <Play className="w-4 h-4" />
                               </Button>
