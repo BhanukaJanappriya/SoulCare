@@ -17,7 +17,7 @@ import {
   Circle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
+// messages management
 interface Message {
   id: string;
   senderId: string;

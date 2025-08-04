@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
+// Error page
 const NotFound = () => {
   const location = useLocation();
 

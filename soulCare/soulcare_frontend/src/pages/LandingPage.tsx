@@ -4,6 +4,7 @@ import { Stethoscope, Brain, User } from "lucide-react";
 import { RoleCard } from "@/components/ui/role-card";
 import { UserRole } from "@/types";
 
+// User friendly landing
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 

@@ -1,5 +1,6 @@
 export type UserRole = 'patient'|'doctor' | 'counselor';
 
+// User roles
 export interface User {
   id: string;
   email: string;
