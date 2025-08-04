@@ -1,93 +1,99 @@
-import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  Users, 
-  Calendar, 
-  FileText, 
-  Star, 
-  TrendingUp, 
+import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Users,
+  Calendar,
+  FileText,
+  Star,
+  TrendingUp,
   Clock,
   MessageSquare,
-  Activity
-} from 'lucide-react';
-import { RightSidebar } from '@/components/layout/RightSidebar';
+  Activity,
+} from "lucide-react";
+import { RightSidebar } from "@/components/layout/RightSidebar";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
   const stats = [
     {
-      title: 'Total Patients',
-      value: '24',
-      change: '+12%',
+      title: "Total Patients",
+      value: "24",
+      change: "+12%",
       icon: Users,
-      color: 'text-primary'
+      color: "text-primary",
     },
     {
-      title: 'Appointments Today',
-      value: '6',
-      change: '+2',
+      title: "Appointments Today",
+      value: "6",
+      change: "+2",
       icon: Calendar,
-      color: 'text-success'
+      color: "text-success",
     },
     {
-      title: 'Pending Messages',
-      value: '3',
-      change: '-1',
+      title: "Pending Messages",
+      value: "3",
+      change: "-1",
       icon: MessageSquare,
-      color: 'text-warning'
+      color: "text-warning",
     },
     {
-      title: 'Average Rating',
-      value: user?.rating?.toFixed(1) || '5.0',
-      change: '+0.2',
+      title: "Average Rating",
+      value: user?.rating?.toFixed(1) || "5.0",
+      change: "+0.2",
       icon: Star,
-      color: 'text-primary'
-    }
+      color: "text-primary",
+    },
   ];
 
   const recentAppointments = [
     {
-      id: '1',
-      patient: 'Sarah Johnson',
-      time: '10:00 AM',
-      type: 'Follow-up',
-      status: 'upcoming'
+      id: "1",
+      patient: "Sarah Johnson",
+      time: "10:00 AM",
+      type: "Follow-up",
+      status: "upcoming",
     },
     {
-      id: '2',
-      patient: 'Mike Chen',
-      time: '11:30 AM',
-      type: 'Consultation',
-      status: 'upcoming'
+      id: "2",
+      patient: "Mike Chen",
+      time: "11:30 AM",
+      type: "Consultation",
+      status: "upcoming",
     },
     {
-      id: '3',
-      patient: 'Emma Wilson',
-      time: '2:00 PM',
-      type: 'Therapy Session',
-      status: 'upcoming'
-    }
+      id: "3",
+      patient: "Emma Wilson",
+      time: "2:00 PM",
+      type: "Therapy Session",
+      status: "upcoming",
+    },
   ];
 
   const recentActivity = [
-    'New patient registration: Alex Morgan',
-    'Appointment confirmed for tomorrow at 9:00 AM',
+    "New patient registration: Alex Morgan",
+    "Appointment confirmed for tomorrow at 9:00 AM",
     'Blog post "Managing Anxiety" published',
-    'Prescription updated for patient ID #1234'
+    "Prescription updated for patient ID #1234",
   ];
 
   return (
     <div className="min-h-screen healthcare-gradient pr-16">
       <RightSidebar />
-      
+
       <div className="p-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back, {user?.name?.split(' ')[0]}!
+            Welcome back, {user?.name?.split(" ")[0]}!
           </h1>
           <p className="text-muted-foreground">
             Here's what's happening with your practice today.
@@ -137,7 +143,7 @@ const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentAppointments.map((appointment) => (
-                <div 
+                <div
                   key={appointment.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-background/50"
                 >
@@ -178,7 +184,7 @@ const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentActivity.map((activity, index) => (
-                <div 
+                <div
                   key={index}
                   className="flex items-start space-x-3 p-3 rounded-lg bg-background/50"
                 >
@@ -195,7 +201,9 @@ const Dashboard: React.FC = () => {
 
         {/* Quick Actions */}
         <div className="mt-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            Quick Actions
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Button className="healthcare-button-primary h-20 flex-col space-y-2">
               <Calendar className="w-6 h-6" />
@@ -205,7 +213,7 @@ const Dashboard: React.FC = () => {
               <Users className="w-6 h-6" />
               <span>Add Patient</span>
             </Button>
-            {user?.role === 'doctor' && (
+            {user?.role === "doctor" && (
               <Button variant="outline" className="h-20 flex-col space-y-2">
                 <FileText className="w-6 h-6" />
                 <span>Write Prescription</span>

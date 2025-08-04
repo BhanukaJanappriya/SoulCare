@@ -1,96 +1,107 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { RightSidebar } from '@/components/layout/RightSidebar';
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  MoreHorizontal, 
-  User, 
-  Phone, 
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { RightSidebar } from "@/components/layout/RightSidebar";
+import {
+  Search,
+  Filter,
+  Plus,
+  MoreHorizontal,
+  User,
+  Phone,
   Mail,
   Calendar,
-  AlertTriangle
-} from 'lucide-react';
+  AlertTriangle,
+} from "lucide-react";
 
 const Patients: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const mockPatients = [
     {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.j@email.com',
-      phone: '+1 (555) 123-4567',
+      id: "1",
+      name: "Sarah Johnson",
+      email: "sarah.j@email.com",
+      phone: "+1 (555) 123-4567",
       age: 28,
-      lastVisit: '2024-01-15',
-      condition: 'Anxiety Disorder',
-      status: 'active',
-      riskLevel: 'low'
+      lastVisit: "2024-01-15",
+      condition: "Anxiety Disorder",
+      status: "active",
+      riskLevel: "low",
     },
     {
-      id: '2',
-      name: 'Mike Chen',
-      email: 'mike.chen@email.com',
-      phone: '+1 (555) 234-5678',
+      id: "2",
+      name: "Mike Chen",
+      email: "mike.chen@email.com",
+      phone: "+1 (555) 234-5678",
       age: 35,
-      lastVisit: '2024-01-14',
-      condition: 'Depression',
-      status: 'active',
-      riskLevel: 'medium'
+      lastVisit: "2024-01-14",
+      condition: "Depression",
+      status: "active",
+      riskLevel: "medium",
     },
     {
-      id: '3',
-      name: 'Emma Wilson',
-      email: 'emma.w@email.com',
-      phone: '+1 (555) 345-6789',
+      id: "3",
+      name: "Emma Wilson",
+      email: "emma.w@email.com",
+      phone: "+1 (555) 345-6789",
       age: 42,
-      lastVisit: '2024-01-12',
-      condition: 'PTSD',
-      status: 'inactive',
-      riskLevel: 'high'
+      lastVisit: "2024-01-12",
+      condition: "PTSD",
+      status: "inactive",
+      riskLevel: "high",
     },
     {
-      id: '4',
-      name: 'James Rodriguez',
-      email: 'james.r@email.com',
-      phone: '+1 (555) 456-7890',
+      id: "4",
+      name: "James Rodriguez",
+      email: "james.r@email.com",
+      phone: "+1 (555) 456-7890",
       age: 29,
-      lastVisit: '2024-01-16',
-      condition: 'Bipolar Disorder',
-      status: 'active',
-      riskLevel: 'medium'
-    }
+      lastVisit: "2024-01-16",
+      condition: "Bipolar Disorder",
+      status: "active",
+      riskLevel: "medium",
+    },
   ];
 
-  const filteredPatients = mockPatients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.condition.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPatients = mockPatients.filter(
+    (patient) =>
+      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.condition.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getRiskLevelColor = (riskLevel: string) => {
     switch (riskLevel) {
-      case 'high': return 'bg-destructive text-destructive-foreground';
-      case 'medium': return 'bg-warning text-warning-foreground';
-      case 'low': return 'bg-success text-success-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case "high":
+        return "bg-destructive text-destructive-foreground";
+      case "medium":
+        return "bg-warning text-warning-foreground";
+      case "low":
+        return "bg-success text-success-foreground";
+      default:
+        return "bg-muted text-muted-foreground";
     }
   };
 
   const getStatusColor = (status: string) => {
-    return status === 'active' 
-      ? 'bg-success/20 text-success' 
-      : 'bg-muted text-muted-foreground';
+    return status === "active"
+      ? "bg-success/20 text-success"
+      : "bg-muted text-muted-foreground";
   };
 
   return (
     <div className="min-h-screen healthcare-gradient pr-16">
       <RightSidebar />
-      
+
       <div className="p-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -132,7 +143,10 @@ const Patients: React.FC = () => {
         {/* Patients Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPatients.map((patient) => (
-            <Card key={patient.id} className="healthcare-card hover:shadow-lg transition-shadow">
+            <Card
+              key={patient.id}
+              className="healthcare-card hover:shadow-lg transition-shadow"
+            >
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
@@ -149,7 +163,7 @@ const Patients: React.FC = () => {
                   </Button>
                 </div>
               </CardHeader>
-              
+
               <CardContent className="space-y-4">
                 {/* Contact Info */}
                 <div className="space-y-2">
@@ -163,34 +177,45 @@ const Patients: React.FC = () => {
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
-                    Last visit: {new Date(patient.lastVisit).toLocaleDateString()}
+                    Last visit:{" "}
+                    {new Date(patient.lastVisit).toLocaleDateString()}
                   </div>
                 </div>
 
                 {/* Condition */}
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-1">Condition:</p>
-                  <p className="text-sm text-muted-foreground">{patient.condition}</p>
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Condition:
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {patient.condition}
+                  </p>
                 </div>
 
                 {/* Status and Risk Level */}
                 <div className="flex items-center justify-between">
                   <Badge className={getStatusColor(patient.status)}>
-                    {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
+                    {patient.status.charAt(0).toUpperCase() +
+                      patient.status.slice(1)}
                   </Badge>
                   <div className="flex items-center">
-                    {patient.riskLevel === 'high' && (
+                    {patient.riskLevel === "high" && (
                       <AlertTriangle className="w-4 h-4 text-destructive mr-1" />
                     )}
                     <Badge className={getRiskLevelColor(patient.riskLevel)}>
-                      {patient.riskLevel.charAt(0).toUpperCase() + patient.riskLevel.slice(1)} Risk
+                      {patient.riskLevel.charAt(0).toUpperCase() +
+                        patient.riskLevel.slice(1)}{" "}
+                      Risk
                     </Badge>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex space-x-2 pt-2">
-                  <Button size="sm" className="flex-1 healthcare-button-primary">
+                  <Button
+                    size="sm"
+                    className="flex-1 healthcare-button-primary"
+                  >
                     View Details
                   </Button>
                   <Button size="sm" variant="outline" className="flex-1">
@@ -211,10 +236,9 @@ const Patients: React.FC = () => {
                 No patients found
               </h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm 
-                  ? 'Try adjusting your search criteria or add a new patient.'
-                  : 'Start by adding your first patient to the system.'
-                }
+                {searchTerm
+                  ? "Try adjusting your search criteria or add a new patient."
+                  : "Start by adding your first patient to the system."}
               </p>
               <Button className="healthcare-button-primary">
                 <Plus className="w-4 h-4 mr-2" />
