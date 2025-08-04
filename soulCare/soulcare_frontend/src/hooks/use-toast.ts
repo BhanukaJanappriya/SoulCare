@@ -136,7 +136,7 @@ function dispatch(action: Action) {
     listener(memoryState)
   })
 }
-
+//omiting
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
