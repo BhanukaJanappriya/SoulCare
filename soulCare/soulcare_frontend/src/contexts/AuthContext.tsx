@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole } from '@/types';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { User, UserRole } from "@/types";
 
 interface AuthContextType {
   user: User | null;
@@ -14,7 +14,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -22,58 +22,67 @@ export const useAuth = () => {
 // Mock users for demo
 const mockUsers: (User & { password: string })[] = [
   {
-    id: '1',
-    email: 'dr.smith@healthcare.com',
-    password: 'password123',
-    name: 'Dr. Sarah Smith',
-    role: 'doctor',
-    specialization: 'Psychiatry',
+    id: "1",
+    email: "dr.smith@healthcare.com",
+    password: "password123",
+    name: "Dr. Sarah Smith",
+    role: "doctor",
+    specialization: "Psychiatry",
     experience: 8,
     rating: 4.8,
-    bio: 'Experienced psychiatrist specializing in anxiety and depression treatment.',
-    createdAt: new Date('2023-01-15'),
+    bio: "Experienced psychiatrist specializing in anxiety and depression treatment.",
+    createdAt: new Date("2023-01-15"),
   },
   {
-    id: '2',
-    email: 'counselor.jones@healthcare.com',
-    password: 'password123',
-    name: 'Mark Jones',
-    role: 'counselor',
-    specialization: 'Cognitive Behavioral Therapy',
+    id: "2",
+    email: "counselor.jones@healthcare.com",
+    password: "password123",
+    name: "Mark Jones",
+    role: "counselor",
+    specialization: "Cognitive Behavioral Therapy",
     experience: 5,
     rating: 4.6,
-    bio: 'Licensed counselor focusing on CBT and trauma therapy.',
-    createdAt: new Date('2023-03-20'),
+    bio: "Licensed counselor focusing on CBT and trauma therapy.",
+    createdAt: new Date("2023-03-20"),
   },
 ];
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check for saved user session
-    const savedUser = localStorage.getItem('healthcareUser');
+    const savedUser = localStorage.getItem("healthcareUser");
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string, role: UserRole): Promise<boolean> => {
+  const login = async (
+    email: string,
+    password: string,
+    role: UserRole
+  ): Promise<boolean> => {
     setIsLoading(true);
-    
+
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const foundUser = mockUsers.find(
-      u => u.email === email && u.password === password && u.role === role
+      (u) => u.email === email && u.password === password && u.role === role
     );
 
     if (foundUser) {
       const { password: _, ...userWithoutPassword } = foundUser;
       setUser(userWithoutPassword);
-      localStorage.setItem('healthcareUser', JSON.stringify(userWithoutPassword));
+      localStorage.setItem(
+        "healthcareUser",
+        JSON.stringify(userWithoutPassword)
+      );
       setIsLoading(false);
       return true;
     }
@@ -82,12 +91,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const signup = async (userData: Partial<User> & { password: string }): Promise<boolean> => {
+  const signup = async (
+    userData: Partial<User> & { password: string }
+  ): Promise<boolean> => {
     setIsLoading(true);
-    
+
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const newUser: User = {
       id: Date.now().toString(),
       email: userData.email!,
@@ -100,14 +111,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setUser(newUser);
-    localStorage.setItem('healthcareUser', JSON.stringify(newUser));
+    localStorage.setItem("healthcareUser", JSON.stringify(newUser));
     setIsLoading(false);
     return true;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('healthcareUser');
+    localStorage.removeItem("healthcareUser");
   };
 
   return (
