@@ -2,48 +2,175 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mental Healthcare Platform Design System */
+
 @layer base {
-  * {
-    box-sizing: border-box;
+  :root {
+    /* Page backgrounds - soft feel */
+    --background: 207 100% 94%;  /* #E3F2FD */
+    --background-soft: 199 81% 84%;  /* #A7D8F0 */
+    --foreground: 210 22% 22%;  /* #2C3E50 */
+
+    /* Card and surface backgrounds */
+    --card: 0 0% 100%;
+    --card-foreground: 210 22% 22%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 22% 22%;
+
+    /* Primary colors - main buttons and UI elements */
+    --primary: 199 73% 61%;  /* #5DADEC */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 199 73% 55%;
+
+    /* Right sidebar color */
+    --sidebar-bg: 207 69% 27%;  /* #144A74 */
+    --sidebar-foreground: 0 0% 100%;
+
+    /* Secondary text colors */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 210 13% 50%;  /* #6C7A89 */
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 210 13% 50%;
+
+    --accent: 199 81% 84%;  /* #A7D8F0 */
+    --accent-foreground: 207 69% 27%;
+
+    /* Status colors */
+    --success: 162 63% 41%;  /* #48C9B0 */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 34 100% 50%;  /* #F39C12 */
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 4 90% 58%;  /* #E74C3C */
+    --destructive-foreground: 0 0% 100%;
+
+    --error-light: 212 92% 90%;  /* #D6EAF8 */
+
+    /* Borders and inputs */
+    --border: 207 100% 94%;
+    --input: 0 0% 100%;
+    --ring: 199 73% 61%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
-  
-  body {
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      Ubuntu, "Helvetica Neue", Helvetica, Arial, "PingFang SC",
-      "Hiragino Sans GB", "Microsoft Yahei UI", "Microsoft Yahei",
-      "Source Han Sans CN", sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #000000;
-  }
-  
-  input, select, textarea, button {
-    outline: 0;
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
-@layer components {
-  .card {
-    @apply bg-white rounded-2xl shadow-sm;
+@layer base {
+  * {
+    @apply border-border;
   }
-  
-  .btn-primary {
-    @apply bg-primary-300 text-secondary-500 px-4 py-2 rounded-2xl font-medium transition-colors hover:bg-primary-400;
+
+  body {
+    @apply bg-background text-foreground;
   }
-  
-  .btn-secondary {
-    @apply bg-primary-50 text-secondary-500 px-4 py-2 rounded-2xl font-medium transition-colors hover:bg-primary-100;
+
+  /* Healthcare Platform Specific Styles */
+  .healthcare-gradient {
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--background-soft)) 100%);
   }
-  
-  .sidebar-icon {
-    @apply w-6 h-6 text-white;
+
+  .healthcare-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/20 shadow-lg;
   }
-  
-  .progress-bar {
-    @apply w-full h-2 bg-gray-200 rounded-full overflow-hidden;
+
+  .healthcare-button-primary {
+    @apply bg-primary hover:bg-primary-hover text-primary-foreground transition-all duration-300 shadow-md hover:shadow-lg;
   }
-  
-  .progress-fill {
-    @apply h-full rounded-full transition-all duration-300;
+
+  .healthcare-button-success {
+    @apply bg-success hover:bg-success/90 text-success-foreground;
+  }
+
+  .healthcare-button-warning {
+    @apply bg-warning hover:bg-warning/90 text-warning-foreground;
+  }
+
+  .healthcare-button-danger {
+    @apply bg-destructive hover:bg-destructive/90 text-destructive-foreground;
+  }
+
+  /* Smooth animations */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  /* Role card hover effects */
+  .role-card {
+    @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer;
+  }
+
+  .role-card:hover {
+    box-shadow: 0 20px 40px rgba(93, 173, 236, 0.15);
   }
 }
