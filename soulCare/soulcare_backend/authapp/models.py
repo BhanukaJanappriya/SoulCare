@@ -21,6 +21,7 @@ class User(AbstractUser):
 
 class PatientProfile(models.Model):
     user = models.OneToOneField('User', on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=100)
     nic = models.CharField(max_length=12)
     contact_number = models.CharField(max_length=15)
     address = models.TextField()
@@ -30,15 +31,19 @@ class PatientProfile(models.Model):
 
 class DoctorProfile(models.Model):
     user = models.OneToOneField('User', on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=100)
     nic = models.CharField(max_length=12)
     contact_number = models.CharField(max_length=15)
     specialization = models.CharField(max_length=255)
     availability = models.CharField(max_length=255)
+    license_number = models.CharField(max_length=100)
     # Add other doctor fields you need here
 
 class CounselorProfile(models.Model):
     user = models.OneToOneField('User', on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=100)
     nic = models.CharField(max_length=12)
     contact_number = models.CharField(max_length=15)
     expertise = models.CharField(max_length=255)
+    license_number = models.CharField(max_length=100)
     # Add other counselor fields you need here
