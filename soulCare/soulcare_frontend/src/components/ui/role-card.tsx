@@ -1,7 +1,13 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { UserRole } from '@/types';
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { UserRole } from "@/types";
 
 interface RoleCardProps {
   role: UserRole;
@@ -28,24 +34,28 @@ export const RoleCard: React.FC<RoleCardProps> = ({
             <Icon className="w-8 h-8 text-primary" />
           </div>
         </div>
-        <CardTitle className="text-2xl font-bold text-foreground">{title}</CardTitle>
+        <CardTitle className="text-2xl font-bold text-foreground">
+          {title}
+        </CardTitle>
         <CardDescription className="text-muted-foreground text-lg">
           {description}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <h4 className="font-semibold text-foreground">Key Features:</h4>
           <ul className="space-y-1">
             {features.map((feature, index) => (
-              <li key={index} className="flex items-center text-sm text-muted-foreground">
+              <li
+                key={index}
+                className="flex items-center text-sm text-muted-foreground"
+              >
                 <div className="w-1.5 h-1.5 bg-primary rounded-full mr-2 flex-shrink-0" />
                 {feature}
               </li>
             ))}
           </ul>
         </div>
-        <Button 
+        <Button
           onClick={() => onSelect(role)}
           className="w-full healthcare-button-primary text-lg py-6 font-semibold"
         >
