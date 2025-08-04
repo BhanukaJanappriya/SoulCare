@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 function DoctorRegister() {
   const [formData, setFormData] = useState({
     username: "",
+    full_name:"",
     email: "",
     password: "",
+    confirm_password:"",
     nic: "",
     contact_number: "",
     specialization: "",
     availability: "",
   });
+
+  const [confirmPasswordError,setConfirmPasswordError] = useState(false)
 
   const navigate = useNavigate();
 
@@ -21,9 +25,23 @@ function DoctorRegister() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  useEffect(() => {
+    if (formData.confirm_password) {
+      setConfirmPasswordError(formData.password !== formData.confirm_password);
+    }
+  }, [formData.password, formData.confirm_password]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("Submitting...");
+    setConfirmPasswordError(false);
+
+    if (formData.password !== formData.confirm_password) {
+      setMessage("Registration failed: Passwords do not match");
+      setConfirmPasswordError(true);
+      return;}
+
+
     try {
       const response = await axios.post(
         "http://localhost:8000/api/auth/register/doctor/",
@@ -52,7 +70,26 @@ function DoctorRegister() {
     <div className="max-w-md mx-auto p-8 bg-white shadow mt-10 rounded">
       <h1 className="text-2xl font-bold mb-6 text-center">Doctor Registration</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {["username", "email", "password", "nic", "contact_number", "specialization", "availability"].map((field) => (
+        {["full_name","username", "email", "password","confirm_password", "nic", "contact_number", "specialization", "availability"].map((field) => 
+        field === "confirm_password" ? (
+            <div key={field}>
+              <input
+                type="password"
+                name="confirm_password"
+                placeholder="CONFIRM PASSWORD"
+                value={formData.confirm_password}
+                onChange={handleChange}
+                className={`border w-full p-2 rounded focus:outline-none focus:ring ${
+                  confirmPasswordError ? "border-red-500" : ""
+                }`}
+                required
+              />
+              {confirmPasswordError && (
+                <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
+              )}
+            </div>
+          ):
+          (
           <input
             key={field}
             type={field === "password" ? "password" : "text"}
@@ -71,7 +108,7 @@ function DoctorRegister() {
           Register Doctor
         </button>
       </form>
-      <p className="mt-4 text-center text-sm">{message}</p>
+      <p className="text-red-500 mt-4 text-center text-sm">{message}</p>
     </div>
   );
 }
