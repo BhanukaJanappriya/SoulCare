@@ -20,6 +20,7 @@ import Content from "./pages/Content";
 import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import CounselorRegister from "./pages/Registration/CounselorRegister";
 
 const queryClient = new QueryClient();
 
@@ -33,7 +34,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
-            <Route path="/auth/signup" element={<SignupPage />} />
+            <Route path="/auth/signup" element={<CounselorRegister />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
