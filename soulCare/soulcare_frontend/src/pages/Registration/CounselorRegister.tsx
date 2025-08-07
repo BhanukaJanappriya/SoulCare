@@ -230,7 +230,7 @@ const CounselorRegister: React.FC = () => {
                 <Input
                   id="license_number"
                   name="license_number"
-                  type="tel"
+                  type="text"
                   value={formData.license_number}
                   onChange={handleChange}
                   placeholder="Enter Your license number"

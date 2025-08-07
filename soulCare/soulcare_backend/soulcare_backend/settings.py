@@ -67,6 +67,7 @@ ROOT_URLCONF = 'soulcare_backend.urls'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://192.168.249.245:5173",
 ]
 
 TEMPLATES = [
