@@ -40,7 +40,7 @@ function DoctorRegister() {
       setMessage("Registration failed: Passwords do not match");
       setConfirmPasswordError(true);
       return;}
-
+    
 
     try {
       const response = await axios.post(

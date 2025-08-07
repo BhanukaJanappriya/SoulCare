@@ -42,6 +42,8 @@ const SignupPage: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+
+    navigate("/dashboard");
     e.preventDefault();
     setError("");
 
@@ -70,7 +72,7 @@ const SignupPage: React.FC = () => {
         description: "Welcome to the healthcare platform!",
         className: "healthcare-button-success",
       });
-      navigate("/dashboard");
+      
     } else {
       setError("Failed to create account. Please try again.");
     }
