@@ -7,7 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/auth/LoginPage";
-import SignupPage from "./pages/auth/SignupPage";
+//import SignupPage from "./pages/auth/SignupPage";
 import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
 import Appointments from "./pages/Appointments";
@@ -21,6 +21,8 @@ import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import CounselorRegister from "./pages/Registration/CounselorRegister";
+import DoctorRegister from "./pages/Registration/DoctorRegister";
+import PatientRegister from "./pages/Registration/PatientRegister";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +36,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
-            <Route path="/auth/signup" element={<CounselorRegister />} />
+            <Route path="/auth/signup" element={<PatientRegister/>} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
