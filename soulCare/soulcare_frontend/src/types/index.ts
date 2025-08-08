@@ -8,6 +8,7 @@ export interface DoctorProfile {
   specialization: string;
   availability: string;
   license_number: string;
+  rating?: number;
 }
 
 export interface CounselorProfile {
@@ -16,6 +17,7 @@ export interface CounselorProfile {
   contact_number: string;
   expertise: string;
   license_number: string;
+  rating?: number;
 }
 
 export interface PatientProfile {

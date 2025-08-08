@@ -96,14 +96,14 @@ const LoginPage: React.FC = () => {
             <div className="text-center mt-4 space-y-2">
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
-                <Link to="/register-options" className="text-primary hover:underline">
+                <Link to="/" className="text-primary hover:underline">
                   Sign up
                 </Link>
               </p>
-              <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary">
+              {/*<Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary">
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 Back to home
-              </Link>
+              </Link>*/}
             </div>
           </CardContent>
         </Card>

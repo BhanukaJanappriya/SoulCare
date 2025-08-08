@@ -154,13 +154,13 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
 class DoctorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorProfile
-        fields = ['full_name', 'nic', 'contact_number', 'specialization', 'availability', 'license_number']  
+        fields = ['full_name', 'nic', 'contact_number', 'specialization', 'availability', 'license_number','rating']  
 
 
 class CounselorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CounselorProfile
-        fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number']
+        fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number','rating']
 
 class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:

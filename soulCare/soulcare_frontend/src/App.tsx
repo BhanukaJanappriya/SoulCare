@@ -40,13 +40,11 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/signup" element={<PatientRegister />} />
-            {/* You might want to rename these to be more consistent */}
             <Route path="/counselor-register" element={<CounselorRegister />} />
             <Route path="/doctor-register" element={<DoctorRegister />} />
 
 
-            {/* --- Doctor & Counselor Shared Routes (Patients CANNOT see these) --- */}
-            {/* CORRECTED: Added allowedRoles to every protected route */}
+            
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRoles={['doctor', 'counselor']}>
                 <Dashboard />

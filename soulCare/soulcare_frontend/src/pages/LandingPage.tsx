@@ -9,7 +9,18 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleRoleSelect = (role: UserRole) => {
-    navigate("/auth/login", { state: { selectedRole: role } });
+    const navigationState = { state: { selectedRole: role } };
+
+    if (role === "user") {
+      navigate("/auth/signup", navigationState);
+    } else if (role === "counselor") {
+      navigate("/counselor-register", navigationState);
+    } else if (role === "doctor") {
+      navigate("/doctor-register", navigationState);
+    } else {
+      
+      console.error("Unknown role selected:", role);
+    }
   };
 
   return (
@@ -30,7 +41,7 @@ const LandingPage: React.FC = () => {
         <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           <div className="animate-fade-in" style={{ animationDelay: "0.4s" }}>
             <RoleCard
-              role={"patient"}
+              role={"user"}
               title="User"
               description="Someone ready to begin their journey toward healing and a brighter state of mind"
               icon={User}

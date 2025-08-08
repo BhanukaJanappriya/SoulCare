@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await axiosInstance.get<User>("user/");
       setUser(response.data);
     } catch (error) {
-      console.error("Token is invalid or expired. Logging out.", error);
+      console.error( error);
       logout();
     }
   };
