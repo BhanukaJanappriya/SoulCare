@@ -37,6 +37,7 @@ class DoctorProfile(models.Model):
     specialization = models.CharField(max_length=255)
     availability = models.CharField(max_length=255)
     license_number = models.CharField(max_length=100)
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
     # Add other doctor fields you need here
 
 class CounselorProfile(models.Model):
@@ -46,4 +47,5 @@ class CounselorProfile(models.Model):
     contact_number = models.CharField(max_length=15)
     expertise = models.CharField(max_length=255)
     license_number = models.CharField(max_length=100)
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
     # Add other counselor fields you need here
