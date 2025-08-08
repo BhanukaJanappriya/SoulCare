@@ -1,39 +1,30 @@
-export type UserRole = 'patient'|'doctor' | 'counselor';
+export type UserRole = 'user'|'doctor' | 'counselor'|'admin';
 
 // User roles
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  avatar?: string;
-  specialization?: string;
-  experience?: number;
-  certifications?: string[];
-  phone?: string;
-  bio?: string;
-  rating?: number;
-  createdAt: Date;
+export interface DoctorProfile {
+  full_name: string;
+  nic: string;
+  contact_number: string;
+  specialization: string;
+  availability: string;
+  license_number: string;
 }
 
-export interface Patient {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  dateOfBirth: Date;
-  gender: 'male' | 'female' | 'other';
-  emergencyContact: {
-    name: string;
-    phone: string;
-    relationship: string;
-  };
-  medicalHistory: string[];
-  currentMedications: string[];
-  allergies: string[];
-  assignedDoctorId?: string;
-  assignedCounselorId?: string;
-  createdAt: Date;
+export interface CounselorProfile {
+  full_name: string;
+  nic: string;
+  contact_number: string;
+  expertise: string;
+  license_number: string;
+}
+
+export interface PatientProfile {
+  full_name: string;
+  nic: string;
+  contact_number: string;
+  address: string;
+  dob: string; // Dates come as strings from JSON
+  health_issues: string | null;
 }
 
 export interface Appointment {
@@ -48,6 +39,16 @@ export interface Appointment {
   notes?: string;
   prescription?: Prescription;
   createdAt: Date;
+}
+
+export interface User {
+  id: number; // Corrected to number
+  username: string;
+  email: string;
+  role: UserRole;
+  is_verified: boolean;
+  // The nested profile object
+  profile: DoctorProfile | CounselorProfile | PatientProfile | null;
 }
 
 export interface Prescription {

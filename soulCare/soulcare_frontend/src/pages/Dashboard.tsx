@@ -47,7 +47,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: "Average Rating",
-      value: user?.rating?.toFixed(1) || "5.0",
+      value: "5.0",
       change: "+0.2",
       icon: Star,
       color: "text-primary",
@@ -93,7 +93,7 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back, {user?.name?.split(" ")[0]}!
+            Welcome back, {user?.profile?.full_name?.split(" ")[0]}!
           </h1>
           <p className="text-muted-foreground">
             Here's what's happening with your practice today.

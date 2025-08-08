@@ -1,5 +1,10 @@
+// src/pages/LoginPage.tsx
+
 import React, { useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext"; // Make sure to import useAuth
+
+// Imports for the UI components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,48 +15,42 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Stethoscope, Brain, ArrowLeft } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { UserRole } from "@/types";
-import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LogIn, ArrowLeft } from "lucide-react";
 
 const LoginPage: React.FC = () => {
-  const location = useLocation();
+  // Get the login function FROM THE CONTEXT
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
-  const { toast } = useToast();
 
-  const selectedRole = location.state?.selectedRole as UserRole;
-  const [role, setRole] = useState<UserRole>(selectedRole || "doctor");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
+  const [errors, setErrors] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    
-    e.preventDefault();
-    setError("");
-
-    const success = await login(email, password, role);
-
-    if (success) {
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to the healthcare platform!",
-        className: "healthcare-button-success",
-      });
-      navigate("/dashboard");
-    } else {
-      setError("Invalid credentials. Please check your email and password.");
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const getDemoCredentials = () => {
-    if (role === "doctor") {
-      return "dr.smith@healthcare.com / password123";
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors([]);
+    setIsLoading(true);
+
+    // Call the login function from the context
+    const result = await login(formData.username, formData.password);
+
+    if (result.success) {
+      // On success, the context handles fetching the user. We just navigate.
+      setTimeout(()=>navigate("/dashboard"));
+    } else {
+      // If it fails, the context gives us the error message.
+      setErrors([result.error || "An unknown error occurred."]);
     }
-    return "counselor.jones@healthcare.com / password123";
+    
+    setIsLoading(false);
   };
 
   return (
@@ -61,115 +60,49 @@ const LoginPage: React.FC = () => {
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                {role === "doctor" ? (
-                  <Stethoscope className="w-8 h-8 text-primary" />
-                ) : (
-                  <Brain className="w-8 h-8 text-primary" />
-                )}
+                <LogIn className="w-8 h-8 text-primary" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">
-              {role === "doctor" ? "Doctor" : "Counselor"} Login
-            </CardTitle>
-            <CardDescription>
-              Sign in to access your healthcare dashboard
-            </CardDescription>
+            <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+            <CardDescription>Access your account to continue</CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-4">
-            {/* Role Toggle */}
-            <div className="flex rounded-lg bg-muted p-1">
-              <button
-                type="button"
-                onClick={() => setRole("doctor")}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                  role === "doctor"
-                    ? "bg-white text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Doctor
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole("counselor")}
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                  role === "counselor"
-                    ? "bg-white text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Counselor
-              </button>
-            </div>
-
-            {/* Demo Credentials Alert */}
-            <Alert className="bg-primary/5 border-primary/20">
-              <AlertDescription className="text-sm">
-                <strong>Demo credentials:</strong> {getDemoCredentials()}
-              </AlertDescription>
-            </Alert>
-
+          <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                />
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" name="username" value={formData.username} onChange={handleChange} placeholder="Enter your username" required/>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                />
+                <Input id="password" name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Enter your password" required/>
               </div>
 
-              {error && (
-                <Alert className="bg-destructive/10 border-destructive/20">
-                  <AlertDescription className="text-destructive text-sm">
-                    {error}
+              {errors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertTitle>Login Failed!</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {errors.map((errorMsg, index) => (<li key={index}>{errorMsg}</li>))}
+                    </ul>
                   </AlertDescription>
                 </Alert>
               )}
 
-              <Button
-                type="submit"
-                className="w-full healthcare-button-primary"
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing in..." : "Sign In"}
+              <Button type="submit" className="w-full healthcare-button-primary" disabled={isLoading}>
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
-
-            <div className="text-center space-y-2">
+            <div className="text-center mt-4 space-y-2">
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
-                <Link
-                  to="/auth/signup"
-                  state={{ selectedRole: role }}
-                  className="text-primary hover:underline"
-                >
+                <Link to="/register-options" className="text-primary hover:underline">
                   Sign up
                 </Link>
               </p>
-
-              <Link
-                to="/"
-                className="inline-flex items-center text-sm text-muted-foreground hover:text-primary"
-              >
+              <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary">
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                Back to role selection
+                Back to home
               </Link>
             </div>
           </CardContent>

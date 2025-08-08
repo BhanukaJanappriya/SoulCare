@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer
+from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 
 
@@ -83,3 +84,11 @@ class CounselorRegisterView(generics.CreateAPIView):
         }
         return Response(response_data,status=status.HTTP_201_CREATED)
     
+
+
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserDetailSerializer(request.user)
+        return Response(serializer.data)

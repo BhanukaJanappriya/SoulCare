@@ -1,10 +1,24 @@
+// contexts/AuthContext.tsx
+
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, UserRole } from "@/types";
+import axios from "axios";
+import { User } from "@/types/index";
+
+
+interface LoginResponse {
+  access: string;
+  refresh: string;
+  role: string;
+  email: string;
+}
+
+const axiosInstance = axios.create({
+  baseURL: "http://localhost:8000/api/auth/",
+});
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: UserRole) => Promise<boolean>;
-  signup: (userData: Partial<User> & { password: string }) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -13,116 +27,85 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
-// Mock users for demo
-const mockUsers: (User & { password: string })[] = [
-  {
-    id: "1",
-    email: "dr.smith@healthcare.com",
-    password: "password123",
-    name: "Dr. Sarah Smith",
-    role: "doctor",
-    specialization: "Psychiatry",
-    experience: 8,
-    rating: 4.8,
-    bio: "Experienced psychiatrist specializing in anxiety and depression treatment.",
-    createdAt: new Date("2023-01-15"),
-  },
-  {
-    id: "2",
-    email: "counselor.jones@healthcare.com",
-    password: "password123",
-    name: "Mark Jones",
-    role: "counselor",
-    specialization: "Cognitive Behavioral Therapy",
-    experience: 5,
-    rating: 4.6,
-    bio: "Licensed counselor focusing on CBT and trauma therapy.",
-    createdAt: new Date("2023-03-20"),
-  },
-];
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for saved user session
-    const savedUser = localStorage.getItem("healthcareUser");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  const fetchUser = async (token: string) => {
+    try {
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await axiosInstance.get<User>("user/");
+      setUser(response.data);
+    } catch (error) {
+      console.error("Token is invalid or expired. Logging out.", error);
+      logout();
     }
-    setIsLoading(false);
-  }, []);
-
-  const login = async (
-    email: string,
-    password: string,
-    role: UserRole
-  ): Promise<boolean> => {
-    setIsLoading(true);
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const foundUser = mockUsers.find(
-      (u) => u.email === email && u.password === password && u.role === role
-    );
-
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem(
-        "healthcareUser",
-        JSON.stringify(userWithoutPassword)
-      );
-      setIsLoading(false);
-      return true;
-    }
-
-    setIsLoading(false);
-    return false;
   };
 
-  const signup = async (
-    userData: Partial<User> & { password: string }
-  ): Promise<boolean> => {
-    setIsLoading(true);
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: userData.email!,
-      name: userData.name!,
-      role: userData.role!,
-      specialization: userData.specialization,
-      experience: userData.experience || 0,
-      rating: 5.0,
-      createdAt: new Date(),
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        await fetchUser(token);
+      }
+      setIsLoading(false);
     };
+    initializeAuth();
+  }, []);
 
-    setUser(newUser);
-    localStorage.setItem("healthcareUser", JSON.stringify(newUser));
-    setIsLoading(false);
-    return true;
+  const login = async (username: string, password: string) => {
+    delete axiosInstance.defaults.headers.common['Authorization'];
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.post<LoginResponse>("login/", { username, password });
+      const { access } = response.data;
+      localStorage.setItem("accessToken", access);
+      await fetchUser(access);
+      setIsLoading(false);
+      return { success: true };
+
+    } catch (error: any) {
+      // --- THIS IS THE NEW, CORRECTED CATCH BLOCK ---
+      console.error("Login API call failed:", error.response?.data); // Log the full error for debugging
+
+      const errorData = error.response?.data;
+      let errorMessage = "An unknown error occurred. Please try again."; // A better default
+
+      if (errorData) {
+        // First, check for the specific 'not verified' or 'invalid password' errors
+        if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors.join(" "); // e.g., "Account not verified..."
+        } 
+        // Then, check for other generic DRF errors
+        else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } 
+        // As a fallback, handle validation errors on specific fields (e.g., username, password)
+        else if (typeof errorData === 'object') {
+          errorMessage = Object.values(errorData).flat().join(" ");
+        }
+      }
+
+      setIsLoading(false);
+      return { success: false, error: errorMessage };
+      // --- END OF THE CORRECTED CATCH BLOCK ---
+    }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("healthcareUser");
+    localStorage.removeItem("accessToken");
+    delete axiosInstance.defaults.headers.common['Authorization'];
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

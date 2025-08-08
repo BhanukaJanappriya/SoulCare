@@ -150,3 +150,40 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
         )
 
         return user
+    
+class DoctorProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DoctorProfile
+        fields = ['full_name', 'nic', 'contact_number', 'specialization', 'availability', 'license_number']  
+
+
+class CounselorProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CounselorProfile
+        fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number']
+
+class PatientProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PatientProfile
+        fields = ['full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues']
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    # This will dynamically serialize the profile based on the user's role
+    profile = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'role', 'is_verified', 'profile']
+
+    def get_profile(self, obj):
+        if obj.role == 'doctor':
+            profile = DoctorProfile.objects.get(user=obj)
+            return DoctorProfileSerializer(profile).data
+        if obj.role == 'counselor':
+            profile = CounselorProfile.objects.get(user=obj)
+            return CounselorProfileSerializer(profile).data
+        if obj.role == 'user': # 'user' is the role for patients in your model
+            profile = PatientProfile.objects.get(user=obj)
+            return PatientProfileSerializer(profile).data
+        return None
