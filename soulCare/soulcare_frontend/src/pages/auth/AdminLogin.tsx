@@ -1,5 +1,3 @@
-// src/pages/LoginPage.tsx
-
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext"; // Make sure to import useAuth
@@ -16,9 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { LogIn, ArrowLeft } from "lucide-react";
+import { LucideShield, ArrowLeft } from "lucide-react";
 
-const LoginPage: React.FC = () => {
+const AdminLogin: React.FC = () => {
   // Get the login function FROM THE CONTEXT
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -42,27 +40,14 @@ const LoginPage: React.FC = () => {
     // Call the login function from the context
     const result = await login(formData.username, formData.password);
 
-    // Check if the login was successful AND we received the user object
-    if (result.success && result.user) {
-      // This is the new role-based navigation logic
-      const role = result.user.role;
-
-      if (role === "doctor" || role === "counselor") {
-        navigate("/dashboard");
-      } else if (role === "user") {
-        // 'user' is the role for patients
-        navigate("/patient/dashboard");
-      } else if (role === "admin") {
-        navigate("/admin/dashboard");
-      } else {
-        // As a fallback, go to a generic landing page if the role is unknown
-        navigate("/");
-      }
+    if (result.success) {
+      // On success, the context handles fetching the user. We just navigate.
+      setTimeout(()=>navigate("/admin"));
     } else {
       // If it fails, the context gives us the error message.
-      setErrors([result.error || "An unknown login error occurred."]);
+      setErrors([result.error || "An unknown error occurred."]);
     }
-
+    
     setIsLoading(false);
   };
 
@@ -73,10 +58,10 @@ const LoginPage: React.FC = () => {
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <LogIn className="w-8 h-8 text-primary" />
+                <LucideShield className="w-8 h-8 text-primary" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+            <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
             <CardDescription>Access your account to continue</CardDescription>
           </CardHeader>
 
@@ -84,26 +69,11 @@ const LoginPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  placeholder="Enter your username"
-                  required
-                />
+                <Input id="username" name="username" value={formData.username} onChange={handleChange} placeholder="Enter your username" required/>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  required
-                />
+                <Input id="password" name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Enter your password" required/>
               </div>
 
               {errors.length > 0 && (
@@ -111,34 +81,28 @@ const LoginPage: React.FC = () => {
                   <AlertTitle>Login Failed!</AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc pl-5 space-y-1">
-                      {errors.map((errorMsg, index) => (
-                        <li key={index}>{errorMsg}</li>
-                      ))}
+                      {errors.map((errorMsg, index) => (<li key={index}>{errorMsg}</li>))}
                     </ul>
                   </AlertDescription>
                 </Alert>
               )}
 
-              <Button
-                type="submit"
-                className="w-full healthcare-button-primary"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full healthcare-button-primary" disabled={isLoading}>
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
-            <div className="text-center mt-4 space-y-2">
+            {/*<div className="text-center mt-4 space-y-2">
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
                 <Link to="/" className="text-primary hover:underline">
                   Sign up
                 </Link>
               </p>
-              {/*<Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary">
+                <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary">
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 Back to home
-              </Link>*/}
-            </div>
+              </Link>
+            </div>*/}
           </CardContent>
         </Card>
       </div>
@@ -146,4 +110,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default AdminLogin;

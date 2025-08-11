@@ -1,9 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer
+from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
+
+from rest_framework import viewsets
+from rest_framework.permissions import IsAdminUser
+from .models import User
+from django.db.models import Count, Q
+
 
 
 class LoginView(APIView):
@@ -92,3 +98,55 @@ class UserDetailView(APIView):
     def get(self, request):
         serializer = UserDetailSerializer(request.user)
         return Response(serializer.data)
+    
+
+class AdminUserViewSet(viewsets.ModelViewSet):
+
+    
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    
+    queryset = User.objects.all().order_by('id')
+
+    
+    serializer_class = AdminUserManagementSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        role = self.request.query_params.get('role')
+        if role:
+            return queryset.filter(role=role)
+        return queryset
+    
+
+class AdminDashboardStatsView(APIView):
+    
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        
+        doctor_count = User.objects.filter(role='doctor').count()
+        counselor_count = User.objects.filter(role='counselor').count()
+        patient_count = User.objects.filter(role='user').count()
+
+        
+        pending_verifications = User.objects.filter(
+            Q(role='doctor') | Q(role='counselor'),
+            is_verified=False
+        ).count()
+
+        
+        recent_users = User.objects.all().order_by('-date_joined')[:5]
+        
+        recent_users_serializer = AdminUserManagementSerializer(recent_users, many=True)
+
+        
+        stats = {
+            'total_doctors': doctor_count,
+            'total_counselors': counselor_count,
+            'total_patients': patient_count,
+            'pending_verifications': pending_verifications,
+            'recent_users': recent_users_serializer.data
+        }
+
+        return Response(stats, status=status.HTTP_200_OK)

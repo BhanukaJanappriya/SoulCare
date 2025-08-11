@@ -187,3 +187,48 @@ class UserDetailSerializer(serializers.ModelSerializer):
             profile = PatientProfile.objects.get(user=obj)
             return PatientProfileSerializer(profile).data
         return None
+    
+    
+
+
+class AdminUserManagementSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Admin UI.
+    Dynamically gets the full_name from the correct related profile based on the user's role.
+    """
+    # Use a SerializerMethodField to implement custom logic for getting the full_name.
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        # Define the fields the admin should be able to see and edit.
+        fields = [
+            'id', 
+            'username', 
+            'email', 
+            'role', 
+            'is_verified',   # This field can be updated by the admin.
+            'is_active',     # This field can also be updated.
+            'full_name',     # This comes from our custom method below.
+            'date_joined'
+        ]
+        # For security, make fields that shouldn't be changed in this view read-only.
+        # The admin will update is_verified and is_active via PATCH requests.
+        read_only_fields = ['id', 'username', 'email', 'role', 'full_name', 'date_joined']
+
+    def get_full_name(self, obj):
+        """
+        This method is called automatically by the SerializerMethodField.
+        It checks the user's role and returns the full_name from the correct profile.
+        `obj` is the User instance being serialized.
+        """
+        # The hasattr() check is a safety measure to prevent errors if a profile doesn't exist.
+        if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            return obj.doctorprofile.full_name
+        if obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            return obj.counselorprofile.full_name
+        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return obj.patientprofile.full_name
+        
+        # As a safe fallback, return the user's username if no specific profile is found.
+        return obj.username
