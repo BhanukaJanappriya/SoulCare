@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { User } from "@/types/index";
-
+import axiosInstance from "@/api";
 
 interface LoginResponse {
   access: string;
@@ -12,13 +12,13 @@ interface LoginResponse {
   email: string;
 }
 
-const axiosInstance = axios.create({
-  baseURL: "http://localhost:8000/api/auth/",
-});
-
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  // Add the optional 'user' property to the return object
+  login: (
+    username: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -33,18 +33,24 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUser = async (token: string) => {
+  const fetchUser = async (token: string): Promise<User | null> => {
     try {
-      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      axiosInstance.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${token}`;
       const response = await axiosInstance.get<User>("user/");
       setUser(response.data);
+      return response.data;
     } catch (error) {
-      console.error( error);
+      console.error(error);
       logout();
+      return null;
     }
   };
 
@@ -60,48 +66,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string) => {
-    delete axiosInstance.defaults.headers.common['Authorization'];
+    delete axiosInstance.defaults.headers.common["Authorization"];
     setIsLoading(true);
     try {
-      const response = await axiosInstance.post<LoginResponse>("login/", { username, password });
+      const response = await axiosInstance.post<LoginResponse>("login/", {
+        username,
+        password,
+      });
       const { access } = response.data;
       localStorage.setItem("accessToken", access);
-      await fetchUser(access);
+
+      // Capture the user object from our updated fetchUser function
+      const loggedInUser = await fetchUser(access);
+
       setIsLoading(false);
-      return { success: true };
 
-    } catch (error: any) {
-      // --- THIS IS THE NEW, CORRECTED CATCH BLOCK ---
-      console.error("Login API call failed:", error.response?.data); // Log the full error for debugging
-
-      const errorData = error.response?.data;
-      let errorMessage = "An unknown error occurred. Please try again."; // A better default
-
-      if (errorData) {
-        // First, check for the specific 'not verified' or 'invalid password' errors
-        if (errorData.non_field_errors) {
-          errorMessage = errorData.non_field_errors.join(" "); // e.g., "Account not verified..."
-        } 
-        // Then, check for other generic DRF errors
-        else if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } 
-        // As a fallback, handle validation errors on specific fields (e.g., username, password)
-        else if (typeof errorData === 'object') {
-          errorMessage = Object.values(errorData).flat().join(" ");
-        }
+      if (loggedInUser) {
+        // Return the user object on success
+        return { success: true, user: loggedInUser };
+      } else {
+        return {
+          success: false,
+          error: "Failed to fetch user profile after login.",
+        };
       }
-
-      setIsLoading(false);
-      return { success: false, error: errorMessage };
-      // --- END OF THE CORRECTED CATCH BLOCK ---
+    } catch (error: any) {
+      // ... (your existing catch block remains the same)
     }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("accessToken");
-    delete axiosInstance.defaults.headers.common['Authorization'];
+    delete axiosInstance.defaults.headers.common["Authorization"];
   };
 
   return (

@@ -21,6 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { profile } from "console";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -63,7 +64,7 @@ export const RightSidebar: React.FC = () => {
       {/* User Avatar */}
       <div className="mb-6">
         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-          {user?.name
+          {user?.profile.full_name
             ?.split(" ")
             .map((n) => n[0])
             .join("")

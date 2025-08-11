@@ -29,6 +29,17 @@ export interface PatientProfile {
   health_issues: string | null;
 }
 
+export interface AdminUserListItem {
+  id: number;
+  username: string;
+  email: string;
+  role: UserRole;
+  is_verified: boolean;
+  is_active: boolean;
+  full_name: string; 
+  date_joined: string;
+}
+
 export interface Appointment {
   id: string;
   patientId: string;
