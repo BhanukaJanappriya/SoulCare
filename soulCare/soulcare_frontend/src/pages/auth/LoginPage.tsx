@@ -1,10 +1,9 @@
-// src/pages/LoginPage.tsx
+
 
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext"; // Make sure to import useAuth
+import { useAuth } from "@/contexts/AuthContext"; 
 
-// Imports for the UI components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { LogIn, ArrowLeft } from "lucide-react";
 
 const LoginPage: React.FC = () => {
-  // Get the login function FROM THE CONTEXT
+  
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -39,27 +38,26 @@ const LoginPage: React.FC = () => {
     setErrors([]);
     setIsLoading(true);
 
-    // Call the login function from the context
+    
     const result = await login(formData.username, formData.password);
 
-    // Check if the login was successful AND we received the user object
     if (result.success && result.user) {
-      // This is the new role-based navigation logic
+      
       const role = result.user.role;
 
       if (role === "doctor" || role === "counselor") {
         navigate("/dashboard");
       } else if (role === "user") {
-        // 'user' is the role for patients
+
         navigate("/patient/dashboard");
       } else if (role === "admin") {
         navigate("/admin/dashboard");
       } else {
-        // As a fallback, go to a generic landing page if the role is unknown
+        
         navigate("/");
       }
     } else {
-      // If it fails, the context gives us the error message.
+      
       setErrors([result.error || "An unknown login error occurred."]);
     }
 
