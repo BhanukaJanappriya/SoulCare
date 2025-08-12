@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/layout/ProtectedRoute"; // gatekeeper
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute"; 
 
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/auth/LoginPage";
@@ -118,7 +118,7 @@ const App = () => (
               }
             />
 
-            {/* --- Routes for ALL Authenticated Users (including Patients) --- */}
+            
             <Route
               path="/video-calls"
               element={
@@ -153,7 +153,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-
+          {/* Patient Routes */}
             <Route
               path="/patient"
               element={

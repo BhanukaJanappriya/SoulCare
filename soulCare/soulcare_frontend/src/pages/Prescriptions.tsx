@@ -190,10 +190,17 @@ export default function Prescriptions() {
   const filteredPrescriptions = prescriptions.filter((prescription) => {
     const patient = mockPatients.find((p) => p.id === prescription.patientId);
     const patientName = patient?.name || "";
-    return (
+
+    const matchesSearch =
       patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+      prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesPatient =
+      !selectedPatient ||
+      selectedPatient === "all" ||
+      prescription.patientId === selectedPatient;
+
+    return matchesSearch && matchesPatient;
   });
 
   const getPatientName = (patientId: string) => {
@@ -474,7 +481,7 @@ export default function Prescriptions() {
                     <SelectValue placeholder="Filter by patient" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Patients</SelectItem>
+                    <SelectItem value="all">All Patients</SelectItem>
                     {mockPatients.map((patient) => (
                       <SelectItem key={patient.id} value={patient.id}>
                         {patient.name}

@@ -1,4 +1,3 @@
-// contexts/AuthContext.tsx
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
@@ -14,7 +13,7 @@ interface LoginResponse {
 
 interface AuthContextType {
   user: User | null;
-  // Add the optional 'user' property to the return object
+  
   login: (
     username: string,
     password: string
@@ -65,6 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     initializeAuth();
   }, []);
 
+  
+
   const login = async (username: string, password: string) => {
     delete axiosInstance.defaults.headers.common["Authorization"];
     setIsLoading(true);
@@ -76,13 +77,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { access } = response.data;
       localStorage.setItem("accessToken", access);
 
-      // Capture the user object from our updated fetchUser function
       const loggedInUser = await fetchUser(access);
 
       setIsLoading(false);
 
       if (loggedInUser) {
-        // Return the user object on success
         return { success: true, user: loggedInUser };
       } else {
         return {
@@ -91,7 +90,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         };
       }
     } catch (error: any) {
-      // ... (your existing catch block remains the same)
+      
+      console.error("Login API call failed:", error.response?.data);
+
+      const errorData = error.response?.data;
+      let errorMessage = "An unknown error occurred. Please try again.";
+
+      if (errorData) {
+        if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors.join(" ");
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === "object") {
+          errorMessage = Object.values(errorData).flat().join(" ");
+        }
+      }
+
+      setIsLoading(false);
+
+      return { success: false, error: errorMessage };
     }
   };
 
