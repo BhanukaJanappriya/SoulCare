@@ -64,21 +64,22 @@ export interface User {
   profile: DoctorProfile | CounselorProfile | PatientProfile | null;
 }
 
+export interface Medication {
+  id: number;
+  name: string;
+  dosage: string;
+  frequency: string;
+  instructions: string;
+}
+
 export interface Prescription {
-  id: string;
-  patientId: string;
-  doctorId: string;
-  appointmentId: string;
-  medications: {
-    name: string;
-    dosage: string;
-    frequency: string;
-    duration: string;
-    instructions: string;
-  }[];
+  id: number;
+  patient: number; // Will be the patient's user ID
+  doctor: number; // Will be the doctor's user ID
   diagnosis: string;
-  notes?: string;
-  createdAt: Date;
+  date_issued: string; // Dates come as strings
+  notes: string;
+  medications: Medication[];
 }
 
 export interface BlogPost {
