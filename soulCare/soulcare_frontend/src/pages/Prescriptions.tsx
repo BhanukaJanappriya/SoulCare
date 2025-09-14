@@ -1,601 +1,152 @@
-import React, { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { RightSidebar } from "@/components/layout/RightSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Plus,
-  Search,
-  Printer,
-  Eye,
-  Edit,
-  Trash2,
-  Pill,
-  Calendar,
-  User,
-  FileText,
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Prescription } from "@/types";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axiosInstance from '@/api';
+import { Prescription } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { PlusCircle, XCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-interface Medication {
-  name: string;
-  dosage: string;
-  frequency: string;
-  duration: string;
-  instructions: string;
-}
+// --- Data Fetching ---
+const fetchPrescriptions = async (): Promise<Prescription[]> => {
+  const response = await axiosInstance.get<Prescription[]>('/prescriptions/');
+  return response.data;
+};
 
-const mockPrescriptions: Prescription[] = [
-  {
-    id: "1",
-    patientId: "1",
-    doctorId: "1",
-    appointmentId: "1",
-    medications: [
-      {
-        name: "Sertraline",
-        dosage: "50mg",
-        frequency: "Once daily",
-        duration: "30 days",
-        instructions: "Take with food in the morning",
-      },
-      {
-        name: "Alprazolam",
-        dosage: "0.25mg",
-        frequency: "As needed",
-        duration: "14 days",
-        instructions: "For anxiety, do not exceed 2 tablets per day",
-      },
-    ],
-    diagnosis: "Generalized Anxiety Disorder",
-    notes:
-      "Patient reports improvement in sleep patterns. Continue current dosage and monitor for side effects.",
-    createdAt: new Date("2024-02-15"),
-  },
-  {
-    id: "2",
-    patientId: "2",
-    doctorId: "1",
-    appointmentId: "2",
-    medications: [
-      {
-        name: "Fluoxetine",
-        dosage: "20mg",
-        frequency: "Once daily",
-        duration: "60 days",
-        instructions: "Take in the morning with breakfast",
-      },
-    ],
-    diagnosis: "Major Depressive Disorder",
-    notes:
-      "Starting treatment with SSRI. Follow up in 4 weeks to assess response.",
-    createdAt: new Date("2024-02-10"),
-  },
-];
+const createPrescription = async (newPrescription: any) => {
+    const { data } = await axiosInstance.post('/prescriptions/', newPrescription);
+    return data;
+};
 
-const mockPatients = [
-  { id: "1", name: "Sarah Johnson", age: 28 },
-  { id: "2", name: "Michael Chen", age: 35 },
-  { id: "3", name: "Emma Wilson", age: 42 },
-];
+// --- Main Component ---
+const Prescriptions: React.FC = () => {
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-export default function Prescriptions() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [prescriptions, setPrescriptions] =
-    useState<Prescription[]>(mockPrescriptions);
-  const [isCreating, setIsCreating] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState("");
-
-  const [newPrescription, setNewPrescription] = useState({
-    patientId: "",
-    diagnosis: "",
-    notes: "",
-    medications: [] as Medication[],
-  });
-
-  const [newMedication, setNewMedication] = useState<Medication>({
-    name: "",
-    dosage: "",
-    frequency: "",
-    duration: "",
-    instructions: "",
-  });
-
-  const handleAddMedication = () => {
-    if (newMedication.name && newMedication.dosage) {
-      setNewPrescription({
-        ...newPrescription,
-        medications: [...newPrescription.medications, newMedication],
-      });
-      setNewMedication({
-        name: "",
-        dosage: "",
-        frequency: "",
-        duration: "",
-        instructions: "",
-      });
-    }
-  };
-
-  const handleRemoveMedication = (index: number) => {
-    setNewPrescription({
-      ...newPrescription,
-      medications: newPrescription.medications.filter((_, i) => i !== index),
+    // Fetching data with react-query
+    const { data: prescriptions = [], isLoading } = useQuery<Prescription[]>({
+        queryKey: ['prescriptions'],
+        queryFn: fetchPrescriptions,
     });
-  };
 
-  const handleCreatePrescription = () => {
-    if (
-      !newPrescription.patientId ||
-      !newPrescription.diagnosis ||
-      newPrescription.medications.length === 0
-    ) {
-      toast({
-        title: "Validation Error",
-        description:
-          "Please fill in all required fields and add at least one medication.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Mutation for creating data
+    const mutation = useMutation({
+        mutationFn: createPrescription,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+            toast({ title: "Success", description: "Prescription created successfully." });
+            setIsDialogOpen(false);
+        },
+        onError: (error: any) => {
+            toast({ variant: "destructive", title: "Error", description: error.response?.data?.detail || "Failed to create prescription." });
+        }
+    });
 
-    const prescription: Prescription = {
-      id: Date.now().toString(),
-      patientId: newPrescription.patientId,
-      doctorId: user?.id || "1",
-      appointmentId: Date.now().toString(),
-      medications: newPrescription.medications,
-      diagnosis: newPrescription.diagnosis,
-      notes: newPrescription.notes,
-      createdAt: new Date(),
+    return (
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">Prescriptions</h1>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button>Create New Prescription</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>New Prescription</DialogTitle>
+                        </DialogHeader>
+                        <PrescriptionForm onSubmit={mutation.mutate} isLoading={mutation.isPending} />
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            {isLoading ? <p>Loading prescriptions...</p> : (
+                <div className="space-y-4">
+                    {prescriptions.map(p => (
+                        <div key={p.id} className="border p-4 rounded-lg">
+                           <h2 className="font-bold">Patient ID: {p.patient} - {p.date_issued}</h2>
+                           <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
+                           <ul className="list-disc pl-5 mt-2">
+                               {p.medications.map(m => <li key={m.id}>{m.name} ({m.dosage}, {m.frequency})</li>)}
+                           </ul>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- Prescription Form Component ---
+const PrescriptionForm: React.FC<{ onSubmit: (data: any) => void; isLoading: boolean }> = ({ onSubmit, isLoading }) => {
+    const [patientId, setPatientId] = useState('');
+    const [diagnosis, setDiagnosis] = useState('');
+    const [notes, setNotes] = useState('');
+    const [medications, setMedications] = useState([{ name: '', dosage: '', frequency: '', instructions: '' }]);
+
+    const handleMedicationChange = (index: number, field: string, value: string) => {
+        const newMeds = [...medications];
+        newMeds[index][field] = value;
+        setMedications(newMeds);
     };
 
-    setPrescriptions([prescription, ...prescriptions]);
-    setNewPrescription({
-      patientId: "",
-      diagnosis: "",
-      notes: "",
-      medications: [],
-    });
-    setIsCreating(false);
+    const addMedication = () => {
+        setMedications([...medications, { name: '', dosage: '', frequency: '', instructions: '' }]);
+    };
 
-    toast({
-      title: "Prescription Created",
-      description:
-        "The prescription has been successfully created and sent to the patient.",
-    });
-  };
+    const removeMedication = (index: number) => {
+        const newMeds = medications.filter((_, i) => i !== index);
+        setMedications(newMeds);
+    };
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSubmit({ patient: patientId, diagnosis, notes, medications });
+    };
 
-  const filteredPrescriptions = prescriptions.filter((prescription) => {
-    const patient = mockPatients.find((p) => p.id === prescription.patientId);
-    const patientName = patient?.name || "";
-
-    const matchesSearch =
-      patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesPatient =
-      !selectedPatient ||
-      selectedPatient === "all" ||
-      prescription.patientId === selectedPatient;
-
-    return matchesSearch && matchesPatient;
-  });
-
-  const getPatientName = (patientId: string) => {
-    const patient = mockPatients.find((p) => p.id === patientId);
-    return patient?.name || "Unknown Patient";
-  };
-
-  return (
-    <div className="min-h-screen bg-page-bg flex">
-      <div className="flex-1 pr-16">
-        <div className="container mx-auto px-6 py-8">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <h1 className="text-3xl font-bold text-text-dark mb-2">
-                Prescriptions
-              </h1>
-              <p className="text-text-muted">
-                Manage patient prescriptions and medications
-              </p>
+                <Label htmlFor="patientId">Patient ID</Label>
+                <Input id="patientId" value={patientId} onChange={(e) => setPatientId(e.target.value)} required />
             </div>
-            <Dialog open={isCreating} onOpenChange={setIsCreating}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Prescription
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Prescription</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="patient">Patient</Label>
-                      <Select
-                        value={newPrescription.patientId}
-                        onValueChange={(value) =>
-                          setNewPrescription({
-                            ...newPrescription,
-                            patientId: value,
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a patient" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mockPatients.map((patient) => (
-                            <SelectItem key={patient.id} value={patient.id}>
-                              {patient.name} (Age: {patient.age})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="diagnosis">Diagnosis</Label>
-                      <Input
-                        id="diagnosis"
-                        value={newPrescription.diagnosis}
-                        onChange={(e) =>
-                          setNewPrescription({
-                            ...newPrescription,
-                            diagnosis: e.target.value,
-                          })
-                        }
-                        placeholder="Enter diagnosis..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Medications Section */}
-                  <div>
-                    <Label className="text-base font-semibold">
-                      Medications
-                    </Label>
-                    <Card className="mt-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          Add Medication
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="med-name">Medication Name</Label>
-                            <Input
-                              id="med-name"
-                              value={newMedication.name}
-                              onChange={(e) =>
-                                setNewMedication({
-                                  ...newMedication,
-                                  name: e.target.value,
-                                })
-                              }
-                              placeholder="e.g., Sertraline"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="dosage">Dosage</Label>
-                            <Input
-                              id="dosage"
-                              value={newMedication.dosage}
-                              onChange={(e) =>
-                                setNewMedication({
-                                  ...newMedication,
-                                  dosage: e.target.value,
-                                })
-                              }
-                              placeholder="e.g., 50mg"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="frequency">Frequency</Label>
-                            <Select
-                              value={newMedication.frequency}
-                              onValueChange={(value) =>
-                                setNewMedication({
-                                  ...newMedication,
-                                  frequency: value,
-                                })
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select frequency" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Once daily">
-                                  Once daily
-                                </SelectItem>
-                                <SelectItem value="Twice daily">
-                                  Twice daily
-                                </SelectItem>
-                                <SelectItem value="Three times daily">
-                                  Three times daily
-                                </SelectItem>
-                                <SelectItem value="As needed">
-                                  As needed
-                                </SelectItem>
-                                <SelectItem value="Every other day">
-                                  Every other day
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="duration">Duration</Label>
-                            <Input
-                              id="duration"
-                              value={newMedication.duration}
-                              onChange={(e) =>
-                                setNewMedication({
-                                  ...newMedication,
-                                  duration: e.target.value,
-                                })
-                              }
-                              placeholder="e.g., 30 days"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="instructions">Instructions</Label>
-                          <Textarea
-                            id="instructions"
-                            value={newMedication.instructions}
-                            onChange={(e) =>
-                              setNewMedication({
-                                ...newMedication,
-                                instructions: e.target.value,
-                              })
-                            }
-                            placeholder="Special instructions for taking this medication..."
-                            rows={2}
-                          />
-                        </div>
-                        <Button onClick={handleAddMedication}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Medication
-                        </Button>
-                      </CardContent>
-                    </Card>
-
-                    {/* Added Medications List */}
-                    {newPrescription.medications.length > 0 && (
-                      <Card className="mt-4">
-                        <CardHeader>
-                          <CardTitle className="text-lg">
-                            Added Medications
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            {newPrescription.medications.map((med, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                              >
-                                <div className="flex-1">
-                                  <div className="font-medium">
-                                    {med.name} - {med.dosage}
-                                  </div>
-                                  <div className="text-sm text-text-muted">
-                                    {med.frequency} for {med.duration}
-                                  </div>
-                                  {med.instructions && (
-                                    <div className="text-sm text-text-muted italic">
-                                      {med.instructions}
-                                    </div>
-                                  )}
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveMedication(index)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={newPrescription.notes}
-                      onChange={(e) =>
-                        setNewPrescription({
-                          ...newPrescription,
-                          notes: e.target.value,
-                        })
-                      }
-                      placeholder="Additional notes or instructions..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsCreating(false)}
-                    >
-                      Cancel
+            <div>
+                <Label htmlFor="diagnosis">Diagnosis</Label>
+                <Textarea id="diagnosis" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} required />
+            </div>
+            
+            <h3 className="font-semibold pt-4">Medications</h3>
+            {medications.map((med, index) => (
+                <div key={index} className="border p-3 rounded-md space-y-2 relative">
+                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeMedication(index)}>
+                        <XCircle className="h-4 w-4 text-red-500" />
                     </Button>
-                    <Button onClick={handleCreatePrescription}>
-                      Create Prescription
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Search and Filters */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-4 h-4" />
-                  <Input
-                    placeholder="Search prescriptions by patient name or diagnosis..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select
-                  value={selectedPatient}
-                  onValueChange={setSelectedPatient}
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by patient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Patients</SelectItem>
-                    {mockPatients.map((patient) => (
-                      <SelectItem key={patient.id} value={patient.id}>
-                        {patient.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Prescriptions List */}
-          <div className="space-y-6">
-            {filteredPrescriptions.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Pill className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                  <p className="text-text-muted">No prescriptions found.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredPrescriptions.map((prescription) => (
-                <Card
-                  key={prescription.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CardTitle className="text-xl">
-                            Prescription #{prescription.id}
-                          </CardTitle>
-                          <Badge variant="outline">
-                            {prescription.medications.length} medication
-                            {prescription.medications.length !== 1 ? "s" : ""}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm text-text-muted">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            <span>
-                              {getPatientName(prescription.patientId)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            <span>{prescription.diagnosis}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>
-                              {prescription.createdAt.toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Printer className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <Input placeholder="Medication Name" value={med.name} onChange={e => handleMedicationChange(index, 'name', e.target.value)} required />
+                        <Input placeholder="Dosage (e.g., 500mg)" value={med.dosage} onChange={e => handleMedicationChange(index, 'dosage', e.target.value)} required />
+                        <Input placeholder="Frequency (e.g., Twice a day)" value={med.frequency} onChange={e => handleMedicationChange(index, 'frequency', e.target.value)} required />
+                        <Input placeholder="Instructions" value={med.instructions} onChange={e => handleMedicationChange(index, 'instructions', e.target.value)} />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="font-semibold">Medications:</Label>
-                        <div className="mt-2 space-y-2">
-                          {prescription.medications.map((med, index) => (
-                            <div
-                              key={index}
-                              className="p-3 bg-gray-50 rounded-lg"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="font-medium">{med.name}</div>
-                                <Badge variant="outline">{med.dosage}</Badge>
-                              </div>
-                              <div className="text-sm text-text-muted mt-1">
-                                {med.frequency} for {med.duration}
-                              </div>
-                              {med.instructions && (
-                                <div className="text-sm text-text-muted italic mt-1">
-                                  Instructions: {med.instructions}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                </div>
+            ))}
 
-                      {prescription.notes && (
-                        <div>
-                          <Label className="font-semibold">Notes:</Label>
-                          <p className="text-sm text-text-muted mt-1">
-                            {prescription.notes}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-      <RightSidebar />
-    </div>
-  );
-}
+            <Button type="button" variant="outline" onClick={addMedication} className="w-full">
+                <PlusCircle className="w-4 h-4 mr-2" /> Add Medication
+            </Button>
+            
+            <div className="pt-4">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            
+            <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Saving...' : 'Save Prescription'}
+            </Button>
+        </form>
+    );
+};
+
+export default Prescriptions;
