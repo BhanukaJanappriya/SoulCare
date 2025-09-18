@@ -232,3 +232,22 @@ class AdminUserManagementSerializer(serializers.ModelSerializer):
         
         # As a safe fallback, return the user's username if no specific profile is found.
         return obj.username
+    
+    
+
+class ProviderListSerializer(serializers.ModelSerializer):
+    """
+    A serializer to list doctors and counselors with their profiles for patients to view.
+    """
+    profile = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'role', 'profile']
+
+    def get_profile(self, obj):
+        if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            return DoctorProfileSerializer(obj.doctorprofile).data
+        if obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            return CounselorProfileSerializer(obj.counselorprofile).data
+        return None

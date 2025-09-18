@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer
+from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer,ProviderListSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 
@@ -150,3 +150,17 @@ class AdminDashboardStatsView(APIView):
         }
 
         return Response(stats, status=status.HTTP_200_OK)
+    
+
+class ProviderListView(generics.ListAPIView):
+    """
+    Provides a list of all verified doctors and counselors for patients to view.
+    """
+    serializer_class = ProviderListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return User.objects.filter(
+            Q(role='doctor') | Q(role='counselor'),
+            is_verified=True
+        ).select_related('doctorprofile', 'counselorprofile')
