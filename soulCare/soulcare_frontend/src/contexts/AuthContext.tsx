@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import { User } from "@/types/index";
-import axiosInstance from "@/api";
+import {axiosInstance,api} from "@/api";
 
 interface LoginResponse {
   access: string;

@@ -1,5 +1,24 @@
 export type UserRole = 'user'|'doctor' | 'counselor'|'admin';
 
+export interface Provider {
+  id: number;
+  username: string;
+  role: 'doctor' | 'counselor';
+  profile: DoctorProfile | CounselorProfile;
+}
+
+export interface Appointment {
+  id: number;
+  patient: Provider;
+  provider: Provider;
+  date: string;
+  time: string;
+  status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
+  notes: string;
+  created_at: string;
+}
+
+
 // User roles
 export interface DoctorProfile {
   full_name: string;
@@ -40,7 +59,7 @@ export interface AdminUserListItem {
   date_joined: string;
 }
 
-export interface Appointment {
+/*export interface Appointment {
   id: string;
   patientId: string;
   providerId: string;
@@ -52,7 +71,7 @@ export interface Appointment {
   notes?: string;
   prescription?: Prescription;
   createdAt: Date;
-}
+}*/
 
 export interface User {
   id: number; // Corrected to number

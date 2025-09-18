@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axiosInstance from "@/api"; 
+import {axiosInstance} from "@/api"; 
 import { UserRole, AdminUserListItem } from "@/types"; 
 
 

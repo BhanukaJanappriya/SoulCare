@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import axiosInstance from '@/api';
+import {axiosInstance} from '@/api';
 import StatCard from '@/components/admin/StatCard';
 import { AdminUserListItem } from '@/types';
 import {
