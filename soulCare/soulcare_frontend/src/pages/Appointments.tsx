@@ -1,169 +1,121 @@
-import React, { useState } from "react";
-import { useQuery } from '@tanstack/react-query';
-import {axiosInstance,api} from '@/api';
+import React from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/api';
 import { Appointment } from '@/types';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { RightSidebar } from "@/components/layout/RightSidebar";
-import {
-  Calendar,
-  Clock,
-  Plus,
-  Search,
-  Filter,
-  Video,
-  User,
-  MoreHorizontal,
-} from "lucide-react";
+import { Calendar, Clock, User, Check, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-// --- Data Fetching Function ---
 const fetchProviderAppointments = async (): Promise<Appointment[]> => {
     const { data } = await api.get<Appointment[]>('/appointments/');
     return data;
 };
 
+const updateAppointmentStatus = async ({ id, status }: { id: number, status: string }) => {
+    const { data } = await api.post(`/appointments/${id}/update-status/`, { status });
+    return data;
+};
+
 const Appointments: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedView, setSelectedView] = useState<"all" | "today" | "upcoming" | "past">("all");
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
 
-  // --- Fetch Real Data with React Query ---
-  const { data: appointments = [], isLoading } = useQuery<Appointment[]>({
-      queryKey: ['providerAppointments'],
-      queryFn: fetchProviderAppointments,
-  });
+    const { data: appointments = [], isLoading } = useQuery<Appointment[]>({
+        queryKey: ['providerAppointments'],
+        queryFn: fetchProviderAppointments,
+    });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "scheduled": return "bg-primary/20 text-primary";
-      case "completed": return "bg-green-600/20 text-green-600";
-      case "cancelled": return "bg-destructive/20 text-destructive";
-      case "pending": return "bg-yellow-500/20 text-yellow-500";
-      default: return "bg-muted text-muted-foreground";
-    }
-  };
-  
-  // Filtering logic remains the same but now works on real data
-  const filteredAppointments = appointments.filter((appointment) => {
-    const patientName = appointment.patient.profile?.full_name || '';
-    const matchesSearch = patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (appointment.notes && appointment.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+    const mutation = useMutation({
+        mutationFn: updateAppointmentStatus,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['providerAppointments'] });
+            toast({ title: "Success", description: "Appointment status updated." });
+        },
+        onError: (error: any) => {
+            toast({ variant: "destructive", title: "Error", description: error.response?.data?.error || "Could not update status." });
+        }
+    });
 
-    // Note: You might want to replace hardcoded dates with a library like date-fns for real-world use
-    if (selectedView === "today") {
-      const today = new Date().toISOString().split('T')[0];
-      return matchesSearch && appointment.date === today;
-    } else if (selectedView === "upcoming") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return matchesSearch && new Date(appointment.date) >= today;
-    } else if (selectedView === "past") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return matchesSearch && new Date(appointment.date) < today;
-    }
-    return matchesSearch;
-  });
+    const handleUpdateStatus = (id: number, status: 'scheduled' | 'cancelled') => {
+        mutation.mutate({ id, status });
+    };
 
-  return (
-    <div className="min-h-screen healthcare-gradient pr-16">
-      <RightSidebar />
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case "scheduled": return "bg-blue-100 text-blue-800";
+            case "completed": return "bg-green-100 text-green-800";
+            case "cancelled": return "bg-red-100 text-red-800";
+            case "pending": return "bg-yellow-100 text-yellow-800 animate-pulse";
+            default: return "bg-gray-100 text-gray-800";
+        }
+    };
 
-      <div className="p-6 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Appointments</h1>
-            <p className="text-muted-foreground">Manage your appointment schedule</p>
-          </div>
-          <Button className="healthcare-button-primary">
-            <Plus className="w-4 h-4 mr-2" />
-            Schedule Appointment
-          </Button>
-        </div>
+    const pendingAppointments = appointments.filter(a => a.status === 'pending');
+    const otherAppointments = appointments.filter(a => a.status !== 'pending');
 
-        {/* Filters and Search */}
-        <Card className="healthcare-card mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex rounded-lg bg-muted p-1">
-                 {(["all", "today", "upcoming", "past"] as const).map((view) => (
-                  <button key={view} onClick={() => setSelectedView(view)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      selectedView === view ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-                    }`}>
-                    {view.charAt(0).toUpperCase() + view.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by patient name or notes..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button variant="outline"><Filter className="w-4 h-4 mr-2" /> More Filters</Button>
+    return (
+        <div className="min-h-screen healthcare-gradient pr-16">
+            <RightSidebar />
+            <div className="p-6 max-w-7xl mx-auto">
+                <h1 className="text-3xl font-bold text-foreground mb-6">Appointments</h1>
+                
+                {/* Pending Appointments Section */}
+                <div className="mb-8">
+                    <h2 className="text-2xl font-semibold text-foreground mb-4">Pending Requests</h2>
+                    {isLoading ? <p>Loading...</p> : pendingAppointments.length > 0 ? (
+                        <div className="space-y-4">
+                            {pendingAppointments.map(app => (
+                                <Card key={app.id} className="bg-yellow-50 border-yellow-200">
+                                    <CardContent className="p-4 flex items-center justify-between">
+                                        <div>
+                                            <p className="font-bold">{app.patient.profile.full_name}</p>
+                                            <p className="text-sm text-muted-foreground">{app.date} at {app.time}</p>
+                                            <p className="text-sm mt-1">Note: {app.notes}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button size="sm" className="bg-green-500 hover:bg-green-600" onClick={() => handleUpdateStatus(app.id, 'scheduled')} disabled={mutation.isPending}>
+                                                <Check className="w-4 h-4 mr-2"/>Confirm
+                                            </Button>
+                                            <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(app.id, 'cancelled')} disabled={mutation.isPending}>
+                                                <X className="w-4 h-4 mr-2"/>Decline
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : <p className="text-muted-foreground">No pending appointment requests.</p>}
+                </div>
+
+                {/* All Other Appointments */}
+                <div>
+                    <h2 className="text-2xl font-semibold text-foreground mb-4">Scheduled & Past Appointments</h2>
+                    <div className="space-y-4">
+                         {otherAppointments.map((appointment) => (
+                          <Card key={appointment.id}>
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <User className="w-8 h-8 text-primary" />
+                                    <div>
+                                        <p className="font-bold">{appointment.patient.profile?.full_name}</p>
+                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                            <p className="flex items-center gap-1"><Calendar className="w-4 h-4"/>{appointment.date}</p>
+                                            <p className="flex items-center gap-1"><Clock className="w-4 h-4"/>{appointment.time}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Badge className={getStatusColor(appointment.status)}>{appointment.status}</Badge>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Appointments List */}
-        <div className="space-y-4">
-          {isLoading ? (
-            <p>Loading appointments...</p>
-          ) : filteredAppointments.length > 0 ? (
-            filteredAppointments.map((appointment) => (
-              <Card key={appointment.id} className="healthcare-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-4 mb-2">
-                           {/* CORRECTED: Display real patient name */}
-                          <h3 className="text-lg font-semibold text-foreground">
-                            {appointment.patient.profile?.full_name || appointment.patient.username}
-                          </h3>
-                          <Badge className={getStatusColor(appointment.status)}>
-                            {appointment.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                          <div className="flex items-center"><Calendar className="w-4 h-4 mr-1" />{appointment.date}</div>
-                          <div className="flex items-center"><Clock className="w-4 h-4 mr-1" />{appointment.time}</div>
-                        </div>
-                        {appointment.notes && <p className="text-sm text-muted-foreground mt-2">{appointment.notes}</p>}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {/* TODO: Add real functionality to these buttons */}
-                      <Button size="sm" variant="outline">Complete</Button>
-                      <Button size="sm" variant="destructive">Cancel</Button>
-                      <Button variant="ghost" size="sm"><MoreHorizontal className="w-4 h-4" /></Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-             <Card className="healthcare-card"><CardContent className="text-center py-12"><p>No appointments found.</p></CardContent></Card>
-          )}
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Appointments;
