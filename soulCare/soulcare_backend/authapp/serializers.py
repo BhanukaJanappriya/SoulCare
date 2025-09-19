@@ -154,13 +154,13 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
 class DoctorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorProfile
-        fields = ['full_name', 'nic', 'contact_number', 'specialization', 'availability', 'license_number','rating']  
+        fields = ['full_name', 'nic', 'contact_number', 'specialization', 'availability', 'license_number','rating','profile_picture_url', 'bio']  
 
 
 class CounselorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CounselorProfile
-        fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number','rating']
+        fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number','rating','profile_picture_url', 'bio']
 
 class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -250,4 +250,6 @@ class ProviderListSerializer(serializers.ModelSerializer):
             return DoctorProfileSerializer(obj.doctorprofile).data
         if obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
             return CounselorProfileSerializer(obj.counselorprofile).data
+        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return PatientProfileSerializer(obj.patientprofile).data
         return None
