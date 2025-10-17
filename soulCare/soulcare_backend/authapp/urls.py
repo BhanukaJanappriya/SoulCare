@@ -1,9 +1,10 @@
 from django.urls import path,include
-from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView
+from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView,ProviderScheduleViewSet,ProviderAvailabilityView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register('manage-users', AdminUserViewSet, basename='admin-manage-users')
+router.register('schedules', ProviderScheduleViewSet,basename='provider-schedule')
 
 
 urlpatterns = [
@@ -15,4 +16,6 @@ urlpatterns = [
     path('admin/', include(router.urls)),
     path('admin/dashboard-stats/', AdminDashboardStatsView.as_view(), name='admin-dashboard-stats'),
     path('providers/', ProviderListView.as_view(), name='provider-list'),
+    
+    path('providers/<int:provider_id>/availability/', ProviderAvailabilityView.as_view(), name='provider-availability'),
 ]
