@@ -43,6 +43,7 @@ import MeditationPage from "./pages/Patient/MeditationPage";
 import PatientJournal from "./pages/Patient/PatientJournal";
 import PatientBlogs from "./pages/Patient/PatientBlogs";
 import BookAppointmentPage from "./pages/Patient/BookAppointmentPage";
+import ProviderDetailPage from "./pages/Patient/ProviderDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -169,6 +170,7 @@ const App = () => (
               <Route path="habits" element={<PatientHabits />} />
               <Route path="appointments" element={<PatientAppointments />} />
               <Route path="book-appointment" element={<BookAppointmentPage />} />
+              <Route path="providers/:providerId" element={<ProviderDetailPage />} />
               <Route path="blogs" element={<PatientBlogs />} />
               <Route path="journal" element={<PatientJournal />} />
               <Route path="meditation" element={<MeditationPage />} />

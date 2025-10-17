@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User,PatientProfile,DoctorProfile,CounselorProfile
+from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderSchedule
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -253,3 +253,11 @@ class ProviderListSerializer(serializers.ModelSerializer):
         if obj.role == 'user' and hasattr(obj, 'patientprofile'):
             return PatientProfileSerializer(obj.patientprofile).data
         return None
+    
+
+# Provider Schedule serializer
+
+class ProviderScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProviderSchedule
+        fields = ['id', 'day_of_week', 'start_time', 'end_time']
