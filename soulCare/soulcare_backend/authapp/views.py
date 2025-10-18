@@ -242,3 +242,14 @@ class ProviderAvailabilityView(APIView):
         return Response(available_slots, status=status.HTTP_200_OK)
     
     
+class ProviderDetailView(generics.RetrieveAPIView):
+    """
+    Provides the detailed public profile for a single doctor or counselor.
+    """
+    serializer_class = ProviderListSerializer # We can reuse our detailed serializer
+    permission_classes = [IsAuthenticated]
+    queryset = User.objects.filter(
+        Q(role='doctor') | Q(role='counselor'),
+        is_verified=True
+    )
+    lookup_field = 'pk' # This tells the view to find the user by their primary key (ID)

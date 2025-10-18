@@ -17,15 +17,23 @@ export const api = axios.create({
 });
 
 // Add the interceptor to the general instance to handle auth tokens automatically
-api.interceptors.request.use(
-  (config) => {
+const addAuthToken = (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+        config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-  },
-  (error) => {
+};
+
+const handleRequestError = (error) => {
     return Promise.reject(error);
-  }
-);
+};
+
+// --- THIS IS THE FIX ---
+// Apply the interceptor to BOTH instances
+
+// 1. Apply to the general 'api' instance
+api.interceptors.request.use(addAuthToken, handleRequestError);
+
+// 2. Apply to the 'authApi' instance as well
+axiosInstance.interceptors.request.use(addAuthToken, handleRequestError);
