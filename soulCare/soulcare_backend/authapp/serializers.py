@@ -261,3 +261,12 @@ class ProviderScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProviderSchedule
         fields = ['id', 'day_of_week', 'start_time', 'end_time']
+        
+class PatientForDoctorSerializer(serializers.ModelSerializer):
+    # Get full_name from the related PatientProfile
+    full_name = serializers.CharField(source='patientprofile.full_name', read_only=True, default='')
+    nic = serializers.CharField(source='patientprofile.nic', read_only=True, default='')
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'full_name','nic'] # Fields needed for the dropdown
