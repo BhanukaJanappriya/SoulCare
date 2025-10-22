@@ -8,45 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Eye,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Bold,
-  Italic,
-  Underline,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  List,
-  Image,
-  Link,
-} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Plus, Edit, Trash2, Eye, Clock, CheckCircle, XCircle, AlertCircle, } from "lucide-react";
+
 import { useToast } from "@/hooks/use-toast";
 import { BlogPost } from "@/types";
-import { fetchBlogPosts, createBlogPost, deleteBlogPost } from "@/pages/api/blogApi";
+import { fetchBlogPosts, createBlogPost, deleteBlogPost, updateBlogPost } from "@/pages/api/blogApi";
+import RichTextEditor from "@/components/common/RichTextEditor";
 
 
-// Helper functions for UI (same as your original logic)
+// --- UI Helper Functions (Ensure these are in your file) ---
 const getStatusColor = (status: BlogPost["status"]) => {
   switch (status) {
     case "published": return "bg-green-500 text-white";
@@ -66,23 +38,36 @@ const getStatusIcon = (status: BlogPost["status"]) => {
     default: return <AlertCircle className="w-4 h-4" />;
   }
 };
+// ----------------------------------------------------------------------
 
+
+// Initial State for a new/editing post
+const initialPostState = {
+    title: "",
+    content: "",
+    excerpt: "",
+    tags: "",
+    status: "draft" as BlogPost["status"],
+};
 
 export default function Blogs() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
 
-  const [newPost, setNewPost] = useState({
-    title: "",
-    content: "",
-    excerpt: "",
-    tags: "",
-    status: "draft" as BlogPost["status"],
-  });
+  // Controls the visibility of the Create/Edit Dialog
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // Tracks if the dialog is in Edit mode (true) or Create mode (false)
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [activeTab, setActiveTab] = useState("all");
+  const [currentPost, setCurrentPost] = useState(initialPostState);
+  const [currentPostId, setCurrentPostId] = useState<string | null>(null);
+
+  // *** REMOVED: Deleted the duplicate 'newPost' state ***
+  // We use currentPost for both new and existing posts now.
+
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -107,49 +92,69 @@ export default function Blogs() {
   }, [fetchData]);
 
 
-  // ************************************************************
-  // FIX FOR NETWORK TAB ISSUE: Logic for handling POST request
-  // This function is now called by the form's onSubmit handler.
-  // ************************************************************
-  const handleCreatePost = async () => {
-    // You can add a check here to ensure the user is allowed to create (e.g., role check)
-    if (!user || (user.role !== 'doctor' && user.role !== 'counselor')) {
-        toast({
+  // --- CREATE / UPDATE Handlers ---
+
+  const openCreateDialog = () => {
+    setCurrentPost(initialPostState);
+    setCurrentPostId(null);
+    setIsEditing(false);
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (post: BlogPost) => {
+    // Map the fetched BlogPost object to the form's state shape
+    setCurrentPost({
+        title: post.title,
+        content: post.content,
+        excerpt: post.excerpt || "", // Ensure excerpt is not undefined
+        // The API returns an array, so convert it to a comma-separated string
+        tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
+        status: post.status,
+    });
+    setCurrentPostId(post.id);
+    setIsEditing(true);
+    setIsDialogOpen(true);
+  };
+
+
+  const handleSavePost = async () => {
+    // 1. Basic validation
+    if (!currentPost.title || !currentPost.content) {
+        toast({ title: "Validation Error", description: "Title and Content are required.", variant: "destructive" });
+        return;
+    }
+
+    // Role-based check on saving
+    if (!user || (user.role !== 'doctor' && user.role !== 'counselor' && user.role !== 'user')) {
+         toast({
             title: "Permission Denied",
-            description: "Only doctors and counselors can create posts.",
+            description: "Your role cannot create/edit blog posts.",
             variant: "destructive",
         });
         return;
     }
 
     try {
-        const createdPost = await createBlogPost({
-            title: newPost.title,
-            content: newPost.content,
-            excerpt: newPost.excerpt,
-            tags: newPost.tags,
-            status: newPost.status,
-        });
+        if (isEditing && currentPostId) {
+            // --- UPDATE LOGIC ---
+            await updateBlogPost(currentPostId, currentPost);
+            toast({ title: "Post Updated", description: "Your blog post has been successfully updated." });
+        } else {
+            // --- CREATE LOGIC ---
+            await createBlogPost(currentPost);
+            toast({ title: "Post Created", description: `Your blog post has been saved as ${currentPost.status}.` });
+        }
 
-        // Re-fetch the list to show the new post
-        await fetchData();
-
-        // Reset form state and close dialog
-        setNewPost({
-            title: "", content: "", excerpt: "", tags: "", status: "draft",
-        });
-        setIsCreating(false);
-
-        toast({
-            title: "Blog Post Created",
-            description: `Your blog post has been saved as ${createdPost.status}.`,
-        });
+        // Success cleanup
+        await fetchData(); // Re-fetch the list
+        setIsDialogOpen(false);
+        setCurrentPost(initialPostState); // Reset form
 
     } catch (error) {
-        console.error("Error creating blog post (Check Network for 4xx/5xx):", error);
+        console.error("Error saving blog post (Check Network for 4xx/5xx):", error);
         toast({
             title: "Error",
-            description: "Failed to create blog post. Check console and ensure you are logged in.",
+            description: "Failed to save blog post. Check console and ensure you have permission.",
             variant: "destructive",
         });
     }
@@ -158,20 +163,11 @@ export default function Blogs() {
   const handleDeletePost = async (id: string) => {
     try {
         await deleteBlogPost(id);
-
         setBlogPosts(blogPosts.filter((post) => post.id !== id));
-
-        toast({
-            title: "Blog Post Deleted",
-            description: "The blog post has been successfully deleted.",
-        });
+        toast({ title: "Blog Post Deleted", description: "The blog post has been successfully deleted." });
     } catch (error) {
         console.error("Error deleting blog post:", error);
-        toast({
-            title: "Error",
-            description: "Failed to delete blog post. You might not have permission.",
-            variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to delete blog post. You might not have permission.", variant: "destructive" });
     }
   };
 
@@ -183,32 +179,32 @@ export default function Blogs() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-text-dark mb-2">
-                Blog Management
-              </h1>
-              <p className="text-text-muted">
-                Create and manage your professional blog posts
-              </p>
+              <h1 className="text-3xl font-bold text-text-dark mb-2">Blog Management</h1>
+              <p className="text-text-muted">Create and manage your professional blog posts</p>
             </div>
-            <Dialog open={isCreating} onOpenChange={setIsCreating}>
+
+            {/* Create/Edit Dialog */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Blog Post
-                </Button>
+                {/* User role check for button visibility */}
+                {(user?.role === 'doctor' || user?.role === 'counselor' || user?.role === 'user') && (
+                    <Button onClick={openCreateDialog}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Blog Post
+                    </Button>
+                )}
               </DialogTrigger>
+
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Create New Blog Post</DialogTitle>
+                  <DialogTitle>{isEditing ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
                 </DialogHeader>
 
-                {/* ********************************************************* */}
                 {/* FIX: Form and onSubmit handler to prevent network failure */}
-                {/* ********************************************************* */}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    handleCreatePost();
+                    handleSavePost();
                   }}
                   className="space-y-6"
                 >
@@ -217,9 +213,9 @@ export default function Blogs() {
                     <Label htmlFor="title">Title</Label>
                     <Input
                       id="title"
-                      value={newPost.title}
+                      value={currentPost.title}
                       onChange={(e) =>
-                        setNewPost({ ...newPost, title: e.target.value })
+                        setCurrentPost({ ...currentPost, title: e.target.value })
                       }
                       placeholder="Enter blog post title..."
                       required
@@ -230,33 +226,24 @@ export default function Blogs() {
                     <Label htmlFor="excerpt">Excerpt</Label>
                     <Textarea
                       id="excerpt"
-                      value={newPost.excerpt}
+                      value={currentPost.excerpt}
                       onChange={(e) =>
-                        setNewPost({ ...newPost, excerpt: e.target.value })
+                        setCurrentPost({ ...currentPost, excerpt: e.target.value })
                       }
                       placeholder="Brief description of your blog post..."
                       rows={2}
                     />
                   </div>
 
-                  {/* Rich Text Editor Toolbar Placeholder */}
+                  {/* Rich Text Editor Component */}
                   <div>
                     <Label>Content</Label>
-                    <div className="border rounded-lg">
-                      <div className="flex items-center gap-2 p-3 border-b bg-gray-50">
-                        {/* ... Your Rich Text Buttons ... */}
-                      </div>
-                      <Textarea
-                        value={newPost.content}
-                        onChange={(e) =>
-                          setNewPost({ ...newPost, content: e.target.value })
-                        }
+                    <RichTextEditor
+                        value={currentPost.content}
+                        onChange={(content) => setCurrentPost({ ...currentPost, content })}
                         placeholder="Start writing your blog post content..."
                         rows={12}
-                        className="border-0 resize-none focus:ring-0"
-                        required
-                      />
-                    </div>
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -264,9 +251,9 @@ export default function Blogs() {
                       <Label htmlFor="tags">Tags (comma separated)</Label>
                       <Input
                         id="tags"
-                        value={newPost.tags}
+                        value={currentPost.tags}
                         onChange={(e) =>
-                          setNewPost({ ...newPost, tags: e.target.value })
+                          setCurrentPost({ ...currentPost, tags: e.target.value })
                         }
                         placeholder="anxiety, mindfulness, therapy..."
                       />
@@ -274,9 +261,9 @@ export default function Blogs() {
                     <div>
                       <Label htmlFor="status">Status</Label>
                       <Select
-                        value={newPost.status}
+                        value={currentPost.status}
                         onValueChange={(value: BlogPost["status"]) =>
-                          setNewPost({ ...newPost, status: value })
+                          setCurrentPost({ ...currentPost, status: value })
                         }
                       >
                         <SelectTrigger>
@@ -294,16 +281,16 @@ export default function Blogs() {
                   </div>
 
                   <div className="flex justify-end gap-3">
-                    {/* Button type="button" prevents it from submitting the form */}
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setIsCreating(false)}
+                      onClick={() => setIsDialogOpen(false)}
                     >
                       Cancel
                     </Button>
-                    {/* Button type="submit" calls the form's onSubmit handler */}
-                    <Button type="submit">Create Post</Button>
+                    <Button type="submit">
+                        {isEditing ? "Save Changes" : "Create Post"}
+                    </Button>
                   </div>
                 </form>
               </DialogContent>
@@ -323,9 +310,9 @@ export default function Blogs() {
             <TabsContent value={activeTab}>
               <div className="grid gap-6">
                 {isLoading ? (
-                    <Card><CardContent className="text-center py-12">Loading posts...</CardContent></Card>
+                   <Card className="col-span-full"><CardContent className="text-center py-12">Loading posts...</CardContent></Card>
                 ) : blogPosts.length === 0 ? (
-                  <Card>
+                  <Card className="col-span-full">
                     <CardContent className="text-center py-12">
                       <p className="text-text-muted">
                         No blog posts found in this category.
@@ -334,48 +321,45 @@ export default function Blogs() {
                   </Card>
                 ) : (
                   blogPosts.map((post) => (
-                    <Card
-                      key={post.id}
-                      className="hover:shadow-md transition-shadow"
-                    >
+                    <Card key={post.id} className="hover:shadow-md transition-shadow">
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
-                              <CardTitle className="text-xl">
-                                {post.title}
-                              </CardTitle>
+                              <CardTitle className="text-xl">{post.title}</CardTitle>
                               <Badge className={getStatusColor(post.status)}>
                                 {getStatusIcon(post.status)}
-                                <span className="ml-1 capitalize">
-                                  {post.status}
-                                </span>
+                                <span className="ml-1 capitalize">{post.status}</span>
                               </Badge>
                             </div>
                             <p className="text-text-muted">{post.excerpt}</p>
                             <div className="flex items-center gap-4 mt-3 text-sm text-text-muted">
-                              <span>
-                                Created: {new Date(post.createdAt).toLocaleDateString()}
-                              </span>
-                              {post.publishedAt && (
-                                <span>
-                                  Published:{" "}
-                                  {new Date(post.publishedAt).toLocaleDateString()}
-                                </span>
-                              )}
+                                <span>Created: {new Date(post.createdAt).toLocaleDateString()}</span>
+                                {post.publishedAt && (
+                                <span>Published: {new Date(post.publishedAt).toLocaleDateString()}</span>
+                                )}
                             </div>
                           </div>
+
+                          {/* Action Buttons for EDIT/DELETE */}
                           <div className="flex gap-2">
-                            {/* Action Buttons */}
                             <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="sm"><Edit className="w-4 h-4" /></Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeletePost(post.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+
+                            {/* Check if user is the author or Admin to show edit/delete */}
+                            {(user?.id.toString() === post.authorId || user?.role === 'admin') && (
+                                <>
+                                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(post)}>
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeletePost(post.id)}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </>
+                            )}
                           </div>
                         </div>
                       </CardHeader>
@@ -388,6 +372,7 @@ export default function Blogs() {
                           )) : null}
                         </div>
                         <p className="text-text-muted text-sm line-clamp-3">
+                            {/* Display the rich content preview (e.g., stripping HTML if you used a real RTE) */}
                           {post.content.substring(0, 200)}...
                         </p>
                       </CardContent>
