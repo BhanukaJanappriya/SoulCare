@@ -1,22 +1,21 @@
+// src/api.ts
+
 import axios from 'axios';
 
+// Define the base URL for the general API (e.g., /api/blogs, /api/appointments)
 const API_BASE_URL = 'http://localhost:8000/api/';
 
-// --- Auth-Specific Instance ---
-// Used for /api/auth/ endpoints (login, user details, etc.)
-// We use a named export here.
+// --- Auth-Specific Instance (Used by AuthContext) ---
 export const axiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}auth/`,
+  baseURL: `${API_BASE_URL}auth/`, // Points to 'http://localhost:8000/api/auth/'
 });
 
-// --- General-Purpose Instance ---
-// Used for all other endpoints (appointments, prescriptions, etc.)
-// We will also use a named export for this one.
+// --- General-Purpose Instance (Used for all CUD operations - Blog, Appts, etc.) ---
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_URL, // Points to 'http://localhost:8000/api/'
 });
 
-// Add the interceptor to the general instance to handle auth tokens automatically
+// --- Request Interceptor Logic (Attaches JWT Token) ---
 const addAuthToken = (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
@@ -29,11 +28,6 @@ const handleRequestError = (error) => {
     return Promise.reject(error);
 };
 
-// --- THIS IS THE FIX ---
-// Apply the interceptor to BOTH instances
-
-// 1. Apply to the general 'api' instance
+// Apply the interceptor to BOTH instances to ensure all authenticated calls work
 api.interceptors.request.use(addAuthToken, handleRequestError);
-
-// 2. Apply to the 'authApi' instance as well
 axiosInstance.interceptors.request.use(addAuthToken, handleRequestError);
