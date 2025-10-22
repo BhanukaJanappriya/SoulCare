@@ -1,78 +1,153 @@
-import React, { useState } from 'react';
+// src/pages/Prescriptions.tsx
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {axiosInstance} from '@/api';
-import { Prescription } from '@/types';
+// Import API functions
+import { getPrescriptionsAPI, createPrescriptionAPI, getDoctorPatients } from '@/api';
+// Import types
+import { PrescriptionData, MedicationData, PatientOption, PrescriptionFormData, PrescriptionInput } from '@/types'; // Use refined types
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { RightSidebar } from "@/components/layout/RightSidebar";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert
 
-// --- Data Fetching ---
-const fetchPrescriptions = async (): Promise<Prescription[]> => {
-  const response = await axiosInstance.get<Prescription[]>('/prescriptions/');
-  return response.data;
-};
-
-const createPrescription = async (newPrescription: any) => {
-    const { data } = await axiosInstance.post('/prescriptions/', newPrescription);
-    return data;
-};
-
-// --- Main Component ---
-const Prescriptions: React.FC = () => {
+// --- Main Page Component ---
+const PrescriptionsPage: React.FC = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-    // Fetching data with react-query
-    const { data: prescriptions = [], isLoading } = useQuery<Prescription[]>({
-        queryKey: ['prescriptions'],
-        queryFn: fetchPrescriptions,
+    // Fetching prescriptions
+    const { data: prescriptions = [], isLoading, error: fetchError } = useQuery<PrescriptionData[]>({
+        queryKey: ['prescriptions'], // Query key for doctor's prescriptions
+        queryFn: getPrescriptionsAPI, // Use function from api.ts
     });
 
-    // Mutation for creating data
+    // Mutation for creating prescriptions
     const mutation = useMutation({
-        mutationFn: createPrescription,
+        mutationFn: (newPrescription: PrescriptionInput) => createPrescriptionAPI(newPrescription),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
             toast({ title: "Success", description: "Prescription created successfully." });
-            setIsDialogOpen(false);
+            setIsDialogOpen(false); // Close dialog on success
         },
         onError: (error: any) => {
-            toast({ variant: "destructive", title: "Error", description: error.response?.data?.detail || "Failed to create prescription." });
+            toast({
+                variant: "destructive",
+                title: "Error Creating Prescription",
+                description: error.response?.data?.detail || error.message || "Failed to create prescription."
+            });
         }
     });
 
+    // Handle form submission: Convert form data structure to API input structure
+    const handleFormSubmit = (formData: PrescriptionFormData) => {
+        // Validate patient ID selection
+        const patientId = parseInt(formData.patient, 10);
+        if (isNaN(patientId)) {
+             toast({ variant: "destructive", title: "Validation Error", description: "Please select a patient." });
+             return;
+        }
+
+        const apiData: PrescriptionInput = {
+            ...formData,
+            patient: patientId, // Convert patient ID string to number
+        };
+        mutation.mutate(apiData); // Trigger the mutation
+    };
+
     return (
-        <div className="p-6">
+        
+        <div className="pr-16 ">
+           <RightSidebar />
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Prescriptions</h1>
+                <h1 className="text-3xl font-bold">Manage Prescriptions</h1>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button>Create New Prescription</Button>
+                        <Button> <PlusCircle className="mr-2 h-4 w-4" /> Create New Prescription</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>New Prescription</DialogTitle>
                         </DialogHeader>
-                        <PrescriptionForm onSubmit={mutation.mutate} isLoading={mutation.isPending} />
+                        {/* Render Form, pass submit handler and loading state */}
+                        <PrescriptionForm onSubmit={handleFormSubmit} isLoading={mutation.isPending} />
                     </DialogContent>
                 </Dialog>
             </div>
 
-            {isLoading ? <p>Loading prescriptions...</p> : (
-                <div className="space-y-4">
+            {/* Loading State */}
+            {isLoading && <p>Loading prescriptions...</p>}
+
+            {/* Error State */}
+            {fetchError && (
+                 <Alert variant="destructive" className="mb-4">
+                   <AlertTitle>Error Loading Prescriptions</AlertTitle>
+                   <AlertDescription>{(fetchError as Error).message || "Could not load data."}</AlertDescription>
+                </Alert>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !fetchError && prescriptions.length === 0 && (
+                <p>No prescriptions have been issued yet.</p>
+            )}
+
+            {/* Prescriptions List */}
+            {!isLoading && !fetchError && prescriptions.length > 0 && (
+                <div className="space-y-6">
                     {prescriptions.map(p => (
-                        <div key={p.id} className="border p-4 rounded-lg">
-                           <h2 className="font-bold">Patient ID: {p.patient} - {p.date_issued}</h2>
-                           <p><strong>Diagnosis:</strong> {p.diagnosis}</p>
-                           <ul className="list-disc pl-5 mt-2">
-                               {p.medications.map(m => <li key={m.id}>{m.name} ({m.dosage}, {m.frequency})</li>)}
-                           </ul>
-                        </div>
+                        <Card key={p.id} className="shadow-md">
+                            <CardHeader>
+                                <CardTitle>Prescription #{p.id}</CardTitle>
+                                <CardDescription>
+                                    Issued on: {format(new Date(p.date_issued), 'PPP')} {/* Nicer date format */}
+                                    {' | '}Patient: {p.patient.full_name || p.patient.username} {/* Display name */}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <h4 className="font-semibold mb-1 text-sm text-gray-600">Diagnosis:</h4>
+                                    <p className="text-gray-800">{p.diagnosis}</p>
+                                </div>
+                                {p.notes && (
+                                     <div>
+                                        <h4 className="font-semibold mb-1 text-sm text-gray-600">Notes:</h4>
+                                        <p className="text-gray-800">{p.notes}</p>
+                                    </div>
+                                )}
+                                <div>
+                                   <h4 className="font-semibold mb-2 text-sm text-gray-600">Medications:</h4>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Dosage</TableHead>
+                                                <TableHead>Frequency</TableHead>
+                                                <TableHead>Instructions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {p.medications.map((med, index) => (
+                                                <TableRow key={`${p.id}-med-${index}`}> {/* More specific key */}
+                                                    <TableCell className="font-medium">{med.name}</TableCell>
+                                                    <TableCell>{med.dosage}</TableCell>
+                                                    <TableCell>{med.frequency}</TableCell>
+                                                    <TableCell>{med.instructions || '--'}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                 </div>
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
             )}
@@ -80,73 +155,131 @@ const Prescriptions: React.FC = () => {
     );
 };
 
-// --- Prescription Form Component ---
-const PrescriptionForm: React.FC<{ onSubmit: (data: any) => void; isLoading: boolean }> = ({ onSubmit, isLoading }) => {
-    const [patientId, setPatientId] = useState('');
+// --- Prescription Form Component (Still within the same file) ---
+const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => void; isLoading: boolean }> = ({ onSubmit, isLoading }) => {
+    const { toast } = useToast();
+
+    // --- State for Patient Dropdown ---
+    const { data: patients = [], isLoading: isLoadingPatients, error: patientsError } = useQuery<PatientOption[]>({
+        queryKey: ['doctorPatients'], // Unique query key for doctor's patients
+        queryFn: getDoctorPatients, // Use API function
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+
+    // --- State for Form Fields ---
+    const [selectedPatientId, setSelectedPatientId] = useState<string>('');
     const [diagnosis, setDiagnosis] = useState('');
     const [notes, setNotes] = useState('');
-    const [medications, setMedications] = useState([{ name: '', dosage: '', frequency: '', instructions: '' }]);
+    const [medications, setMedications] = useState<Omit<MedicationData, 'id'>[]>([{ name: '', dosage: '', frequency: '', instructions: '' }]);
 
-    const handleMedicationChange = (index: number, field: string, value: string) => {
+    // --- Medication Handlers ---
+     const handleMedicationChange = (index: number, field: keyof Omit<MedicationData, 'id'>, value: string) => {
         const newMeds = [...medications];
-        newMeds[index][field] = value;
+        (newMeds[index] as any)[field] = value;
         setMedications(newMeds);
     };
+    const addMedication = () => setMedications([...medications, { name: '', dosage: '', frequency: '', instructions: '' }]);
+    const removeMedication = (index: number) => setMedications(medications.filter((_, i) => i !== index));
 
-    const addMedication = () => {
-        setMedications([...medications, { name: '', dosage: '', frequency: '', instructions: '' }]);
-    };
-
-    const removeMedication = (index: number) => {
-        const newMeds = medications.filter((_, i) => i !== index);
-        setMedications(newMeds);
-    };
-    
+    // --- Form Submission ---
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit({ patient: patientId, diagnosis, notes, medications });
+        // Basic Client-Side Validation (consider adding more robust validation)
+        if (!selectedPatientId) {
+             toast({ variant: "destructive", title: "Error", description: "Please select a patient." });
+             return;
+        }
+        if (!diagnosis.trim()) {
+            toast({ variant: "destructive", title: "Error", description: "Diagnosis cannot be empty." });
+             return;
+        }
+        if (medications.length === 0 || medications.some(m => !m.name.trim() || !m.dosage.trim() || !m.frequency.trim())) {
+             toast({ variant: "destructive", title: "Error", description: "Please ensure all medications have a name, dosage, and frequency." });
+             return;
+        }
+        onSubmit({ patient: selectedPatientId, diagnosis, notes, medications });
     };
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <Label htmlFor="patientId">Patient ID</Label>
-                <Input id="patientId" value={patientId} onChange={(e) => setPatientId(e.target.value)} required />
-            </div>
-            <div>
-                <Label htmlFor="diagnosis">Diagnosis</Label>
-                <Textarea id="diagnosis" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} required />
-            </div>
-            
-            <h3 className="font-semibold pt-4">Medications</h3>
-            {medications.map((med, index) => (
-                <div key={index} className="border p-3 rounded-md space-y-2 relative">
-                    <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeMedication(index)}>
-                        <XCircle className="h-4 w-4 text-red-500" />
-                    </Button>
-                    <div className="grid grid-cols-2 gap-2">
-                        <Input placeholder="Medication Name" value={med.name} onChange={e => handleMedicationChange(index, 'name', e.target.value)} required />
-                        <Input placeholder="Dosage (e.g., 500mg)" value={med.dosage} onChange={e => handleMedicationChange(index, 'dosage', e.target.value)} required />
-                        <Input placeholder="Frequency (e.g., Twice a day)" value={med.frequency} onChange={e => handleMedicationChange(index, 'frequency', e.target.value)} required />
-                        <Input placeholder="Instructions" value={med.instructions} onChange={e => handleMedicationChange(index, 'instructions', e.target.value)} />
-                    </div>
-                </div>
-            ))}
+     // Display error if patients fail to load
+     if (patientsError) {
+        return <p className="text-red-500">Error loading patient list.</p>;
+     }
 
-            <Button type="button" variant="outline" onClick={addMedication} className="w-full">
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
+            {/* Patient Selection */}
+            <div>
+                <Label htmlFor="patientId">Patient *</Label>
+                <Select
+                    value={selectedPatientId}
+                    onValueChange={setSelectedPatientId}
+                    disabled={isLoadingPatients || isLoading}
+                >
+                    <SelectTrigger id="patientId">
+                        <SelectValue placeholder={isLoadingPatients ? "Loading patients..." : "Select a patient"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {patients.map((p) => (
+                            <SelectItem key={p.id} value={String(p.id)}>
+                                {p.full_name || p.username} (ID: {p.id})
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Diagnosis */}
+            <div>
+                <Label htmlFor="diagnosis">Diagnosis *</Label>
+                <Textarea id="diagnosis" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} disabled={isLoading} required />
+            </div>
+
+            {/* Medications Section */}
+            <h3 className="font-semibold pt-4">Medications *</h3>
+            {medications.map((med, index) => (
+                <Card key={index} className="border p-4 pt-8 rounded-md space-y-3 relative shadow-sm">
+                    {medications.length > 1 && (
+                         <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-red-500 hover:text-red-700" onClick={() => removeMedication(index)}>
+                            <XCircle className="h-4 w-4" />
+                            <span className="sr-only">Remove Medication</span>
+                         </Button>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                         <div>
+                            <Label htmlFor={`med-name-${index}`}>Name *</Label>
+                            <Input id={`med-name-${index}`} placeholder="Medication Name" value={med.name} onChange={e => handleMedicationChange(index, 'name', e.target.value)} disabled={isLoading} required />
+                        </div>
+                         <div>
+                            <Label htmlFor={`med-dosage-${index}`}>Dosage *</Label>
+                            <Input id={`med-dosage-${index}`} placeholder="e.g., 500mg" value={med.dosage} onChange={e => handleMedicationChange(index, 'dosage', e.target.value)} disabled={isLoading} required />
+                        </div>
+                         <div>
+                            <Label htmlFor={`med-freq-${index}`}>Frequency *</Label>
+                            <Input id={`med-freq-${index}`} placeholder="e.g., Twice a day" value={med.frequency} onChange={e => handleMedicationChange(index, 'frequency', e.target.value)} disabled={isLoading} required />
+                        </div>
+                         <div>
+                            <Label htmlFor={`med-instr-${index}`}>Instructions</Label>
+                            <Input id={`med-instr-${index}`} placeholder="e.g., Take with food" value={med.instructions || ''} onChange={e => handleMedicationChange(index, 'instructions', e.target.value)} disabled={isLoading} />
+                        </div>
+                    </div>
+                </Card>
+            ))}
+            <Button type="button" variant="outline" onClick={addMedication} className="w-full" disabled={isLoading}>
                 <PlusCircle className="w-4 h-4 mr-2" /> Add Medication
             </Button>
-            
+
+            {/* Additional Notes */}
             <div className="pt-4">
                 <Label htmlFor="notes">Additional Notes</Label>
-                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isLoading} />
             </div>
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
+
+            {/* Submit Button */}
+            <Button type="submit" className="w-full mt-4" disabled={isLoading}>
                 {isLoading ? 'Saving...' : 'Save Prescription'}
             </Button>
         </form>
     );
 };
 
-export default Prescriptions;
+export default PrescriptionsPage; // Ensure default export name matches filename convention

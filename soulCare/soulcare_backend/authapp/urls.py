@@ -1,5 +1,5 @@
 from django.urls import path,include
-from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView,ProviderScheduleViewSet,ProviderAvailabilityView,ProviderDetailView
+from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView,ProviderScheduleViewSet,ProviderAvailabilityView,ProviderDetailView,DoctorPatientsView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -22,4 +22,6 @@ urlpatterns = [
     path('', include(router.urls)),
     
     path('providers/<int:pk>/', ProviderDetailView.as_view(), name='provider-detail'),
+    
+    path('doctors/my-patients/', DoctorPatientsView.as_view(), name='doctor-patients-list'),
 ]

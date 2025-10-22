@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer,ProviderListSerializer,ProviderScheduleSerializer
+from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer,ProviderListSerializer,ProviderScheduleSerializer,PatientForDoctorSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 
@@ -253,3 +253,28 @@ class ProviderDetailView(generics.RetrieveAPIView):
         is_verified=True
     )
     lookup_field = 'pk' # This tells the view to find the user by their primary key (ID)
+    
+
+class DoctorPatientsView(APIView):
+    """
+    Returns a list of unique patients associated with the logged-in doctor
+    based on past or present appointments.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        # Ensure the user is a doctor
+        if request.user.role != 'doctor':
+            return Response({"detail": "Permission denied. Only doctors can access this list."}, status=403)
+
+        # Get distinct patient IDs from appointments linked to this doctor
+        patient_ids = Appointment.objects.filter(
+            provider=request.user # Filter by the logged-in doctor
+        ).values_list('patient', flat=True).distinct() # Get unique patient IDs
+
+        # Fetch the User objects for these patients, ensuring they are patients ('user' role)
+        patients = User.objects.filter(id__in=patient_ids, role='user')
+
+        # Serialize the patient data
+        serializer = PatientForDoctorSerializer(patients, many=True)
+        return Response(serializer.data)
