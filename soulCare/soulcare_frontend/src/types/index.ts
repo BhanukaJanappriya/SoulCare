@@ -83,22 +83,51 @@ export interface User {
   profile: DoctorProfile | CounselorProfile | PatientProfile | null;
 }
 
-export interface Medication {
-  id: number;
-  name: string;
-  dosage: string;
-  frequency: string;
-  instructions: string;
+export interface BasicUserInfo {
+    id: number;
+    username: string;
+    full_name?: string; // Add if your serializers include it
+    nic?: string;
+
 }
 
-export interface Prescription {
+export interface PatientOption {
   id: number;
-  patient: number; // Will be the patient's user ID
-  doctor: number; // Will be the doctor's user ID
-  diagnosis: string;
-  date_issued: string; // Dates come as strings
-  notes: string;
-  medications: Medication[];
+  username: string;
+  full_name?: string;
+  nic?: string;
+}
+
+export interface MedicationData {
+    id?: number; // Might have ID when fetching
+    name: string;
+    dosage: string;
+    frequency: string;
+    instructions?: string;
+}
+
+export interface PrescriptionData {
+    id: number;
+    patient: BasicUserInfo; // Expecting nested object when fetching
+    doctor: BasicUserInfo;  // Expecting nested object when fetching
+    diagnosis: string;
+    date_issued: string; // ISO date string
+    notes?: string;
+    medications: MedicationData[];
+}
+
+export interface PrescriptionInput {
+    patient: number; // Patient User ID
+    diagnosis: string;
+    notes?: string;
+    medications: Omit<MedicationData, 'id'>[];
+}
+
+export interface PrescriptionFormData {
+    patient: string; // Patient ID as string (from Select component)
+    diagnosis: string;
+    notes?: string;
+    medications: Omit<MedicationData, 'id'>[];
 }
 
 export interface BlogPost {
