@@ -37,12 +37,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'authapp',
+
+    # Third-party Apps:
     'rest_framework',
     'rest_framework_simplejwt',
     "corsheaders",
+
+    # Existing Apps:
+    'authapp',
     'prescriptions',
     'appointments',
+    'blog.apps.BlogConfig',
+
+
 
 ]
 
@@ -55,6 +62,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -62,7 +70,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = 'soulcare_backend.urls'
@@ -70,6 +77,7 @@ ROOT_URLCONF = 'soulcare_backend.urls'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://192.168.249.245:5173",
+
 ]
 
 TEMPLATES = [
@@ -98,7 +106,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'GDR@1101',
+        'PASSWORD': 'Bhanuka@2001',
         'HOST': 'localhost',
         'PORT': '3306',
     }
