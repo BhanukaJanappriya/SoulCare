@@ -3,7 +3,7 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Bold, Italic, Underline, Link, H1, H2 } from 'lucide-react';
+import { Bold, Italic, Underline, Link, Heading1, Heading2 } from 'lucide-react';
 
 interface RichTextEditorProps {
     value: string;
@@ -27,10 +27,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             {/* Toolbar */}
             <div className="flex items-center gap-2 p-3 border-b bg-gray-50">
                 <Button type="button" variant="ghost" size="sm" onClick={() => formatText('H1')}>
-                    <H1 className="w-4 h-4" />
+                    <Heading1 className="w-4 h-4" />
                 </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => formatText('H2')}>
-                    <H2 className="w-4 h-4" />
+                    <Heading2 className="w-4 h-4" />
                 </Button>
                 <div className="w-px h-6 bg-gray-300 mx-2" />
                 <Button type="button" variant="ghost" size="sm" onClick={() => formatText('Bold')}>

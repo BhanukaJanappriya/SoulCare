@@ -57,4 +57,26 @@ export const deleteBlogPost = async (id: string): Promise<void> => {
     await api.delete(`blogs/${id}/`);
 };
 
-// You should also add update/edit functions (put/patch) here later!
+/**
+ * Updates an existing blog post. (PUT/PATCH Request - Requires Auth)
+ */
+export const updateBlogPost = async (
+  id: string,
+  postData: {
+    title: string;
+    content: string;
+    excerpt: string;
+    tags: string; // Comma-separated string
+    status: BlogPost["status"];
+  }
+): Promise<BlogPost> => {
+  const payload = {
+    ...postData,
+    tags_input: postData.tags,
+  };
+
+  // Use the authenticated 'api' instance for PUT/PATCH
+  const response = await api.patch<BlogPost>(`blogs/${id}/`, payload); // PATCH is usually better for partial updates
+
+  return response.data;
+};

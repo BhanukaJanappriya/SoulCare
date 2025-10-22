@@ -1,62 +1,73 @@
-# blog/views.py (MODIFIED)
+# blog/views.py (FINAL VERSION)
 
 from rest_framework import viewsets, permissions
-from rest_framework.response import Response
-from rest_framework import status
 from .models import BlogPost
 from .serializers import BlogPostSerializer
+from .permissions import IsAuthorOrAdmin
 from django.utils import timezone
-from authapp.models import User # Use your actual User model
+from django.db.models import Q # For complex queries
 
 class BlogPostViewSet(viewsets.ModelViewSet):
-    # 1. Define the queryset: get all blog posts
+    # Base queryset
     queryset = BlogPost.objects.all()
-    # 2. Define the serializer
     serializer_class = BlogPostSerializer
 
-    # ***********************************
-    # 3. Use DRF Permissions:
-    # Allow GET (Read) requests for anyone (IsAuthenticatedOrReadOnly)
-    # Require POST/PUT/DELETE for authenticated users
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    # ***********************************
+    # Permissions: Anyone can read (GET), logged-in can do CUD.
+    # CUD is further restricted to the author or admin by IsAuthorOrAdmin.
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrAdmin]
 
-    # Optional: Override the list method to allow filtering by status (like your tabs)
+    # Custom logic to determine which posts a user can see in the list view (GET request)
     def get_queryset(self):
-        queryset = self.queryset
-        # Only allow unauthenticated users to see 'published' posts
-        if not self.request.user.is_authenticated:
-            queryset = queryset.filter(status='published')
+        user = self.request.user
+        queryset = self.queryset.order_by('-createdAt')
 
-        # Authenticated users can filter by any status (published, draft, etc.)
-        status_filter = self.request.query_params.get('status')
-        if status_filter and status_filter != 'all':
-            # Ensure an author only sees their own drafts/pending, but admins can see all
-            if status_filter != 'published' and not self.request.user.is_superuser:
-                 queryset = queryset.filter(author=self.request.user, status=status_filter)
-            else:
-                 queryset = queryset.filter(status=status_filter)
+        # 1. If user is NOT logged in, they can ONLY see published posts
+        if not user.is_authenticated:
+            return queryset.filter(status='published')
 
-        return queryset.order_by('-createdAt')
+        # Get the status filter from the URL (e.g., ?status=pending)
+        status_filter = self.request.query_params.get('status', 'all')
 
+        # 2. If user is a Doctor, Counselor, or Admin: Full Management View
+        if user.role in ['doctor', 'counselor', 'admin'] or user.is_superuser:
+            # If a specific tab is selected, filter by that status
+            if status_filter != 'all':
+                return queryset.filter(status=status_filter)
+            # If 'all' is selected, show everything
+            return queryset
 
+        # 3. If user is a Patient ('user' role): Combined View
+        if user.role == 'user':
+            # They can see everyone's published posts
+            published_posts = queryset.filter(status='published')
+            # They can see their own non-published posts (drafts, pending, rejected)
+            personal_posts = queryset.filter(author=user).exclude(status='published')
+
+            # Combine the two
+            all_viewable_posts = published_posts.union(personal_posts).order_by('-createdAt')
+
+            # Filter the combined set by the active tab status
+            if status_filter == 'published':
+                return published_posts.order_by('-createdAt')
+            elif status_filter in ['draft', 'pending', 'rejected']:
+                return personal_posts.filter(status=status_filter).order_by('-createdAt')
+
+            # Default for 'all' tab for patients is their combined view
+            return all_viewable_posts
+
+        # Default fallback (should not be reached if roles are handled)
+        return queryset.filter(status='published')
+
+    # Logic to set the author automatically on creation
     def perform_create(self, serializer):
-        # ***********************************
-        # 4. Set the Author automatically to the logged-in user!
-        # This is where your JWT authentication pays off.
-        # ***********************************
-        author = self.request.user
-
-        # Handle the status change to set publishedAt
         if serializer.validated_data.get('status') == 'published':
-            # This logic should be here:
-            if not serializer.instance or not serializer.instance.publishedAt:
-                 serializer.validated_data['publishedAt'] = timezone.now()
+            serializer.validated_data['publishedAt'] = timezone.now()
 
-        serializer.save(author=author)
+        # Author is set to the logged-in user (request.user)
+        serializer.save(author=self.request.user)
 
+    # Logic to handle publishedAt update when status changes to 'published'
     def perform_update(self, serializer):
-        # Handle the status change to set publishedAt
         if serializer.validated_data.get('status') == 'published' and not serializer.instance.publishedAt:
              serializer.validated_data['publishedAt'] = timezone.now()
 

@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Eye, Calendar, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BlogPost } from "@/types";
-// Import the API call
-import { fetchBlogPosts } from "@/pages/api/blogApi";
+import { fetchBlogPosts } from "@/pages/api/blogApi"; // Only need the fetch function
 
+// Note: Ensure your getStatusColor/Icon helpers are not needed/used here,
+// as patients only see 'published' posts.
 
 export default function PatientBlogs() {
   const { toast } = useToast();
@@ -19,6 +20,7 @@ export default function PatientBlogs() {
     setIsLoading(true);
     try {
       // CRUCIAL: Pass 'published' to the API to only get posts verified by admin
+      // This matches the simplified view logic in the backend (Views.py)
       const data = await fetchBlogPosts('published');
       setBlogPosts(data);
     } catch (error) {
@@ -39,7 +41,7 @@ export default function PatientBlogs() {
   }, [fetchData]);
 
   const handleReadMore = (post: BlogPost) => {
-    // This is where you would implement navigation to the full blog post view
+    // In a real app, this would open a detailed view
     console.log(`Navigating to full article for: ${post.title}`);
     toast({
         title: post.title,
@@ -71,10 +73,8 @@ export default function PatientBlogs() {
       {/* Blog List Content */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
-          // Loading State
           <Card className="col-span-full"><CardContent className="py-12 text-center text-text-muted">Loading articles...</CardContent></Card>
         ) : blogPosts.length === 0 ? (
-          // Empty State
           <Card className="col-span-full">
             <CardContent className="text-center py-12">
               <p className="text-text-muted">
@@ -83,7 +83,6 @@ export default function PatientBlogs() {
             </CardContent>
           </Card>
         ) : (
-          // Render Articles
           blogPosts.map((post) => (
             <Card
               key={post.id}
