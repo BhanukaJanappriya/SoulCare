@@ -60,6 +60,11 @@ class BlogPostViewSet(viewsets.ModelViewSet):
 
     # Logic to set the author automatically on creation
     def perform_create(self, serializer):
+        user = self.request.user
+        if user.role == 'user' and serializer.validated_data.get('status') != 'published':
+            # Patient submits for review. We enforce 'pending' if they didn't try to publish.
+            serializer.validated_data['status'] = 'pending'
+
         if serializer.validated_data.get('status') == 'published':
             serializer.validated_data['publishedAt'] = timezone.now()
 

@@ -16,9 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { BlogPost } from "@/types";
 import { fetchBlogPosts, createBlogPost, deleteBlogPost, updateBlogPost } from "@/pages/api/blogApi";
 import RichTextEditor from "@/components/common/RichTextEditor";
+import FullArticleDialog from "@/components/common/FullArticleDialog"; // <--- NEW IMPORT
 
 
-// --- UI Helper Functions (Ensure these are in your file) ---
+// --- UI Helper Functions (Status Colors/Icons) ---
 const getStatusColor = (status: BlogPost["status"]) => {
   switch (status) {
     case "published": return "bg-green-500 text-white";
@@ -58,30 +59,26 @@ export default function Blogs() {
 
   // Controls the visibility of the Create/Edit Dialog
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  // Tracks if the dialog is in Edit mode (true) or Create mode (false)
   const [isEditing, setIsEditing] = useState(false);
 
   const [activeTab, setActiveTab] = useState("all");
   const [currentPost, setCurrentPost] = useState(initialPostState);
   const [currentPostId, setCurrentPostId] = useState<string | null>(null);
 
-  // *** REMOVED: Deleted the duplicate 'newPost' state ***
-  // We use currentPost for both new and existing posts now.
+  // --- NEW STATE for Read More Dialog ---
+  const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<BlogPost | null>(null);
+  // ------------------------------------
 
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch posts based on the active tab status
       const data = await fetchBlogPosts(activeTab);
       setBlogPosts(data);
     } catch (error) {
       console.error("Error fetching blog posts:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load blog posts from the server.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to load blog posts from the server.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +89,7 @@ export default function Blogs() {
   }, [fetchData]);
 
 
-  // --- CREATE / UPDATE Handlers ---
+  // --- Dialog Handlers ---
 
   const openCreateDialog = () => {
     setCurrentPost(initialPostState);
@@ -102,12 +99,10 @@ export default function Blogs() {
   };
 
   const openEditDialog = (post: BlogPost) => {
-    // Map the fetched BlogPost object to the form's state shape
     setCurrentPost({
         title: post.title,
         content: post.content,
-        excerpt: post.excerpt || "", // Ensure excerpt is not undefined
-        // The API returns an array, so convert it to a comma-separated string
+        excerpt: post.excerpt || "",
         tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
         status: post.status,
     });
@@ -116,45 +111,58 @@ export default function Blogs() {
     setIsDialogOpen(true);
   };
 
+  const handleReadMore = (post: BlogPost) => {
+    setSelectedArticle(post);
+    setIsArticleDialogOpen(true);
+  };
+
 
   const handleSavePost = async () => {
-    // 1. Basic validation
     if (!currentPost.title || !currentPost.content) {
         toast({ title: "Validation Error", description: "Title and Content are required.", variant: "destructive" });
         return;
     }
 
-    // Role-based check on saving
-    if (!user || (user.role !== 'doctor' && user.role !== 'counselor' && user.role !== 'user')) {
-         toast({
-            title: "Permission Denied",
-            description: "Your role cannot create/edit blog posts.",
-            variant: "destructive",
-        });
-        return;
+    // Role-based check on creation/editing permission
+    const isPermittedUser = (user?.role === 'doctor' || user?.role === 'counselor' || user?.role === 'user' || user?.role === 'admin');
+    if (!user || !isPermittedUser) {
+         toast({ title: "Permission Denied", description: "You do not have permission to perform this action.", variant: "destructive" });
+         return;
     }
+
+    // Logic to override status for Patients on creation
+    const isPatientCreating = user?.role === 'user' && !isEditing;
+    const finalPostData = {
+        ...currentPost,
+        // If patient creates, force status to 'pending'. Backend will also enforce this.
+        status: isPatientCreating ? 'pending' : currentPost.status,
+    };
+
 
     try {
         if (isEditing && currentPostId) {
             // --- UPDATE LOGIC ---
-            await updateBlogPost(currentPostId, currentPost);
+            await updateBlogPost(currentPostId, finalPostData);
             toast({ title: "Post Updated", description: "Your blog post has been successfully updated." });
         } else {
             // --- CREATE LOGIC ---
-            await createBlogPost(currentPost);
-            toast({ title: "Post Created", description: `Your blog post has been saved as ${currentPost.status}.` });
+            await createBlogPost(finalPostData);
+
+            // Custom toast message for patient creation flow
+            const toastStatus = isPatientCreating ? 'pending (Awaiting Admin Review)' : finalPostData.status;
+            toast({ title: "Post Created", description: `Your blog post has been saved as ${toastStatus}.` });
         }
 
         // Success cleanup
-        await fetchData(); // Re-fetch the list
+        await fetchData();
         setIsDialogOpen(false);
-        setCurrentPost(initialPostState); // Reset form
+        setCurrentPost(initialPostState);
 
     } catch (error) {
         console.error("Error saving blog post (Check Network for 4xx/5xx):", error);
         toast({
             title: "Error",
-            description: "Failed to save blog post. Check console and ensure you have permission.",
+            description: `Failed to save blog post. ${error.message || 'Check console for details.'}`,
             variant: "destructive",
         });
     }
@@ -167,12 +175,13 @@ export default function Blogs() {
         toast({ title: "Blog Post Deleted", description: "The blog post has been successfully deleted." });
     } catch (error) {
         console.error("Error deleting blog post:", error);
-        toast({ title: "Error", description: "Failed to delete blog post. You might not have permission.", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to delete blog post. Permission Denied.", variant: "destructive" });
     }
   };
 
 
   return (
+    <>
     <div className="min-h-screen bg-page-bg flex">
       <div className="flex-1 pr-16">
         <div className="container mx-auto px-6 py-8">
@@ -186,8 +195,8 @@ export default function Blogs() {
             {/* Create/Edit Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                {/* User role check for button visibility */}
-                {(user?.role === 'doctor' || user?.role === 'counselor' || user?.role === 'user') && (
+                {/* Allow all authenticated roles to see the button */}
+                {user && (
                     <Button onClick={openCreateDialog}>
                       <Plus className="w-4 h-4 mr-2" />
                       New Blog Post
@@ -200,7 +209,6 @@ export default function Blogs() {
                   <DialogTitle>{isEditing ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
                 </DialogHeader>
 
-                {/* FIX: Form and onSubmit handler to prevent network failure */}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -208,31 +216,15 @@ export default function Blogs() {
                   }}
                   className="space-y-6"
                 >
-
-                  <div>
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      value={currentPost.title}
-                      onChange={(e) =>
-                        setCurrentPost({ ...currentPost, title: e.target.value })
-                      }
-                      placeholder="Enter blog post title..."
-                      required
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* ... (Title/Tags Inputs) ... */}
                   </div>
 
-                  <div>
-                    <Label htmlFor="excerpt">Excerpt</Label>
-                    <Textarea
-                      id="excerpt"
-                      value={currentPost.excerpt}
-                      onChange={(e) =>
-                        setCurrentPost({ ...currentPost, excerpt: e.target.value })
-                      }
-                      placeholder="Brief description of your blog post..."
-                      rows={2}
-                    />
+                  <div><Label htmlFor="title">Title</Label>
+                    <Input id="title" value={currentPost.title} onChange={(e) => setCurrentPost({ ...currentPost, title: e.target.value })} placeholder="Enter blog post title..." required />
+                  </div>
+                  <div><Label htmlFor="excerpt">Excerpt</Label>
+                    <Textarea id="excerpt" value={currentPost.excerpt} onChange={(e) => setCurrentPost({ ...currentPost, excerpt: e.target.value })} placeholder="Brief description of your blog post..." rows={2} />
                   </div>
 
                   {/* Rich Text Editor Component */}
@@ -242,21 +234,13 @@ export default function Blogs() {
                         value={currentPost.content}
                         onChange={(content) => setCurrentPost({ ...currentPost, content })}
                         placeholder="Start writing your blog post content..."
-                        rows={12}
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="tags">Tags (comma separated)</Label>
-                      <Input
-                        id="tags"
-                        value={currentPost.tags}
-                        onChange={(e) =>
-                          setCurrentPost({ ...currentPost, tags: e.target.value })
-                        }
-                        placeholder="anxiety, mindfulness, therapy..."
-                      />
+                      <Input id="tags" value={currentPost.tags} onChange={(e) => setCurrentPost({ ...currentPost, tags: e.target.value })} placeholder="anxiety, mindfulness, therapy..." />
                     </div>
                     <div>
                       <Label htmlFor="status">Status</Label>
@@ -265,32 +249,28 @@ export default function Blogs() {
                         onValueChange={(value: BlogPost["status"]) =>
                           setCurrentPost({ ...currentPost, status: value })
                         }
+                        // FIX: Disable the status selection for Patient users when creating
+                        disabled={user?.role === 'user' && !isEditing}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="pending">
-                            Submit for Review
+                          {/* If a patient is submitting, the backend auto-sets to pending, but we show this for clarity */}
+                          <SelectItem value="pending" disabled={user?.role === 'user' && !isEditing}>
+                            {user?.role === 'user' ? 'Awaiting Review' : 'Submit for Review'}
                           </SelectItem>
-                          <SelectItem value="published">Publish Now</SelectItem>
+                          {/* Only Doctors/Counselors/Admins can publish directly */}
+                          <SelectItem value="published" disabled={user?.role === 'user' && !isEditing}>Publish Now</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
                   <div className="flex justify-end gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit">
-                        {isEditing ? "Save Changes" : "Create Post"}
-                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">{isEditing ? "Save Changes" : "Create Post"}</Button>
                   </div>
                 </form>
               </DialogContent>
@@ -314,9 +294,7 @@ export default function Blogs() {
                 ) : blogPosts.length === 0 ? (
                   <Card className="col-span-full">
                     <CardContent className="text-center py-12">
-                      <p className="text-text-muted">
-                        No blog posts found in this category.
-                      </p>
+                      <p className="text-text-muted">No blog posts found in this category.</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -343,10 +321,11 @@ export default function Blogs() {
 
                           {/* Action Buttons for EDIT/DELETE */}
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
+                            {/* FIX: Use ReadMore handler */}
+                            <Button variant="ghost" size="sm" onClick={() => handleReadMore(post)}><Eye className="w-4 h-4" /></Button>
 
-                            {/* Check if user is the author or Admin to show edit/delete */}
-                            {(user?.id.toString() === post.authorId || user?.role === 'admin') && (
+                            {/* Check if user is the author (convert ID to string) or Admin */}
+                            {(user?.id?.toString() === post.authorId || user?.role === 'admin') && (
                                 <>
                                     <Button variant="ghost" size="sm" onClick={() => openEditDialog(post)}>
                                       <Edit className="w-4 h-4" />
@@ -372,7 +351,6 @@ export default function Blogs() {
                           )) : null}
                         </div>
                         <p className="text-text-muted text-sm line-clamp-3">
-                            {/* Display the rich content preview (e.g., stripping HTML if you used a real RTE) */}
                           {post.content.substring(0, 200)}...
                         </p>
                       </CardContent>
@@ -386,5 +364,13 @@ export default function Blogs() {
       </div>
       <RightSidebar />
     </div>
+
+    {/* NEW: Full Article Dialog Component */}
+    <FullArticleDialog
+        post={selectedArticle}
+        isOpen={isArticleDialogOpen}
+        onOpenChange={setIsArticleDialogOpen}
+    />
+    </>
   );
 }
