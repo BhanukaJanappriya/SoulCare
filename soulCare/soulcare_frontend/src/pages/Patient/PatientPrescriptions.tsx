@@ -40,7 +40,7 @@ const PatientPrescriptions: React.FC = () => {
                 prescriptions.map((presc) => (
                     <Card key={presc.id} className="shadow-md">
                         <CardHeader>
-                            <CardTitle>Prescription from Dr. {presc.doctor.full_name || presc.doctor.username}</CardTitle>
+                            <CardTitle>Prescription from Dr. {presc.doctor.full_name}</CardTitle>
                             <CardDescription>
                                 Issued on: {format(new Date(presc.date_issued), 'PPP')}
                             </CardDescription>

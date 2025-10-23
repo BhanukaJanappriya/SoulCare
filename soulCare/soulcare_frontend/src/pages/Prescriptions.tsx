@@ -109,7 +109,7 @@ const PrescriptionsPage: React.FC = () => {
                                 <CardTitle>Prescription #{p.id}</CardTitle>
                                 <CardDescription>
                                     Issued on: {format(new Date(p.date_issued), 'PPP')} {/* Nicer date format */}
-                                    {' | '}Patient: {p.patient.full_name || p.patient.username} {/* Display name */}
+                                    {' | '}Patient: {p.patient.full_name} (NIC: {p.patient.nic}) {/* Display name */}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -221,7 +221,7 @@ const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => voi
                     <SelectContent>
                         {patients.map((p) => (
                             <SelectItem key={p.id} value={String(p.id)}>
-                                {p.full_name || p.username} (ID: {p.id})
+                                {p.full_name || p.username} (NIC: {p.nic})
                             </SelectItem>
                         ))}
                     </SelectContent>
