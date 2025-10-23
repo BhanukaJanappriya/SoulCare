@@ -262,11 +262,37 @@ class ProviderScheduleSerializer(serializers.ModelSerializer):
         model = ProviderSchedule
         fields = ['id', 'day_of_week', 'start_time', 'end_time']
         
-class PatientForDoctorSerializer(serializers.ModelSerializer):
-    # Get full_name from the related PatientProfile
-    full_name = serializers.CharField(source='patientprofile.full_name', read_only=True, default='')
-    nic = serializers.CharField(source='patientprofile.nic', read_only=True, default='')
+
+class PatientForDoctorSerializer(serializers.ModelSerializer): # Renamed for clarity
+    # Use SerializerMethodField to get profile data dynamically
+    full_name = serializers.SerializerMethodField()
+    nic = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'full_name','nic'] # Fields needed for the dropdown
+        # Keep the fields you need, matching BasicUserInfo/PatientOption
+        fields = ['id', 'username', 'full_name', 'nic']
+
+    def get_full_name(self, obj):
+        """
+        Dynamically get the full_name from the correct profile.
+        """
+        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return obj.patientprofile.full_name
+        elif obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            return obj.doctorprofile.full_name
+        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'): # Optional: Add counselor support if needed elsewhere
+             return obj.counselorprofile.full_name
+        return obj.get_full_name() or obj.username # Fallback
+
+    def get_nic(self, obj):
+        """
+        Dynamically get the NIC from the correct profile.
+        """
+        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return obj.patientprofile.nic
+        elif obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            return obj.doctorprofile.nic
+        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'): # Optional: Add counselor support
+            return obj.counselorprofile.nic
+        return '' # Return empty string if no profile or NIC found

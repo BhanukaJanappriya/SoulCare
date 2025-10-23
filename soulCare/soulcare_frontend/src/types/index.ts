@@ -86,15 +86,17 @@ export interface User {
 export interface BasicUserInfo {
     id: number;
     username: string;
-    full_name?: string; // Add if your serializers include it
-    nic?: string;
+    full_name: string; // Add if your serializers include it
+    nic: string;
+    license_number: string;
+
 
 }
 
 export interface PatientOption {
   id: number;
   username: string;
-  full_name?: string;
+  full_name: string;
   nic?: string;
 }
 
