@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer,ProviderListSerializer,ProviderScheduleSerializer,PatientForDoctorSerializer
+from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer,ProviderListSerializer,ProviderScheduleSerializer,UserInfoSerializer,PatientDetailSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 
 from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
+from rest_framework.exceptions import PermissionDenied, NotFound
 from .models import User,ProviderSchedule
 from django.db.models import Count, Q
 from datetime import date,datetime,timedelta
@@ -264,7 +265,7 @@ class DoctorPatientsView(APIView):
 
     def get(self, request, *args, **kwargs):
         # Ensure the user is a doctor
-        if request.user.role != 'doctor':
+        if request.user.role not in ['doctor', 'counselor'] :
             return Response({"detail": "Permission denied. Only doctors can access this list."}, status=403)
 
         # Get distinct patient IDs from appointments linked to this doctor
@@ -276,5 +277,54 @@ class DoctorPatientsView(APIView):
         patients = User.objects.filter(id__in=patient_ids, role='user')
 
         # Serialize the patient data
-        serializer = PatientForDoctorSerializer(patients, many=True)
+        serializer = UserInfoSerializer(patients, many=True)
         return Response(serializer.data)
+    
+
+
+class PatientDetailView(generics.RetrieveAPIView):
+    """
+    API view to retrieve details for a specific patient.
+    Ensures the requesting doctor/counselor is associated with the patient via an appointment.
+    
+    """
+    serializer_class = PatientDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk' # Use the primary key (ID) from the URL
+
+    def get_queryset(self):
+        # Pre-filter to only allow fetching users with the 'user' role
+        return User.objects.filter(role='user')
+
+    def get_object(self):
+        # Get the patient object based on the URL pk, ensuring it's a 'user'
+        try:
+            patient = super().get_object()
+        except User.DoesNotExist:
+             raise NotFound("Patient not found.") # More specific error
+
+        user = self.request.user
+
+        # Allow access if the requester is an Admin
+        if user.role == 'admin':
+            return patient
+
+        # Only Doctors and Counselors proceed beyond this point
+        if user.role not in ['doctor', 'counselor']:
+            raise PermissionDenied("You do not have permission to view patient details.")
+
+        # Check if there's at least one appointment linking this provider and patient
+        is_associated = Appointment.objects.filter(
+            provider=user,
+            patient=patient
+        ).exists()
+
+        if not is_associated:
+            # You might allow admins to bypass this check if needed:
+            # if not user.is_staff:
+            raise PermissionDenied("You do not have appointment history with this patient.")
+
+        # If needed, you could prefetch or annotate related data here
+        # E.g., patient = User.objects.prefetch_related('patient_appointments', 'prescriptions_as_patient').get(pk=patient.pk)
+
+        return patient

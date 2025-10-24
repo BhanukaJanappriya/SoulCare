@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Prescription, Medication
 from authapp.models import User # We need this to validate the patient
-from authapp.serializers import PatientForDoctorSerializer
+from authapp.serializers import UserInfoSerializer
 
 class MedicationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,11 +21,11 @@ class PrescriptionSerializer(serializers.ModelSerializer):
     )
 
     # --- MODIFIED: Field for READING patient details ---
-    patient = PatientForDoctorSerializer(read_only=True) # Display nested info on GET
+    patient = UserInfoSerializer(read_only=True) # Display nested info on GET
 
     # --- MODIFIED: Field for READING doctor details ---
     # Assuming PatientForDoctorSerializer works for doctors too, or use another appropriate serializer
-    doctor = PatientForDoctorSerializer(read_only=True)  # Display nested info on GET
+    doctor = UserInfoSerializer(read_only=True)  # Display nested info on GET
 
     class Meta:
         model = Prescription

@@ -2,6 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderSchedule
+#from appointments.serializers import AppointmentReadSerializer
+#from prescriptions.serializers import PrescriptionSerializer
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -263,36 +265,66 @@ class ProviderScheduleSerializer(serializers.ModelSerializer):
         fields = ['id', 'day_of_week', 'start_time', 'end_time']
         
 
-class PatientForDoctorSerializer(serializers.ModelSerializer): # Renamed for clarity
-    # Use SerializerMethodField to get profile data dynamically
+class UserInfoSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     nic = serializers.SerializerMethodField()
+    email = serializers.EmailField(read_only=True) # Get email from User model
+    contact_number = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        # Keep the fields you need, matching BasicUserInfo/PatientOption
-        fields = ['id', 'username', 'full_name', 'nic']
+        fields = ['id', 'username', 'email', 'full_name', 'nic', 'contact_number'] # Updated fields
 
     def get_full_name(self, obj):
-        """
-        Dynamically get the full_name from the correct profile.
-        """
+        # Safely access profile attributes
+        profile = None
         if obj.role == 'user' and hasattr(obj, 'patientprofile'):
-            return obj.patientprofile.full_name
+            profile = obj.patientprofile
         elif obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
-            return obj.doctorprofile.full_name
-        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'): # Optional: Add counselor support if needed elsewhere
-             return obj.counselorprofile.full_name
-        return obj.get_full_name() or obj.username # Fallback
+            profile = obj.doctorprofile
+        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            profile = obj.counselorprofile
+
+        # Return full_name from profile if available, else User's name, else username
+        return getattr(profile, 'full_name', None) or obj.get_full_name() or obj.username
 
     def get_nic(self, obj):
-        """
-        Dynamically get the NIC from the correct profile.
-        """
+        profile = None
         if obj.role == 'user' and hasattr(obj, 'patientprofile'):
-            return obj.patientprofile.nic
+            profile = obj.patientprofile
         elif obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
-            return obj.doctorprofile.nic
-        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'): # Optional: Add counselor support
-            return obj.counselorprofile.nic
-        return '' # Return empty string if no profile or NIC found
+            profile = obj.doctorprofile
+        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            profile = obj.counselorprofile
+        return getattr(profile, 'nic', None) # Return None if not found
+
+    def get_contact_number(self, obj):
+        profile = None
+        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            profile = obj.patientprofile
+        elif obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            profile = obj.doctorprofile
+        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            profile = obj.counselorprofile
+        return getattr(profile, 'contact_number', None) # Return None if not found
+    
+
+# --- NEW: PatientDetailSerializer (For Patient Detail Page) ---
+class PatientDetailSerializer(serializers.ModelSerializer):
+    # Nest the profile directly
+    patientprofile = PatientProfileSerializer(read_only=True)
+
+    # Optional: Add related data (limit results for performance)
+    # Customize AppointmentSerializer/PrescriptionSerializer if needed for this view
+    #recent_appointments = AppointmentReadSerializer(many=True, read_only=True, source='patient_appointments') # Use related_name
+    #recent_prescriptions = PrescriptionSerializer(many=True, read_only=True, source='prescriptions_as_patient') # Use related_name
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'date_joined', 'is_active', 'role', # Include role for safety
+            'patientprofile',
+             #'recent_appointments', # Uncomment if adding related data
+             #'recent_prescriptions',
+        ]
+        read_only_fields = fields # Make all fields read-only for this detail view
