@@ -4,7 +4,8 @@ import axios from 'axios';
 import {
     PatientOption,
     PrescriptionInput,
-    PrescriptionData
+    PrescriptionData,
+    PatientDetailData
 } from '@/types';
 
 // Define the base URL for the general API (e.g., /api/blogs, /api/appointments)
@@ -72,4 +73,32 @@ export const getPrescriptionsAPI = async (): Promise<PrescriptionData[]> => {
     console.error("Error fetching prescriptions:", error);
     throw error; // Re-throw for react-query
   }
+};
+
+export const getPatientDetailsAPI = async (patientId: string | number): Promise<PatientDetailData> => {
+    try {
+        // Use axiosInstance because the URL is under /auth/
+        const response = await axiosInstance.get<PatientDetailData>(`patients/${patientId}/`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching patient details for ID ${patientId}:`, error);
+        throw error; // Re-throw for react-query
+    }
+};
+
+export const createFormData = <T extends Record<string, unknown>>(data: T): FormData => {
+    const formData = new FormData();
+    for (const key in data) {
+        const value = data[key];
+        if (value !== undefined && value !== null) {
+            if (value instanceof File) {
+                formData.append(key, value, value.name);
+            } else if (typeof value === 'object' && !Array.isArray(value)) {
+                // handle object flattening if needed
+            } else {
+                formData.append(key, String(value));
+            }
+        }
+    }
+    return formData;
 };

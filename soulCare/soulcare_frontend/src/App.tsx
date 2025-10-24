@@ -25,6 +25,7 @@ import Content from "./pages/Content";
 import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import PatientDetailPage from "./pages/PatientDetailPage";
 
 //admin imports
 import AdminLayout from "./components/layout/AdminLayout";
@@ -66,6 +67,15 @@ const App = () => (
             <Route path="/doctor-register" element={<DoctorRegister />} />
 
             <Route
+              path="/patient-details/:patientId"
+              element={
+                <ProtectedRoute allowedRoles={["doctor", "counselor"]}>
+                  <PatientDetailPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute allowedRoles={["doctor", "counselor"]}>
@@ -73,6 +83,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/patients"
               element={
