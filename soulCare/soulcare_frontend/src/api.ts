@@ -4,7 +4,8 @@ import axios from 'axios';
 import {
     PatientOption,
     PrescriptionInput,
-    PrescriptionData
+    PrescriptionData,
+    PatientDetailData
 } from '@/types';
 
 // Define the base URL for the general API (e.g., /api/blogs, /api/appointments)
@@ -72,4 +73,15 @@ export const getPrescriptionsAPI = async (): Promise<PrescriptionData[]> => {
     console.error("Error fetching prescriptions:", error);
     throw error; // Re-throw for react-query
   }
+};
+
+export const getPatientDetailsAPI = async (patientId: string | number): Promise<PatientDetailData> => {
+    try {
+        // Use axiosInstance because the URL is under /auth/
+        const response = await axiosInstance.get<PatientDetailData>(`patients/${patientId}/`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching patient details for ID ${patientId}:`, error);
+        throw error; // Re-throw for react-query
+    }
 };
