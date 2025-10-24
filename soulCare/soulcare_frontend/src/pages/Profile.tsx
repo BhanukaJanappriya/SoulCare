@@ -1,7 +1,6 @@
 // src/pages/Profile.tsx
 
 import React, { useState, useEffect, useRef } from "react";
-// NOTE: Assuming this is a custom hook that returns AuthContextType
 import { useAuth } from "@/hooks/useAuth";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,11 +12,7 @@ import { Star, Edit, Save, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/api";
 
-// Assuming createFormData is defined in your api.ts or a separate file.
-// For this file, we assume it's imported correctly.
-
 // ---------------- TYPES ----------------
-// NOTE: These interfaces should ideally be imported from "@/types/index"
 interface BaseProfile {
   full_name: string;
   contact_number: string;
@@ -28,6 +23,7 @@ interface BaseProfile {
   address?: string;
   availability?: string;
   rating?: number;
+  dob?: string; // Add DOB for patients
 }
 
 interface DoctorProfile extends BaseProfile {
@@ -40,6 +36,9 @@ interface CounselorProfile extends BaseProfile {
 
 interface PatientProfile extends BaseProfile {
   address: string;
+  health_issues?: string;
+  nic: string;
+  dob?: string;
 }
 
 type ProfileType = DoctorProfile | CounselorProfile | PatientProfile;
@@ -56,35 +55,37 @@ interface User {
 type ProfileUpdateValue = string | File | undefined | null;
 type ProfileUpdateData = Record<string, ProfileUpdateValue>;
 
+// ✅ Add proper error response type
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      detail?: string;
+      non_field_errors?: string[] | string;
+      [key: string]: unknown;
+    };
+  };
+}
 
 // -------------- HELPERS ----------------
-const getProfileKey = (role: string): string => {
-  if (role === "doctor") return "doctor_profile_update";
-  if (role === "counselor") return "counselor_profile_update";
-  if (role === "user") return "patient_profile_update";
-  return "";
-};
-
 const isDoctor = (profile: ProfileType): profile is DoctorProfile => "specialization" in profile;
 const isCounselor = (profile: ProfileType): profile is CounselorProfile => "expertise" in profile;
-const isPatient = (profile: ProfileType): profile is PatientProfile => "address" in profile;
+const isPatient = (profile: ProfileType): profile is PatientProfile => "address" in profile && "nic" in profile;
 const hasRating = (profile: ProfileType): profile is DoctorProfile | CounselorProfile => "rating" in profile;
 const hasLicense = (profile: ProfileType): profile is DoctorProfile | CounselorProfile => "license_number" in profile;
 const hasAvailability = (profile: ProfileType): profile is DoctorProfile => "availability" in profile;
 const getProfilePicture = (profile: ProfileType): string | null => profile.profile_picture || null;
 
-// The logic from the original `createFormData` function (moved inline for self-contained fix)
-const buildFormData = (data: ProfileUpdateData, profileKey: string): FormData => {
+// FormData builder
+const buildFormData = (data: ProfileUpdateData): FormData => {
     const formData = new FormData();
     for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
             const value = data[key];
-            const prefixedKey = `${profileKey}.${key}`;
 
             if (value instanceof File) {
-                formData.append(prefixedKey, value, value.name);
+                formData.append(key, value, value.name);
             } else if (value !== null && value !== undefined) {
-                formData.append(prefixedKey, value.toString());
+                formData.append(key, value.toString());
             }
         }
     }
@@ -104,7 +105,10 @@ export default function Profile() {
     full_name: "",
     email: "",
     contact_number: "",
-    profileField: "",
+    profileField: "", // specialization/expertise/address
+    health_issues: "",
+    nic: "",
+    dob: "",
   });
 
   // Sync user data to local state
@@ -125,6 +129,9 @@ export default function Profile() {
         full_name: profile.full_name || "",
         contact_number: profile.contact_number || "",
         profileField: profileField || "",
+        health_issues: profile.health_issues || "",
+        nic: (profile as PatientProfile).nic || "",
+        dob: (profile as PatientProfile).dob || "",
       });
     }
   }, [user]);
@@ -133,19 +140,25 @@ export default function Profile() {
     if (!user || !user.profile) return;
 
     setIsEditing(false);
-    const profileKey = getProfileKey(user.role);
-    const profile = user.profile as ProfileType; // Re-assert user profile
+    const profile = user.profile as ProfileType;
 
-    // 1. Prepare data (Type is now ProfileUpdateData, which is Record<string, string | File | ...>)
+    // 1. Prepare data for the specific role
     const profileUpdateData: ProfileUpdateData = {
         'full_name': formData.full_name,
         'contact_number': formData.contact_number,
-
-        // Dynamic field mapping
-        ...(user.role === 'doctor' && { 'specialization': formData.profileField }),
-        ...(user.role === 'counselor' && { 'expertise': formData.profileField }),
-        ...(user.role === 'user' && { 'address': formData.profileField }),
     };
+
+    // Add role-specific fields
+    if (user.role === 'doctor') {
+        profileUpdateData['specialization'] = formData.profileField;
+    } else if (user.role === 'counselor') {
+        profileUpdateData['expertise'] = formData.profileField;
+    } else if (user.role === 'user') {
+        // Patient specific fields
+        profileUpdateData['address'] = formData.profileField;
+        profileUpdateData['health_issues'] = formData.health_issues;
+        // Note: NIC and DOB are not included as they are unchangeable
+    }
 
     // 2. Add Profile Picture file
     if (file) {
@@ -153,34 +166,53 @@ export default function Profile() {
     }
 
     // 3. Create the final FormData object
-    const formDataObject = buildFormData(profileUpdateData, profileKey);
-
+    const formDataObject = buildFormData(profileUpdateData);
 
     try {
       // API Call: PATCH request to the /auth/user/ endpoint
       await api.patch(`auth/user/`, formDataObject, {
           headers: {
-              // Ensures correct boundary is set
-              'Content-Type': undefined,
+              'Content-Type': 'multipart/form-data',
           }
       });
 
-      // Re-fetch user data to update the AuthContext and UI
-      const token = localStorage.getItem('accessToken');
+      // Use correct token key
+      const token = localStorage.getItem('access');
       if (token) {
          await fetchUser(token);
       }
 
       toast({
         title: "Profile Updated",
-        description: "Your profile and picture have been successfully updated.",
+        description: "Your profile has been successfully updated.",
       });
       setFile(null);
-    } catch (error) {
-      console.error("Profile Update Failed:", error.response || error);
+    } catch (error: unknown) {
+      console.error("Profile Update Failed:", error);
+
+      let errorMessage = "Could not save profile. Please try again.";
+
+      // ✅ FIX: Type-safe error handling without 'any'
+      const apiError = error as ApiErrorResponse;
+      if (apiError.response?.data) {
+        const errorData = apiError.response.data;
+
+        if (errorData.detail && typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        } else if (errorData.non_field_errors) {
+          if (Array.isArray(errorData.non_field_errors)) {
+            errorMessage = errorData.non_field_errors.join(' ');
+          } else if (typeof errorData.non_field_errors === 'string') {
+            errorMessage = errorData.non_field_errors;
+          }
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Update Failed",
-        description: "Could not save profile. Check console for details.",
+        description: errorMessage,
         variant: "destructive",
       });
       setIsEditing(true);
@@ -200,18 +232,22 @@ export default function Profile() {
   };
 
   if (isAuthLoading || !user || !user.profile) {
-    return <div>Loading profile...</div>;
+    return <div className="min-h-screen bg-page-bg flex items-center justify-center">
+      <div>Loading profile...</div>
+    </div>;
   }
 
   const profile = user.profile as ProfileType;
   const profilePictureUrl = getProfilePicture(profile);
   const profileImageSrc = file ? URL.createObjectURL(file) : profilePictureUrl;
 
+  // Role-specific labels and values
   const roleLabel = isDoctor(profile)
     ? "Specialization"
     : isCounselor(profile)
     ? "Expertise"
     : "Address";
+
   const roleLabelValue = isDoctor(profile)
     ? profile.specialization
     : isCounselor(profile)
@@ -220,15 +256,18 @@ export default function Profile() {
     ? profile.address
     : "N/A";
 
-  const secondaryLabel =
-    isDoctor(profile) || isCounselor(profile)
-      ? "License Number"
-      : "Health Issues";
+  const secondaryLabel = isDoctor(profile) || isCounselor(profile)
+    ? "License Number"
+    : "Health Issues";
+
   const secondaryLabelValue = hasLicense(profile)
     ? profile.license_number ?? "N/A"
     : isPatient(profile)
     ? profile.health_issues ?? "N/A"
     : "N/A";
+
+  // Patient-specific fields
+  const patientProfile = profile as PatientProfile;
 
   return (
     <div className="min-h-screen bg-page-bg flex">
@@ -304,6 +343,27 @@ export default function Profile() {
                     </Label>
                     <p className="text-sm">{secondaryLabelValue}</p>
                   </div>
+
+                  {/* ✅ Patient-specific fields in summary card */}
+                  {isPatient(profile) && (
+                    <>
+                      <div>
+                        <Label className="text-sm font-medium text-text-muted">
+                          NIC
+                        </Label>
+                        <p className="text-sm">{patientProfile.nic || "N/A"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-text-muted">
+                          Date of Birth
+                        </Label>
+                        <p className="text-sm">
+                          {patientProfile.dob ? new Date(patientProfile.dob).toLocaleDateString() : "N/A"}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
                   {hasAvailability(profile) && (
                     <div>
                       <Label className="text-sm font-medium text-text-muted">
@@ -391,6 +451,46 @@ export default function Profile() {
                       disabled={!isEditing}
                     />
                   </div>
+
+                  {/* ✅ Patient-specific editable fields */}
+                  {user.role === 'user' && (
+                    <>
+                      <div>
+                        <Label htmlFor="health_issues">Health Issues</Label>
+                        <Input
+                          id="health_issues"
+                          value={formData.health_issues}
+                          onChange={(e) =>
+                            setFormData((p) => ({
+                              ...p,
+                              health_issues: e.target.value,
+                            }))
+                          }
+                          disabled={!isEditing}
+                          placeholder="Describe any health issues"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="nic">NIC</Label>
+                        <Input
+                          id="nic"
+                          value={formData.nic}
+                          disabled={true}
+                          className="opacity-70"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dob">Date of Birth</Label>
+                        <Input
+                          id="dob"
+                          type="text"
+                          value={formData.dob ? new Date(formData.dob).toLocaleDateString() : 'N/A'}
+                          disabled={true}
+                          className="opacity-70"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
