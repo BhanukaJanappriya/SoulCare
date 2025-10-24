@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Heart,
@@ -11,6 +11,7 @@ import {
   BookOpen,
   MessageCircle,
   Bell,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -19,9 +20,35 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+
+// ✅ Define proper TypeScript interfaces
+interface BaseProfile {
+  full_name?: string;
+  profile_picture?: string | null;
+}
+
+interface UserProfile {
+  username?: string;
+  role?: string;
+  profile?: BaseProfile | null;
+}
+
+// ✅ Type-safe helper functions
+const getProfilePicture = (profile: BaseProfile | null | undefined): string | null => {
+  return profile?.profile_picture || null;
+};
+
+const getFullName = (profile: BaseProfile | null | undefined): string | null => {
+  return profile?.full_name || null;
+};
 
 const PatientSidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const navigationItems = [
     { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
@@ -35,15 +62,47 @@ const PatientSidebar: React.FC = () => {
     { name: "Chatbot", href: "/patient/chatbot", icon: MessageCircle },
   ];
 
+  // ✅ Type-safe profile data extraction
+  const profile = user?.profile as BaseProfile | undefined;
+  const fullName = getFullName(profile);
+
+  const userInitials = fullName
+    ? fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase()
+    : user?.username ? user.username[0].toUpperCase() : 'U';
+
+  const profileImageSrc = getProfilePicture(profile);
+
+  // ✅ Profile Click Handler
+  const handleProfileClick = () => {
+    navigate('/patient/profile');
+  };
+
+  // ✅ Logout Handler
+  const handleLogout = () => {
+    logout();
+    navigate('/auth/login');
+  };
+
   return (
     <TooltipProvider>
       <div className="fixed right-0 top-0 h-full w-16 bg-sidebar-bg flex flex-col items-center py-4 z-50 shadow-lg">
-        {/* Logo/Brand */}
-        <div className="mb-6">
-          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-            {"E"}
-          </div>
-        </div>
+
+        {/* ✅ User Avatar (Navigation to Profile) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="mb-6 cursor-pointer" onClick={handleProfileClick}>
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={profileImageSrc || ''} alt={`${user?.username}'s profile`} />
+                <AvatarFallback className="bg-primary text-white font-semibold text-sm">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="mr-2">
+            <p>View Profile</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Navigation Items */}
         <nav className="flex-1 flex flex-col space-y-2">
@@ -75,7 +134,7 @@ const PatientSidebar: React.FC = () => {
         {/* Notifications */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 flex items-center justify-center relative">
+            <button className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 flex items-center justify-center relative mb-2">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
                 <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
@@ -84,6 +143,23 @@ const PatientSidebar: React.FC = () => {
           </TooltipTrigger>
           <TooltipContent side="left" className="mr-2">
             Notifications
+          </TooltipContent>
+        </Tooltip>
+
+        {/* ✅ Logout Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-red-500/20 hover:text-red-200 transition-all duration-200"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="mr-2">
+            <p>Logout</p>
           </TooltipContent>
         </Tooltip>
       </div>
