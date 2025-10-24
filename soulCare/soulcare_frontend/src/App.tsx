@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/layout/ProtectedRoute"; 
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/auth/LoginPage";
@@ -44,6 +44,7 @@ import PatientJournal from "./pages/Patient/PatientJournal";
 import PatientBlogs from "./pages/Patient/PatientBlogs";
 import BookAppointmentPage from "./pages/Patient/BookAppointmentPage";
 import ProviderDetailPage from "./pages/Patient/ProviderDetailPage";
+import PatientGames from "./pages/Patient/PatientGames";
 
 const queryClient = new QueryClient();
 
@@ -120,7 +121,7 @@ const App = () => (
               }
             />
 
-            
+
             <Route
               path="/video-calls"
               element={
@@ -174,7 +175,8 @@ const App = () => (
               <Route path="blogs" element={<PatientBlogs />} />
               <Route path="journal" element={<PatientJournal />} />
               <Route path="meditation" element={<MeditationPage />} />
-          
+              <Route path="games" element={<PatientGames />} />
+
             </Route>
 
             <Route
