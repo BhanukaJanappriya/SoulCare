@@ -106,7 +106,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'GDR@1101',
+        'PASSWORD': 'Bhanuka@2001',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -145,6 +145,7 @@ USE_I18N = True
 USE_TZ = True
 
 
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
@@ -154,3 +155,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MEDIA_ROOT = BASE_DIR / 'media'
+
+MEDIA_URL = '/soulcare_backend/media/'
