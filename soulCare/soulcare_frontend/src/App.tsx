@@ -45,6 +45,7 @@ import PatientBlogs from "./pages/Patient/PatientBlogs";
 import BookAppointmentPage from "./pages/Patient/BookAppointmentPage";
 import ProviderDetailPage from "./pages/Patient/ProviderDetailPage";
 import PatientGames from "./pages/Patient/PatientGames";
+import PatientPrescriptions from "./pages/Patient/PatientPrescriptions";
 
 const queryClient = new QueryClient();
 
@@ -176,6 +177,8 @@ const App = () => (
               <Route path="journal" element={<PatientJournal />} />
               <Route path="meditation" element={<MeditationPage />} />
               <Route path="games" element={<PatientGames />} />
+
+              <Route path="prescriptions" element={<PatientPrescriptions />} />
 
             </Route>
 
