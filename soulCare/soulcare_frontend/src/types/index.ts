@@ -48,6 +48,7 @@ export interface PatientProfile {
   health_issues: string | null;
 }
 
+
 export interface AdminUserListItem {
   id: number;
   username: string;
@@ -86,18 +87,42 @@ export interface User {
 export interface BasicUserInfo {
     id: number;
     username: string;
-    full_name?: string; // Add if your serializers include it
-    nic?: string;
-
+    email: string;
+    full_name?: string | null;
+    nic?: string | null;
+    contact_number?: string | null;
 }
 
 export interface PatientOption {
   id: number;
   username: string;
-  full_name?: string;
-  nic?: string;
+  email: string;
+  full_name?: string | null; // Can be null from backend
+  nic?: string | null;
+  contact_number?: string | null;
+
+  // Mock/Placeholder fields (will be fetched separately on detail page)
+  age?: number;
+  lastVisit?: string | null;
+  condition?: string | null;
+  status?: 'active' | 'inactive' | string;
+  riskLevel?: 'low' | 'medium' | 'high' | string;
 }
 
+export interface PatientDetailData {
+    id: number;
+    username: string;
+    email: string;
+    date_joined: string; // ISO string
+    is_active: boolean;
+    role: UserRole; // Should always be 'user' based on backend query
+    patientprofile: PatientProfile | null; // Profile might be missing
+
+    // Optional: Add if you include recent_appointments/prescriptions in serializer
+    recent_appointments?: Appointment[];
+    recent_prescriptions?: PrescriptionData[];
+    
+}
 export interface MedicationData {
     id?: number; // Might have ID when fetching
     name: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types';
 
 
@@ -26,29 +26,29 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: UserR
 
 
   if (!user) {
-    
+
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  
+
   if (user && allowedRoles && allowedRoles.length > 0) {
-    
+
     const isAuthorized = allowedRoles.includes(user.role);
 
-    
+
     if (!isAuthorized) {
-      
+
       if (user.role === 'user') {
         return <Navigate to="/" replace />;
       }
-      
-      
+
+
       return <Navigate to="/dashboard" replace />;
     }
   }
 
- 
+
   return <>{children}</>;
 };
 
-export { ProtectedRoute }; 
+export { ProtectedRoute };
