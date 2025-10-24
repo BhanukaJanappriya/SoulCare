@@ -1,17 +1,10 @@
-# Django web framework
-django==5.2.7
-
-# Django REST framework
-djangorestframework==3.16.1
-
-# JWT authentication for DRF
-djangorestframework-simplejwt==5.5.1
-
-# CORS headers middleware
+asgiref==3.10.0
+Django==5.2.7
 django-cors-headers==4.9.0
-
-# MySQL database driver (use PyMySQL for Windows)
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+pillow==12.0.0
+PyJWT==2.10.1
 PyMySQL==1.1.1
-
-# Optional: MySQL client (only if you can compile on Windows or Linux)
-# mysqlclient==2.2.7
+sqlparse==0.5.3
+tzdata==2025.2

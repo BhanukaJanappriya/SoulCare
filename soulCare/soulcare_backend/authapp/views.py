@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer,ProviderListSerializer,ProviderScheduleSerializer,UserInfoSerializer,PatientDetailSerializer
+from .serializers import LoginSerializer,PatientRegistrationSerializer, DoctorRegistrationSerializer, CounselorRegistrationSerializer,UserDetailSerializer,AdminUserManagementSerializer,ProviderListSerializer,ProviderScheduleSerializer,UserInfoSerializer,PatientDetailSerializer, UserProfileUpdateSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 
@@ -20,7 +20,7 @@ class LoginView(APIView):
         if serializer.is_valid():
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 class PatientRegisterView(generics.CreateAPIView):
     serializer_class = PatientRegistrationSerializer
 
@@ -86,31 +86,39 @@ class CounselorRegisterView(generics.CreateAPIView):
                 "nic": user.counselorprofile.nic,
                 "full_name":user.counselorprofile.full_name,
                 "contact_number": user.counselorprofile.contact_number,
-                "expertise": user.counselorprofile.expertise, 
+                "expertise": user.counselorprofile.expertise,
                 "license_number": user.counselorprofile.license_number,
             }
         }
         return Response(response_data,status=status.HTTP_201_CREATED)
-    
 
 
-class UserDetailView(APIView):
+
+class UserDetailView(generics.RetrieveUpdateAPIView):
+    """
+    Handles GET for user details and PUT/PATCH for profile updates.
+    """
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        serializer = UserDetailSerializer(request.user)
-        return Response(serializer.data)
-    
+    # We only want to retrieve/update the logged-in user
+    def get_object(self):
+        return self.request.user
 
+    # Use the UserDetailSerializer for GET (Read) requests
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return UserDetailSerializer
+        # Use the new serializer for PATCH/PUT (Update) requests
+        return UserProfileUpdateSerializer
 class AdminUserViewSet(viewsets.ModelViewSet):
 
-    
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
-    
+
     queryset = User.objects.all().order_by('id')
 
-    
+
     serializer_class = AdminUserManagementSerializer
 
     def get_queryset(self):
@@ -119,30 +127,30 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         if role:
             return queryset.filter(role=role)
         return queryset
-    
+
 
 class AdminDashboardStatsView(APIView):
-    
+
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, *args, **kwargs):
-        
+
         doctor_count = User.objects.filter(role='doctor').count()
         counselor_count = User.objects.filter(role='counselor').count()
         patient_count = User.objects.filter(role='user').count()
 
-        
+
         pending_verifications = User.objects.filter(
             Q(role='doctor') | Q(role='counselor'),
             is_verified=False
         ).count()
 
-        
+
         recent_users = User.objects.all().order_by('-date_joined')[:5]
-        
+
         recent_users_serializer = AdminUserManagementSerializer(recent_users, many=True)
 
-        
+
         stats = {
             'total_doctors': doctor_count,
             'total_counselors': counselor_count,
@@ -152,7 +160,7 @@ class AdminDashboardStatsView(APIView):
         }
 
         return Response(stats, status=status.HTTP_200_OK)
-    
+
 
 class ProviderListView(generics.ListAPIView):
     """
@@ -166,8 +174,8 @@ class ProviderListView(generics.ListAPIView):
             Q(role='doctor') | Q(role='counselor'),
             is_verified=True
         ).select_related('doctorprofile', 'counselorprofile')
-        
-        
+
+
 class ProviderScheduleViewSet(viewsets.ModelViewSet):
     """
     A ViewSet for providers to manage their own weekly availability schedules.
@@ -182,9 +190,9 @@ class ProviderScheduleViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # When creating a schedule, automatically assign it to the logged-in provider
         serializer.save(provider=self.request.user)
-        
-        
-        
+
+
+
 class ProviderAvailabilityView(APIView):
     """
     Calculates the available appointment slots for a given provider and date range.
@@ -232,17 +240,17 @@ class ProviderAvailabilityView(APIView):
                     # Check if this slot is already booked
                     if (current_date, slot_time) not in booked_slots:
                         day_slots.append(slot_time.strftime('%H:%M'))
-                    
+
                     current_time += slot_duration
-            
+
             if day_slots:
                 available_slots[current_date.isoformat()] = day_slots
-            
+
             current_date += timedelta(days=1)
 
         return Response(available_slots, status=status.HTTP_200_OK)
-    
-    
+
+
 class ProviderDetailView(generics.RetrieveAPIView):
     """
     Provides the detailed public profile for a single doctor or counselor.
@@ -254,7 +262,7 @@ class ProviderDetailView(generics.RetrieveAPIView):
         is_verified=True
     )
     lookup_field = 'pk' # This tells the view to find the user by their primary key (ID)
-    
+
 
 class DoctorPatientsView(APIView):
     """
@@ -279,14 +287,14 @@ class DoctorPatientsView(APIView):
         # Serialize the patient data
         serializer = UserInfoSerializer(patients, many=True)
         return Response(serializer.data)
-    
+
 
 
 class PatientDetailView(generics.RetrieveAPIView):
     """
     API view to retrieve details for a specific patient.
     Ensures the requesting doctor/counselor is associated with the patient via an appointment.
-    
+
     """
     serializer_class = PatientDetailSerializer
     permission_classes = [IsAuthenticated]

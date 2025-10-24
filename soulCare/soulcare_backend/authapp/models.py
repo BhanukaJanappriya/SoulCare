@@ -27,6 +27,8 @@ class PatientProfile(models.Model):
     address = models.TextField()
     dob = models.DateField(null=True, blank=True)
     health_issues = models.TextField(blank=True, null=True)
+    profile_picture = models.ImageField(upload_to='profiles/patients/', blank=True, null=True)
+
     # Add other patient fields you need here
 
 class DoctorProfile(models.Model):
@@ -40,6 +42,8 @@ class DoctorProfile(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
     profile_picture_url = models.URLField(max_length=500, blank=True, null=True)
     bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
+    profile_picture = models.ImageField(upload_to='profiles/doctors/', blank=True, null=True)
+    bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
     # Add other doctor fields you need here
 
 class CounselorProfile(models.Model):
@@ -51,6 +55,8 @@ class CounselorProfile(models.Model):
     license_number = models.CharField(max_length=100)
     rating = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
     profile_picture_url = models.URLField(max_length=500, blank=True, null=True)
+    bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
+    profile_picture = models.ImageField(upload_to='profiles/counselors/', blank=True, null=True)
     bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
     # Add other counselor fields you need here
 

@@ -76,6 +76,15 @@ const App = () => (
             />
 
             <Route
+            path="/patients/:id"
+            element={
+              <ProtectedRoute allowedRoles={["doctor", "counselor"]}>
+                <PatientDetailPage />
+              </ProtectedRoute>
+            }
+        />
+
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute allowedRoles={["doctor", "counselor"]}>
@@ -188,6 +197,9 @@ const App = () => (
               <Route path="journal" element={<PatientJournal />} />
               <Route path="meditation" element={<MeditationPage />} />
               <Route path="games" element={<PatientGames />} />
+              <Route path="profile" element={<Profile />} />
+
+
 
               <Route path="prescriptions" element={<PatientPrescriptions />} />
 
