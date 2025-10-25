@@ -7,6 +7,8 @@ from django.db.models import Q  # ✅ Add this import
 from .models import JournalEntry, Tag
 from .serializers import JournalEntrySerializer, TagSerializer
 from django.http import HttpResponse
+from appointments.models import Appointment
+
 
 class JournalEntryViewSet(viewsets.ModelViewSet):
     """
@@ -48,6 +50,35 @@ class JournalEntryViewSet(viewsets.ModelViewSet):
         """Associate the journal entry with the logged-in patient."""
         serializer.save(patient=self.request.user.patientprofile)
 
+    @action(detail=True, methods=['post'], url_path='share')
+    def share_with_counselor(self, request, pk=None):
+        """Shares a specific journal entry with the patient's counselor."""
+        journal_entry = self.get_object()
+        patient_profile = request.user.patientprofile
+
+        # Security check: ensure the user owns this journal entry
+        if journal_entry.patient != patient_profile:
+            return Response({'detail': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Find a counselor this patient has had an appointment with.
+        # (This is a simple business logic rule; you could make it more complex).
+        counselor_appointment = Appointment.objects.filter(
+            patient=patient_profile,
+            provider__role='counselor'
+        ).first()
+
+        if not counselor_appointment:
+            return Response({'detail': 'No counselor found to share with.'}, status=status.HTTP_404_NOT_FOUND)
+
+        counselor_profile = counselor_appointment.provider.counselorprofile
+        journal_entry.shared_with_counselor = counselor_profile
+        journal_entry.save()
+
+        return Response(
+            {'detail': f'Journal entry shared with {counselor_profile.full_name}.'},
+            status=status.HTTP_200_OK
+        )
+
     @action(detail=False, methods=['get'], url_path='download')
     def download_journals(self, request):
         """Generates and returns a downloadable markdown file of all user's journals."""
@@ -74,6 +105,7 @@ class JournalEntryViewSet(viewsets.ModelViewSet):
         response = HttpResponse(content, content_type='text/markdown')
         response['Content-Disposition'] = 'attachment; filename="soulcare_journal.md"'
         return response
+
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     """
