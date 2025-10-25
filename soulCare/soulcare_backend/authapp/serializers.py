@@ -370,7 +370,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'full_name', 'nic', 'contact_number'] # Updated fields
+        fields = ['id', 'username', 'email', 'full_name', 'nic', 'contact_number','role'] # Updated fields
 
     def get_full_name(self, obj):
         # Safely access profile attributes
