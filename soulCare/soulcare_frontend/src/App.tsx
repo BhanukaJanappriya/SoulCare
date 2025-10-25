@@ -13,7 +13,7 @@ import CounselorRegister from "./pages/Registration/CounselorRegister";
 import DoctorRegister from "./pages/Registration/DoctorRegister";
 import PatientRegister from "./pages/Registration/PatientRegister";
 import Dashboard from "./pages/Dashboard";
-//import PatientDashboard from "./pages/PatientDashboard";
+
 import Patients from "./pages/Patients";
 import Appointments from "./pages/Appointments";
 import Profile from "./pages/Profile";
@@ -38,7 +38,6 @@ import ManagePatientsPage from "./pages/admin/ManagePatientsPage";
 import PatientLayout from "./components/layout/PatientLayout";
 import PatientDashboard from "./pages/Patient/PatientDashboard";
 import PatientAppointments from "./pages/Patient/PatientAppointments";
-import MoodTracker from "./pages/Patient/MoodTracker";
 import PatientHabits from "./pages/Patient/PatientHabits";
 import MeditationPage from "./pages/Patient/MeditationPage";
 import PatientJournal from "./pages/Patient/PatientJournal";
@@ -47,6 +46,7 @@ import BookAppointmentPage from "./pages/Patient/BookAppointmentPage";
 import ProviderDetailPage from "./pages/Patient/ProviderDetailPage";
 import PatientGames from "./pages/Patient/PatientGames";
 import PatientPrescriptions from "./pages/Patient/PatientPrescriptions";
+import MoodTracker from "./pages/Patient/MoodTracker";
 
 const queryClient = new QueryClient();
 
@@ -76,13 +76,13 @@ const App = () => (
             />
 
             <Route
-            path="/patients/:id"
-            element={
-              <ProtectedRoute allowedRoles={["doctor", "counselor"]}>
-                <PatientDetailPage />
-              </ProtectedRoute>
-            }
-        />
+              path="/patients/:id"
+              element={
+                <ProtectedRoute allowedRoles={["doctor", "counselor"]}>
+                  <PatientDetailPage />
+                </ProtectedRoute>
+              }
+            />
 
             <Route
               path="/dashboard"
@@ -142,7 +142,6 @@ const App = () => (
               }
             />
 
-
             <Route
               path="/video-calls"
               element={
@@ -177,7 +176,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-          {/* Patient Routes */}
+            {/* Patient Routes */}
             <Route
               path="/patient"
               element={
@@ -188,18 +187,23 @@ const App = () => (
             >
               <Route index element={<PatientDashboard />} />
               <Route path="dashboard" element={<PatientDashboard />} />
-              <Route path="mood" element={<MoodTracker />} />
               <Route path="habits" element={<PatientHabits />} />
               <Route path="appointments" element={<PatientAppointments />} />
-              <Route path="book-appointment" element={<BookAppointmentPage />} />
-              <Route path="providers/:providerId" element={<ProviderDetailPage />} />
+              <Route
+                path="book-appointment"
+                element={<BookAppointmentPage />}
+              />
+              <Route
+                path="providers/:providerId"
+                element={<ProviderDetailPage />}
+              />
               <Route path="blogs" element={<PatientBlogs />} />
               <Route path="journal" element={<PatientJournal />} />
               <Route path="meditation" element={<MeditationPage />} />
               <Route path="games" element={<PatientGames />} />
               <Route path="profile" element={<Profile />} />
               <Route path="prescriptions" element={<PatientPrescriptions />} />
-
+              <Route path="mood" element={<MoodTracker />} />
             </Route>
 
             <Route
