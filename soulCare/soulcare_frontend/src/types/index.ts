@@ -142,7 +142,7 @@ export interface PrescriptionData {
 }
 
 export interface PrescriptionInput {
-    patient: number; // Patient User ID
+    patient_id: number; // Patient User ID
     diagnosis: string;
     notes?: string;
     medications: Omit<MedicationData, 'id'>[];
