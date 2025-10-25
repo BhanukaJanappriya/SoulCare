@@ -15,6 +15,8 @@ import {
   ChatMessage,
 } from '@/types';
 
+const TOKEN_KEY = 'access';
+
 // Base API URL
 const API_BASE_URL = 'http://localhost:8000/api/';
 
@@ -28,23 +30,66 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// --- Request Interceptor (Attach JWT Token) ---
 const addAuthToken = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-  const token = localStorage.getItem('accessToken');
+  // Always use the same key to get the token.
+  const token = localStorage.getItem(TOKEN_KEY);
+
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 };
 
+
+// This function handles any errors during the request setup.
 const handleRequestError = (error: AxiosError) => {
-  console.error('Request interceptor error:', error);
+  console.error('Request Interceptor Error:', error);
   return Promise.reject(error);
 };
 
+
 // Apply interceptors
 api.interceptors.request.use(addAuthToken, handleRequestError);
-axiosInstance.interceptors.request.use(addAuthToken, handleRequestError);
+
+const handleResponseError = (error: AxiosError) => {
+  // Check if the error is a 401 Unauthorized response.
+  if (error.response?.status === 401) {
+    console.warn('Authentication token is invalid or expired. Redirecting to login.');
+    // Remove the invalid token.
+    localStorage.removeItem(TOKEN_KEY);
+    // Redirect the user to the login page to re-authenticate.
+    // This prevents the app from getting stuck in a broken state.
+    if (window.location.pathname !== '/auth/login') {
+      window.location.href = '/auth/login';
+    }
+  }
+  return Promise.reject(error);
+};
+
+api.interceptors.request.use(
+  (config) => {
+    // 1. Retrieve the access token from localStorage.
+    //    (Your login logic should save the token here).
+    const token = localStorage.getItem('access');
+
+    // 2. If the token exists, add it to the request headers.
+    if (token) {
+      // The 'Authorization' header is the standard way to send tokens.
+      // The format 'Bearer <token>' is required by Django REST Framework SimpleJWT.
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // 3. Return the modified config object so the request can proceed.
+    return config;
+  },
+  (error) => {
+    // Handle any errors that might occur during the setup.
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+
 
 // --- Response Interceptor (Handle 401) ---
 api.interceptors.response.use(
@@ -57,6 +102,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 // =================================================================
 // --- DOCTOR / PATIENT API FUNCTIONS ---
