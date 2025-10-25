@@ -1,34 +1,52 @@
 # In soulcare_backend/moodtracker/serializers.py
 
 from rest_framework import serializers
-from .models import MoodEntry, Activity
+from .models import MoodEntry, Activity, Tag # NEW: import Tag
 
 class ActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Activity
         fields = ['id', 'name']
 
+# NEW: Serializer for the Tag model
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name']
+
 class MoodEntrySerializer(serializers.ModelSerializer):
-    # ✅ FIX 1: For READING data (GET requests).
-    # This will show the activity names in the API response, which your frontend uses.
     activities = serializers.SlugRelatedField(
         many=True,
-        read_only=True, # This field is only for sending data out.
-        slug_field='name'
+        slug_field='name',
+        queryset=Activity.objects.all()
     )
-
-    # ✅ FIX 2: For WRITING data (POST requests).
-    # This creates a new field that accepts a list of activity IDs.
-    activity_ids = serializers.PrimaryKeyRelatedField(
+    # NEW: Add a field for tags, works just like activities
+    tags = serializers.SlugRelatedField(
         many=True,
-        write_only=True, # This field is only for receiving data.
-        queryset=Activity.objects.all(),
-        source='activities' # This maps the input to the actual 'activities' model field.
+        slug_field='name',
+        queryset=Tag.objects.all()
     )
 
     class Meta:
         model = MoodEntry
-        # ✅ FIX 3: Update the fields list.
-        # 'patient' is set automatically in the view.
-        # 'activities' is for reading, 'activity_ids' is for writing.
-        fields = ['id', 'date', 'mood', 'energy', 'anxiety', 'notes', 'activities', 'activity_ids', 'created_at']
+        # NEW: Add 'tags' to the list of fields
+        fields = ['id', 'date', 'mood', 'energy', 'anxiety', 'notes', 'activities', 'tags', 'created_at']
+
+    def create(self, validated_data):
+        # Pop the relationship data before creating the main object
+        activity_names = validated_data.pop('activities', [])
+        tag_names = validated_data.pop('tags', []) # NEW: handle tags
+
+        mood_entry = MoodEntry.objects.create(**validated_data)
+
+        # Link activities
+        for name in activity_names:
+            activity, _ = Activity.objects.get_or_create(name=name)
+            mood_entry.activities.add(activity)
+
+        # NEW: Link tags
+        for name in tag_names:
+            tag, _ = Tag.objects.get_or_create(name=name)
+            mood_entry.tags.add(tag)
+
+        return mood_entry
