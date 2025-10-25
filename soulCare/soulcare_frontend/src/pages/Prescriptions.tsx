@@ -59,7 +59,7 @@ const PrescriptionsPage: React.FC = () => {
 
         const apiData: PrescriptionInput = {
             ...formData,
-            patient: patientId, // Convert patient ID string to number
+            patient_id: patientId, // Convert patient ID string to number
         };
         mutation.mutate(apiData); // Trigger the mutation
     };

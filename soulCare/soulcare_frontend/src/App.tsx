@@ -198,9 +198,6 @@ const App = () => (
               <Route path="meditation" element={<MeditationPage />} />
               <Route path="games" element={<PatientGames />} />
               <Route path="profile" element={<Profile />} />
-
-
-
               <Route path="prescriptions" element={<PatientPrescriptions />} />
 
             </Route>
