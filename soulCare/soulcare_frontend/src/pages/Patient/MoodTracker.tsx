@@ -1,4 +1,9 @@
-import React, { useState } from "react";
+// In soulcare_frontend/src/pages/MoodTracker.tsx
+
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+// NEW: Import the API instance and toast hook
+import { api } from "@/api";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   Card,
@@ -27,71 +32,214 @@ import {
   Heart,
   Zap,
   AlertTriangle,
-  Calendar,
   Plus,
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
 
+// NEW: Define TypeScript types that match our Django backend models
+interface MoodEntry {
+  id: number;
+  date: string; // Will be in "YYYY-MM-DD" format from backend
+  mood: number;
+  energy: number;
+  anxiety: number;
+  notes?: string;
+  activities: string[];
+}
+
+interface Activity {
+  id: number;
+  name: string;
+}
+
+// ✅ Add proper API response types
+interface MoodEntriesResponse {
+  results?: MoodEntry[];
+  data?: MoodEntry[];
+}
+
+interface ActivitiesResponse {
+  results?: Activity[];
+  data?: Activity[];
+}
+
+// ✅ Add proper error response type
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      date?: string[];
+      detail?: string;
+      [key: string]: unknown;
+    };
+  };
+}
+
 const MoodTracker: React.FC = () => {
+  // --- STATE MANAGEMENT ---
+  const { toast } = useToast();
+
+  // Form state
   const [mood, setMood] = useState([7]);
   const [energy, setEnergy] = useState([6]);
   const [anxiety, setAnxiety] = useState([3]);
   const [notes, setNotes] = useState("");
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
-  // Mock historical data
-  const weeklyData = [
-    { day: "Mon", mood: 7, energy: 6, anxiety: 4, date: "2024-01-15" },
-    { day: "Tue", mood: 8, energy: 7, anxiety: 3, date: "2024-01-16" },
-    { day: "Wed", mood: 6, energy: 5, anxiety: 6, date: "2024-01-17" },
-    { day: "Thu", mood: 9, energy: 8, anxiety: 2, date: "2024-01-18" },
-    { day: "Fri", mood: 7, energy: 7, anxiety: 4, date: "2024-01-19" },
-    { day: "Sat", mood: 8, energy: 8, anxiety: 3, date: "2024-01-20" },
-    { day: "Sun", mood: 9, energy: 9, anxiety: 2, date: "2024-01-21" },
-  ];
+  // NEW: State for data fetched from the backend
+  const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
+  const [availableActivities, setAvailableActivities] = useState<Activity[]>([]);
 
-  const monthlyData = [
-    { week: "Week 1", mood: 7.2, energy: 6.8, anxiety: 3.5 },
-    { week: "Week 2", mood: 7.8, energy: 7.2, anxiety: 3.2 },
-    { week: "Week 3", mood: 6.9, energy: 6.5, anxiety: 4.1 },
-    { week: "Week 4", mood: 8.1, energy: 7.8, anxiety: 2.8 },
-  ];
+  // NEW: Loading and submission state
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const activities = [
-    "Exercise",
-    "Meditation",
-    "Social time",
-    "Work",
-    "Sleep",
-    "Reading",
-    "Music",
-    "Outdoor time",
-    "Creative work",
-    "Relaxation",
-    "Gaming",
-    "Cooking",
-  ];
 
-  const toggleActivity = (activity: string) => {
-    setSelectedActivities((prev) =>
-      prev.includes(activity)
-        ? prev.filter((a) => a !== activity)
-        : [...prev, activity]
-    );
-  };
+  // --- DATA FETCHING ---
+  // NEW: Function to fetch all required data from the backend
+  const fetchMoodData = useCallback(async () => {
+    try {
+      // Fetch mood entries and available activities at the same time
+      const [entriesResponse, activitiesResponse] = await Promise.all([
+        api.get<MoodEntriesResponse>('/mood/entries/'),
+        api.get<ActivitiesResponse>('/mood/activities/')
+      ]);
 
-  const handleSubmit = () => {
-    // Handle mood entry submission
-    console.log({
+      // This is a good place to debug and see what the API is actually sending
+      console.log("API Response for entries:", entriesResponse.data);
+      console.log("API Response for activities:", activitiesResponse.data);
+
+      // Handle different response formats safely
+      const moodData = (entriesResponse.data.results || entriesResponse.data || []) as MoodEntry[];
+      const activitiesData = (activitiesResponse.data.results || activitiesResponse.data || []) as Activity[];
+
+      setMoodHistory(moodData);
+      setAvailableActivities(activitiesData);
+    } catch (error) {
+      console.error("Failed to fetch mood data:", error);
+      toast({
+        title: "Error",
+        description: "Could not load your mood history. Please try refreshing.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  // NEW: useEffect hook to call the fetch function when the component loads
+  useEffect(() => {
+    fetchMoodData();
+  }, [fetchMoodData]);
+
+
+  // --- DATA SUBMISSION ---
+  // UPDATED: handleSubmit function to send data to the backend
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+
+    const today = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
+    // Check if an entry for today already exists
+    if (moodHistory.some(entry => entry.date === today)) {
+        toast({
+            title: "Already Logged Today",
+            description: "You have already logged your mood for today. You can log again tomorrow.",
+            variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+    }
+
+    const newEntryPayload = {
+      date: today,
       mood: mood[0],
       energy: energy[0],
       anxiety: anxiety[0],
       notes,
       activities: selectedActivities,
-      date: new Date(),
-    });
-    // Reset form or show success message
+    };
+
+    try {
+      await api.post('/mood/entries/', newEntryPayload);
+      toast({
+        title: "Success!",
+        description: "Your mood entry has been saved.",
+      });
+      // Reset the form
+      setMood([7]);
+      setEnergy([6]);
+      setAnxiety([3]);
+      setNotes("");
+      setSelectedActivities([]);
+      // Refresh the data to show the new entry
+      fetchMoodData();
+    } catch (error: unknown) {
+      console.error("Failed to save mood entry:", error);
+
+      // ✅ FIX: Type-safe error handling without 'any'
+      const apiError = error as ApiErrorResponse;
+      const errorMessage = apiError.response?.data?.date?.[0] || "An unexpected error occurred.";
+
+      toast({
+        title: "Submission Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
+  // --- CLIENT-SIDE DATA PROCESSING ---
+  // NEW: useMemo to efficiently calculate stats from the fetched data
+  const todaysEntry = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return moodHistory.find(entry => entry.date === todayStr);
+  }, [moodHistory]);
+
+  const weeklyAverage = useMemo(() => {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const recentEntries = moodHistory.filter(entry => new Date(entry.date) >= oneWeekAgo);
+
+    if (recentEntries.length === 0) return { mood: 0, energy: 0, anxiety: 0 };
+
+    const totals = recentEntries.reduce((acc, entry) => ({
+        mood: acc.mood + entry.mood,
+        energy: acc.energy + entry.energy,
+        anxiety: acc.anxiety + entry.anxiety,
+    }), { mood: 0, energy: 0, anxiety: 0 });
+
+    return {
+        mood: parseFloat((totals.mood / recentEntries.length).toFixed(1)),
+        energy: parseFloat((totals.energy / recentEntries.length).toFixed(1)),
+        anxiety: parseFloat((totals.anxiety / recentEntries.length).toFixed(1)),
+    };
+  }, [moodHistory]);
+
+  // UPDATED: Prepare data for the charts from the fetched history
+  const chartData = useMemo(() => {
+    return moodHistory
+      .slice(0, 7) // Get the last 7 entries
+      .map(entry => ({
+        ...entry,
+        // Format date for the chart (e.g., "Oct 25")
+        day: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      }))
+      .reverse(); // Show oldest first in the chart
+  }, [moodHistory]);
+
+
+  // --- UTILITY FUNCTIONS ---
+  const toggleActivity = (activityName: string) => {
+    setSelectedActivities((prev) =>
+      prev.includes(activityName)
+        ? prev.filter((a) => a !== activityName)
+        : [...prev, activityName]
+    );
   };
 
   const getMoodColor = (value: number) => {
@@ -109,17 +257,18 @@ const MoodTracker: React.FC = () => {
     return "😢";
   };
 
+
+  // --- RENDER LOGIC ---
+  if (isLoading) {
+    return <div className="p-6 text-center">Loading your mood tracker...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      
-
       <div className="p-6">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Mood Tracker
-            </h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Mood Tracker</h1>
             <p className="text-muted-foreground">
               Track your emotional well-being and identify patterns over time
             </p>
@@ -135,7 +284,6 @@ const MoodTracker: React.FC = () => {
 
             <TabsContent value="track" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Mood Entry Form */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -143,7 +291,7 @@ const MoodTracker: React.FC = () => {
                       Log Today's Mood
                     </CardTitle>
                     <CardDescription>
-                      How are you feeling right now?
+                      {todaysEntry ? "You've already logged today. Come back tomorrow!" : "How are you feeling right now?"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -151,88 +299,55 @@ const MoodTracker: React.FC = () => {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-sm font-medium flex items-center gap-2">
-                          <Heart className="w-4 h-4 text-rose-500" />
-                          Mood
+                          <Heart className="w-4 h-4 text-rose-500" /> Mood
                         </label>
                         <div className="flex items-center gap-2">
                           <span className={`text-2xl ${getMoodColor(mood[0])}`}>
                             {getMoodEmoji(mood[0])}
                           </span>
-                          <span className="text-sm font-medium">
-                            {mood[0]}/10
-                          </span>
+                          <span className="text-sm font-medium">{mood[0]}/10</span>
                         </div>
                       </div>
-                      <Slider
-                        value={mood}
-                        onValueChange={setMood}
-                        max={10}
-                        min={1}
-                        step={1}
-                        className="w-full"
-                      />
+                      <Slider value={mood} onValueChange={setMood} max={10} min={1} step={1} disabled={!!todaysEntry || isSubmitting}
+                      className="cursor-pointer"/>
                     </div>
 
                     {/* Energy Slider */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-sm font-medium flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-yellow-500" />
-                          Energy Level
+                          <Zap className="w-4 h-4 text-yellow-500" /> Energy Level
                         </label>
-                        <span className="text-sm font-medium">
-                          {energy[0]}/10
-                        </span>
+                        <span className="text-sm font-medium">{energy[0]}/10</span>
                       </div>
-                      <Slider
-                        value={energy}
-                        onValueChange={setEnergy}
-                        max={10}
-                        min={1}
-                        step={1}
-                        className="w-full"
-                      />
+                      <Slider value={energy} onValueChange={setEnergy} max={10} min={1} step={1} disabled={!!todaysEntry || isSubmitting}
+                      className="cursor-pointer"/>
                     </div>
 
                     {/* Anxiety Slider */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-sm font-medium flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-orange-500" />
-                          Anxiety Level
+                          <AlertTriangle className="w-4 h-4 text-orange-500" /> Anxiety Level
                         </label>
-                        <span className="text-sm font-medium">
-                          {anxiety[0]}/10
-                        </span>
+                        <span className="text-sm font-medium">{anxiety[0]}/10</span>
                       </div>
-                      <Slider
-                        value={anxiety}
-                        onValueChange={setAnxiety}
-                        max={10}
-                        min={1}
-                        step={1}
-                        className="w-full"
-                      />
+                      <Slider value={anxiety} onValueChange={setAnxiety} max={10} min={1} step={1} disabled={!!todaysEntry || isSubmitting}
+                      className="cursor-pointer"/>
                     </div>
 
-                    {/* Activities */}
+                    {/* UPDATED: Activities now come from the backend */}
                     <div className="space-y-3">
-                      <label className="text-sm font-medium">
-                        What did you do today?
-                      </label>
+                      <label className="text-sm font-medium">What did you do today?</label>
                       <div className="grid grid-cols-3 gap-2">
-                        {activities.map((activity) => (
+                        {availableActivities.map((activity) => (
                           <Badge
-                            key={activity}
-                            variant={
-                              selectedActivities.includes(activity)
-                                ? "default"
-                                : "outline"
-                            }
-                            className="cursor-pointer text-center justify-center py-2"
-                            onClick={() => toggleActivity(activity)}
+                            key={activity.id}
+                            variant={selectedActivities.includes(activity.name) ? "default" : "outline"}
+                            className={`cursor-pointer text-center justify-center py-2 ${todaysEntry ? 'cursor-not-allowed opacity-50' : ''}`}
+                            onClick={() => !todaysEntry && toggleActivity(activity.name)}
                           >
-                            {activity}
+                            {activity.name}
                           </Badge>
                         ))}
                       </div>
@@ -240,90 +355,73 @@ const MoodTracker: React.FC = () => {
 
                     {/* Notes */}
                     <div className="space-y-3">
-                      <label className="text-sm font-medium">
-                        Additional Notes (Optional)
-                      </label>
+                      <label className="text-sm font-medium">Additional Notes (Optional)</label>
                       <Textarea
                         placeholder="How was your day? Any specific events or thoughts..."
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         rows={3}
+                        disabled={!!todaysEntry || isSubmitting}
                       />
                     </div>
 
-                    <Button onClick={handleSubmit} className="w-full">
-                      Save Mood Entry
+                    <Button onClick={handleSubmit} className="w-full" disabled={!!todaysEntry || isSubmitting}>
+                      {isSubmitting ? 'Saving...' : 'Save Mood Entry'}
                     </Button>
                   </CardContent>
                 </Card>
 
-                {/* Quick Stats */}
+                {/* Quick Stats - UPDATED to use real data */}
                 <div className="space-y-6">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Today's Summary</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle>Today's Summary</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm font-medium">
-                          Current Mood
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl">
-                            {getMoodEmoji(mood[0])}
-                          </span>
-                          <span
-                            className={`font-bold ${getMoodColor(mood[0])}`}
-                          >
-                            {mood[0]}/10
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm font-medium">Energy</span>
-                        <span className="font-bold text-yellow-500">
-                          {energy[0]}/10
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm font-medium">Anxiety</span>
-                        <span className="font-bold text-orange-500">
-                          {anxiety[0]}/10
-                        </span>
-                      </div>
+                      {todaysEntry ? (
+                        <>
+                          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <span className="text-sm font-medium">Mood</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{getMoodEmoji(todaysEntry.mood)}</span>
+                              <span className={`font-bold ${getMoodColor(todaysEntry.mood)}`}>{todaysEntry.mood}/10</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <span className="text-sm font-medium">Energy</span>
+                            <span className="font-bold text-yellow-500">{todaysEntry.energy}/10</span>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <span className="text-sm font-medium">Anxiety</span>
+                            <span className="font-bold text-orange-500">{todaysEntry.anxiety}/10</span>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">Log your mood for today to see a summary here.</p>
+                      )}
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader>
-                      <CardTitle>This Week's Average</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle>This Week's Average</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Mood
-                        </span>
+                        <span className="text-sm text-muted-foreground">Mood</span>
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-green-500" />
-                          <span className="font-bold text-green-500">7.6</span>
+                          {weeklyAverage.mood > 5 ? <TrendingUp className="w-4 h-4 text-green-500"/> : <TrendingDown className="w-4 h-4 text-red-500"/>}
+                          <span className="font-bold">{weeklyAverage.mood}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Energy
-                        </span>
+                        <span className="text-sm text-muted-foreground">Energy</span>
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-green-500" />
-                          <span className="font-bold text-green-500">7.2</span>
+                           {weeklyAverage.energy > 5 ? <TrendingUp className="w-4 h-4 text-green-500"/> : <TrendingDown className="w-4 h-4 text-red-500"/>}
+                          <span className="font-bold">{weeklyAverage.energy}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Anxiety
-                        </span>
+                        <span className="text-sm text-muted-foreground">Anxiety</span>
                         <div className="flex items-center gap-2">
-                          <TrendingDown className="w-4 h-4 text-green-500" />
-                          <span className="font-bold text-green-500">3.4</span>
+                          {weeklyAverage.anxiety < 5 ? <TrendingUp className="w-4 h-4 text-green-500"/> : <TrendingDown className="w-4 h-4 text-red-500"/>}
+                          <span className="font-bold">{weeklyAverage.anxiety}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -332,59 +430,24 @@ const MoodTracker: React.FC = () => {
               </div>
             </TabsContent>
 
+            {/* UPDATED: Weekly View Chart */}
             <TabsContent value="weekly" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Weekly Mood Trends</CardTitle>
-                  <CardDescription>
-                    Your mood patterns over the past week
-                  </CardDescription>
+                  <CardDescription>Your mood patterns over the last 7 entries</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={weeklyData}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          className="opacity-30"
-                        />
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                         <XAxis dataKey="day" />
                         <YAxis domain={[0, 10]} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--popover))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="mood"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={3}
-                          dot={{
-                            fill: "hsl(var(--primary))",
-                            strokeWidth: 2,
-                            r: 6,
-                          }}
-                          name="Mood"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="energy"
-                          stroke="#10b981"
-                          strokeWidth={2}
-                          dot={{ fill: "#10b981", strokeWidth: 2, r: 5 }}
-                          name="Energy"
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="anxiety"
-                          stroke="#f59e0b"
-                          strokeWidth={2}
-                          dot={{ fill: "#f59e0b", strokeWidth: 2, r: 5 }}
-                          name="Anxiety"
-                        />
+                        <Tooltip contentStyle={{ backgroundColor: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}/>
+                        <Line type="monotone" dataKey="mood" stroke="hsl(var(--primary))" strokeWidth={3} name="Mood" />
+                        <Line type="monotone" dataKey="energy" stroke="#10b981" strokeWidth={2} name="Energy" />
+                        <Line type="monotone" dataKey="anxiety" stroke="#f59e0b" strokeWidth={2} name="Anxiety" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -392,114 +455,7 @@ const MoodTracker: React.FC = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="monthly" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Overview</CardTitle>
-                  <CardDescription>
-                    Weekly averages for the current month
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyData}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          className="opacity-30"
-                        />
-                        <XAxis dataKey="week" />
-                        <YAxis domain={[0, 10]} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--popover))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                          }}
-                        />
-                        <Bar
-                          dataKey="mood"
-                          fill="hsl(var(--primary))"
-                          name="Mood"
-                        />
-                        <Bar dataKey="energy" fill="#10b981" name="Energy" />
-                        <Bar dataKey="anxiety" fill="#f59e0b" name="Anxiety" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="insights" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Mood Patterns</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <h4 className="font-semibold text-green-800 dark:text-green-200">
-                        Best Days
-                      </h4>
-                      <p className="text-sm text-green-600 dark:text-green-300">
-                        You tend to feel better on weekends, especially Sundays
-                      </p>
-                    </div>
-                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <h4 className="font-semibold text-blue-800 dark:text-blue-200">
-                        Activity Impact
-                      </h4>
-                      <p className="text-sm text-blue-600 dark:text-blue-300">
-                        Exercise and outdoor time correlate with higher mood
-                        scores
-                      </p>
-                    </div>
-                    <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                      <h4 className="font-semibold text-yellow-800 dark:text-yellow-200">
-                        Energy Levels
-                      </h4>
-                      <p className="text-sm text-yellow-600 dark:text-yellow-300">
-                        Your energy peaks in the morning and after lunch
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recommendations</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                      <h4 className="font-semibold text-purple-800 dark:text-purple-200">
-                        Try Meditation
-                      </h4>
-                      <p className="text-sm text-purple-600 dark:text-purple-300">
-                        On days with higher anxiety, consider 10-minute
-                        breathing exercises
-                      </p>
-                    </div>
-                    <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                      <h4 className="font-semibold text-indigo-800 dark:text-indigo-200">
-                        Social Connection
-                      </h4>
-                      <p className="text-sm text-indigo-600 dark:text-indigo-300">
-                        Schedule more social activities on mid-week days
-                      </p>
-                    </div>
-                    <div className="p-4 bg-rose-50 dark:bg-rose-950/20 rounded-lg border border-rose-200 dark:border-rose-800">
-                      <h4 className="font-semibold text-rose-800 dark:text-rose-200">
-                        Sleep Schedule
-                      </h4>
-                      <p className="text-sm text-rose-600 dark:text-rose-300">
-                        Maintain consistent sleep times to improve energy levels
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
+            {/* You can continue to adapt the Monthly and Insights tabs using the 'moodHistory' state */}
           </Tabs>
         </div>
       </div>
