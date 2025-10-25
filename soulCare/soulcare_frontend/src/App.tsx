@@ -47,6 +47,7 @@ import BookAppointmentPage from "./pages/Patient/BookAppointmentPage";
 import ProviderDetailPage from "./pages/Patient/ProviderDetailPage";
 import PatientGames from "./pages/Patient/PatientGames";
 import PatientPrescriptions from "./pages/Patient/PatientPrescriptions";
+import PatientMessages from "./pages/Patient/PatientMessages";
 
 const queryClient = new QueryClient();
 
@@ -199,6 +200,7 @@ const App = () => (
               <Route path="games" element={<PatientGames />} />
               <Route path="profile" element={<Profile />} />
               <Route path="prescriptions" element={<PatientPrescriptions />} />
+              <Route path="messages" element={<PatientMessages />} />
 
             </Route>
 

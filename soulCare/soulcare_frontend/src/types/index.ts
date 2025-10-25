@@ -91,6 +91,7 @@ export interface BasicUserInfo {
     full_name?: string | null;
     nic?: string | null;
     contact_number?: string | null;
+    role: UserRole;
 }
 
 export interface PatientOption {
@@ -228,4 +229,21 @@ export interface JournalFormData {
     mood_emoji?: string;
     tag_names?: string[]; // e.g., ["gratitude", "work"]
     is_private?: boolean;
+}
+// Matches the MessageSerializer output
+export interface ChatMessage {
+  id: number;
+  conversation: number;
+  sender: BasicUserInfo; // Uses your existing BasicUserInfo type
+  content: string;
+  timestamp: string; // ISO date string
+  is_read: boolean;
+}
+
+// Matches the ConversationListSerializer output
+export interface Conversation {
+  id: number;
+  other_user: BasicUserInfo; // The person you are talking to
+  last_message: ChatMessage | null; // The most recent message object
+  unread_count: number;
 }
