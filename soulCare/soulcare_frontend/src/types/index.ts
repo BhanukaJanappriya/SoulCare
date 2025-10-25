@@ -56,7 +56,7 @@ export interface AdminUserListItem {
   role: UserRole;
   is_verified: boolean;
   is_active: boolean;
-  full_name: string; 
+  full_name: string;
   date_joined: string;
 }
 
@@ -121,7 +121,7 @@ export interface PatientDetailData {
     // Optional: Add if you include recent_appointments/prescriptions in serializer
     recent_appointments?: Appointment[];
     recent_prescriptions?: PrescriptionData[];
-    
+
 }
 export interface MedicationData {
     id?: number; // Might have ID when fetching
@@ -200,4 +200,30 @@ export interface ProgressNote {
   goals: string[];
   nextSteps: string[];
   createdAt: Date;
+}
+
+
+export interface Tag {
+  id: number;
+  name: string;
+}
+
+export interface JournalEntry {
+  id: number;
+  title: string;
+  content: string;
+  mood_emoji: string | null;
+  is_private: boolean;
+  created_at: string; // ISO date string
+  updated_at: string; // ISO date string
+  tags: Tag[];
+}
+
+// For creating or updating
+export interface JournalFormData {
+    title: string;
+    content: string;
+    mood_emoji?: string;
+    tag_names?: string[]; // e.g., ["gratitude", "work"]
+    is_private?: boolean;
 }

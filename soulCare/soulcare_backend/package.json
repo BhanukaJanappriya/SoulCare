@@ -1,6 +1,9 @@
 {
   "dependencies": {
-    "typescript": "^5.9.3"
+    "@hookform/resolvers": "^5.2.2",
+    "react-hook-form": "^7.65.0",
+    "typescript": "^5.9.3",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",

@@ -9,26 +9,26 @@ class ActivitySerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 class MoodEntrySerializer(serializers.ModelSerializer):
-    # We want to send back the names of the activities, not just their IDs.
+    # ✅ FIX 1: For READING data (GET requests).
+    # This will show the activity names in the API response, which your frontend uses.
     activities = serializers.SlugRelatedField(
         many=True,
-        slug_field='name',
-        queryset=Activity.objects.all()
+        read_only=True, # This field is only for sending data out.
+        slug_field='name'
+    )
+
+    # ✅ FIX 2: For WRITING data (POST requests).
+    # This creates a new field that accepts a list of activity IDs.
+    activity_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        write_only=True, # This field is only for receiving data.
+        queryset=Activity.objects.all(),
+        source='activities' # This maps the input to the actual 'activities' model field.
     )
 
     class Meta:
         model = MoodEntry
-        # The 'patient' will be set automatically from the logged-in user, so we don't need it here.
-        fields = ['id', 'date', 'mood', 'energy', 'anxiety', 'notes', 'activities', 'created_at']
-
-    def create(self, validated_data):
-        # This logic correctly handles creating the mood entry and linking the activities.
-        activities_data = validated_data.pop('activities')
-        mood_entry = MoodEntry.objects.create(**validated_data)
-
-        # Link the activities to the newly created mood entry
-        for activity_name in activities_data:
-            activity, created = Activity.objects.get_or_create(name=activity_name)
-            mood_entry.activities.add(activity)
-
-        return mood_entry
+        # ✅ FIX 3: Update the fields list.
+        # 'patient' is set automatically in the view.
+        # 'activities' is for reading, 'activity_ids' is for writing.
+        fields = ['id', 'date', 'mood', 'energy', 'anxiety', 'notes', 'activities', 'activity_ids', 'created_at']
