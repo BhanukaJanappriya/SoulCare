@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
     'moodtracker',
     'journal'
 
+    'chat'
 
 
 
@@ -99,6 +102,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'soulcare_backend.wsgi.application'
+ASGI_APPLICATION = 'soulcare_backend.asgi.application'
 
 
 # Database
@@ -109,7 +113,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'Bhanuka@2001',
+        'PASSWORD': 'GDR@1101',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -162,3 +166,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 MEDIA_URL = '/soulcare_backend/media/'
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },   
+}

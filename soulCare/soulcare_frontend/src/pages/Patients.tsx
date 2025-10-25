@@ -17,12 +17,10 @@ import { RightSidebar } from "@/components/layout/RightSidebar"; // Assuming pat
 import {
   Search,
   Filter,
-  Plus,
   MoreHorizontal,
   User,
   Phone,
   Mail,
-  Calendar,
   AlertTriangle,
   Loader2,
 } from "lucide-react";
@@ -41,8 +39,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
   DropdownMenuPortal,
-} from "@/components/ui/dropdown-menu"; // Import Dropdown components
-import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
+} from "@/components/ui/dropdown-menu";
 
 // Define filter types
 type StatusFilter = "all" | "active" | "inactive";
@@ -65,23 +62,20 @@ const PatientCard: React.FC<PatientCardProps> = ({
   const { toast } = useToast(); // Correct place to call useToast
 
   const handleViewDetails = () => navigate(`/patient-details/${patient.id}`);
-  const handleSchedule = () => {
-    toast({
-      title: "Action",
-      description: `Trigger scheduling for ${
-        patient.full_name || patient.username
-      }`,
-    });
-    // navigate(`/schedule?patientId=${patient.id}`); // Future implementation
-  };
+
+  // handleSchedule function removed
+
   const handleWritePrescription = () => {
+    // Navigate to the main prescriptions page
+    navigate("/prescriptions");
+
+    // Optional: Show a toast to guide the user what to do next
     toast({
-      title: "Action",
-      description: `Trigger prescription for ${
-        patient.full_name || patient.username
-      }`,
+      title: "Navigated to Prescriptions",
+      description: `Click "Create New Prescription" and select '${
+        patient.full_name
+      }' from the list.`,
     });
-    // Future: navigate(`/prescriptions?patientId=${patient.id}`); // Or open modal
   };
   const handleViewHistory = () => {
     toast({
@@ -93,10 +87,22 @@ const PatientCard: React.FC<PatientCardProps> = ({
 
   // Helper functions for styling
   const getRiskLevelColor = (riskLevel?: string) => {
-    /* ... (copy from previous version) ... */
+    switch (riskLevel) {
+      case "high":
+        return "bg-destructive text-destructive-foreground hover:bg-destructive/80";
+      case "medium":
+        return "bg-yellow-500 text-black hover:bg-yellow-500/80";
+      case "low":
+        return "bg-green-600 text-white hover:bg-green-600/80";
+      default:
+        return "bg-muted text-muted-foreground hover:bg-muted/80";
+    }
   };
+
   const getStatusColor = (status?: string) => {
-    /* ... (copy from previous version) ... */
+    return status === "active"
+      ? "bg-green-100 text-green-700 border border-green-200"
+      : "bg-gray-100 text-gray-500 border border-gray-200";
   };
 
   return (
@@ -135,24 +141,19 @@ const PatientCard: React.FC<PatientCardProps> = ({
               <DropdownMenuItem onClick={handleViewDetails}>
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleSchedule}>
-                Schedule Appointment
-              </DropdownMenuItem>
+              {/* Schedule Appointment item removed */}
               <DropdownMenuItem onClick={handleWritePrescription}>
                 Write Prescription
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleViewHistory}>
                 View History
               </DropdownMenuItem>
-              {/* Add more actions like 'Edit', 'Discharge' later */}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-2 flex-grow text-sm pb-4">
-        {" "}
-        {/* Reduced bottom padding */}
         <div className="flex items-center text-muted-foreground">
           <Mail className="w-4 h-4 mr-2 flex-shrink-0" />
           <span className="truncate">{patient.email || "No email"}</span>
@@ -161,9 +162,6 @@ const PatientCard: React.FC<PatientCardProps> = ({
           <Phone className="w-4 h-4 mr-2 flex-shrink-0" />
           {patient.contact_number || "No phone"}
         </div>
-        {/* Mock Data Display (Keep until real data is available) */}
-        {/* <div className="flex items-center text-muted-foreground"> ... Last visit ... </div> */}
-        {/* <div className="text-muted-foreground"> <span className="font-medium text-foreground">Condition: </span> ... </div> */}
       </CardContent>
 
       <div className="p-4 pt-2 border-t flex items-center justify-between">
@@ -197,8 +195,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
           className="h-auto p-0 text-primary"
           onClick={handleViewDetails}
         >
-          {" "}
-          View{" "}
+          View
         </Button>
       </div>
     </Card>
@@ -226,7 +223,6 @@ const Patients: React.FC = () => {
   });
 
   // --- MOCK DATA INJECTION (Remove when API provides status/risk) ---
-  // This adds mock status/risk to the fetched patient data for UI demonstration
   const patientsWithMockData = useMemo(() => {
     return patients.map((p) => ({
       ...p,
@@ -250,10 +246,10 @@ const Patients: React.FC = () => {
       const lowerSearchTerm = searchTerm.toLowerCase();
       results = results.filter(
         (patient) =>
-          patient.full_name?.toLowerCase().includes(lowerSearchTerm) ||
+          (patient.full_name && patient.full_name.toLowerCase().includes(lowerSearchTerm)) ||
           patient.username.toLowerCase().includes(lowerSearchTerm) ||
-          patient.email?.toLowerCase().includes(lowerSearchTerm) ||
-          patient.nic?.toLowerCase().includes(lowerSearchTerm)
+          (patient.email && patient.email.toLowerCase().includes(lowerSearchTerm)) ||
+          (patient.nic && patient.nic.toLowerCase().includes(lowerSearchTerm))
       );
     }
 
@@ -272,24 +268,30 @@ const Patients: React.FC = () => {
     }
 
     return results;
-  }, [patientsWithMockData, searchTerm, statusFilter, riskFilter]); // Depend on mocked data
+  }, [patientsWithMockData, searchTerm, statusFilter, riskFilter]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pr-16">
+    // Assuming RightSidebar is w-16 (4rem), p-6 is 1.5rem.
+    // Total right padding = 4rem + 1.5rem = 5.5rem (pr-[5.5rem] is ~pr-22 in Tailwind)
+    <div className="min-h-screen bg-background text-foreground pr-[5.5rem]">
       <RightSidebar />
       <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          {/* ... Title and Description ... */}
-          <Button className="healthcare-button-primary" disabled>
-            {" "}
-            <Plus className="w-4 h-4 mr-2" /> Add New Patient (TBD){" "}
-          </Button>
-        </div>
-
-        {/* Search and Filters */}
-        <Card className="mb-6 shadow-sm bg-card">
-          <CardContent className="p-4">
+        
+        {/* --- UPDATED & COMBINED HEADER / FILTER CARD --- */}
+        <Card className="mb-8 shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-2xl font-bold">
+                  Patient Management
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  View, search, and filter patients associated with your profile.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 pb-4">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Search Input */}
               <div className="flex-1 relative">
@@ -304,7 +306,7 @@ const Patients: React.FC = () => {
               {/* Filter Dropdown Button */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
+                  <Button variant="outline" className="h-10">
                     <Filter className="w-4 h-4 mr-2" />
                     Filter
                     {/* Optional: Show badge if filters active */}
@@ -379,19 +381,31 @@ const Patients: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        {/* --- END OF UPDATED HEADER --- */}
+
 
         {/* Loading State */}
         {isLoading && (
           <div className="flex justify-center items-center py-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">Loading ...</span>
+            <span className="ml-2 text-muted-foreground">Loading patients...</span>
           </div>
         )}
-        
+
+        {/* Error State */}
+        {fetchError && (
+          <Alert variant="destructive" className="mt-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error Loading Patients</AlertTitle>
+            <AlertDescription>
+              {(fetchError as Error).message || "Could not load patient data."}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Patients Grid */}
         {!isLoading && !fetchError && filteredPatients.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
             {filteredPatients.map((patient) => (
               // Pass mock status/risk until API provides them
               <PatientCard
@@ -406,13 +420,13 @@ const Patients: React.FC = () => {
 
         {/* Empty State */}
         {!isLoading && !fetchError && filteredPatients.length === 0 && (
-          <Card className="mt-6 bg-card">
+          <Card className="mt-6 bg-card border border-dashed">
             <CardContent className="text-center py-12">
-              <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">
+              <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-1">
                 No patients found
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {searchTerm
                   ? "Try adjusting your search criteria."
                   : "No patients with scheduled appointments found in your list."}
@@ -420,18 +434,6 @@ const Patients: React.FC = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Error State */}
-        {fetchError && (
-          <Alert variant="destructive" className="mt-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Error Loading Patients</AlertTitle>
-            <AlertDescription>
-              {(fetchError as Error).message || "Could not load patient data."}
-            </AlertDescription>
-          </Alert>
-        )}
-        
       </div>
     </div>
   );

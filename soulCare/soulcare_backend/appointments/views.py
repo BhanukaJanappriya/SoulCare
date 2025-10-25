@@ -17,18 +17,42 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return AppointmentWriteSerializer
         return AppointmentReadSerializer
 
+    
     def get_queryset(self):
         """
         Filter appointments based on the user's role.
-        A user can only see appointments they are a part of.
+        
+        - A user (patient) can only see their own appointments.
+        - A provider (doctor/counselor) can see appointments they are the provider for.
+        - A provider can ALSO filter their appointments by a specific patient
+          by using a query parameter: /api/appointments/?patient_id=29
         """
         user = self.request.user
+        
+        # --- NEW: Check for patient_id filter from the provider ---
+        patient_id = self.request.query_params.get('patient_id')
+        
         if user.role in ['doctor', 'counselor']:
-            return Appointment.objects.filter(provider=user).select_related('patient__patientprofile')
+            queryset = Appointment.objects.filter(provider=user).select_related('patient__patientprofile')
+            
+            # If a patient_id is provided in the URL, filter the queryset further
+            if patient_id:
+                try:
+                    return queryset.filter(patient_id=int(patient_id))
+                except (ValueError, TypeError):
+                    # Handle invalid patient_id gracefully
+                    return Appointment.objects.none()
+            
+            # If no patient_id, return all appointments for the provider (original behavior)
+            return queryset
+            
         elif user.role == 'user':
+            # Patient logic remains unchanged
             return Appointment.objects.filter(patient=user).select_related('provider__doctorprofile', 'provider__counselorprofile')
+            
         return Appointment.objects.none()
-
+    
+    
     def perform_create(self, serializer):
         """
         When a patient creates an appointment, set them as the patient.
