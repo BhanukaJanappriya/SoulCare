@@ -1,104 +1,164 @@
 // src/api.ts
 
 import axios from 'axios';
+import type { AxiosRequestConfig, AxiosError } from 'axios';
 import {
-    PatientOption,
-    PrescriptionInput,
-    PrescriptionData,
-    PatientDetailData
+  JournalEntry,
+  JournalFormData,
+  Tag,
+  PatientOption,
+  PrescriptionInput,
+  PrescriptionData,
+  PatientDetailData
 } from '@/types';
 
-// Define the base URL for the general API (e.g., /api/blogs, /api/appointments)
+// Base API URL
 const API_BASE_URL = 'http://localhost:8000/api/';
 
-// --- Auth-Specific Instance (Used by AuthContext) ---
+// --- Auth Instance ---
 export const axiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}auth/`, // Points to 'http://localhost:8000/api/auth/'
+  baseURL: `${API_BASE_URL}auth/`,
 });
 
-// --- General-Purpose Instance (Used for all CUD operations - Blog, Appts, etc.) ---
+// --- General API Instance ---
 export const api = axios.create({
-  baseURL: API_BASE_URL, // Points to 'http://localhost:8000/api/'
+  baseURL: API_BASE_URL,
 });
 
-// --- Request Interceptor Logic (Attaches JWT Token) ---
-const addAuthToken = (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+// --- Request Interceptor (Attach JWT Token) ---
+const addAuthToken = (config: AxiosRequestConfig): AxiosRequestConfig => {
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    config.headers = {
+      ...config.headers,
+      Authorization: `Bearer ${token}`,
+    };
+  }
+  return config;
 };
 
-const handleRequestError = (error) => {
-    return Promise.reject(error);
+const handleRequestError = (error: AxiosError) => {
+  console.error('Request interceptor error:', error);
+  return Promise.reject(error);
 };
 
-// Apply the interceptor to BOTH instances to ensure all authenticated calls work
+// Apply interceptors
 api.interceptors.request.use(addAuthToken, handleRequestError);
 axiosInstance.interceptors.request.use(addAuthToken, handleRequestError);
 
-// 2. Apply to the 'authApi' instance as well
-axiosInstance.interceptors.request.use(addAuthToken, handleRequestError);
+// --- Response Interceptor (Handle 401) ---
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// =================================================================
+// --- DOCTOR / PATIENT API FUNCTIONS ---
+// =================================================================
 
 export const getDoctorPatients = async (): Promise<PatientOption[]> => {
-  try {
-    // Correct URL relative to axiosInstance baseURL
-    const response = await axiosInstance.get<PatientOption[]>('doctors/my-patients/');
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching doctor's patients:", error);
-    throw error; // Re-throw for react-query to handle
-  }
+  const response = await axiosInstance.get<PatientOption[]>('doctors/my-patients/');
+  return response.data;
 };
 
 export const createPrescriptionAPI = async (prescriptionData: PrescriptionInput): Promise<PrescriptionData> => {
-  try {
-    // Correct URL relative to api baseURL
-    const response = await api.post<PrescriptionData>('prescriptions/', prescriptionData);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating prescription:", error);
-    throw error; // Re-throw for react-query
-  }
+  const response = await api.post<PrescriptionData>('prescriptions/', prescriptionData);
+  return response.data;
 };
 
-// Fetch prescriptions (for patient or doctor) (uses api)
 export const getPrescriptionsAPI = async (): Promise<PrescriptionData[]> => {
-  try {
-    // Correct URL relative to api baseURL
-    const response = await api.get<PrescriptionData[]>('prescriptions/');
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching prescriptions:", error);
-    throw error; // Re-throw for react-query
-  }
+  const response = await api.get<PrescriptionData[]>('prescriptions/');
+  return response.data;
 };
 
 export const getPatientDetailsAPI = async (patientId: string | number): Promise<PatientDetailData> => {
-    try {
-        // Use axiosInstance because the URL is under /auth/
-        const response = await axiosInstance.get<PatientDetailData>(`patients/${patientId}/`);
-        return response.data;
-    } catch (error) {
-        console.error(`Error fetching patient details for ID ${patientId}:`, error);
-        throw error; // Re-throw for react-query
-    }
+  const response = await axiosInstance.get<PatientDetailData>(`patients/${patientId}/`);
+  return response.data;
 };
 
+// =================================================================
+// --- FORM DATA CREATOR ---
+// =================================================================
 export const createFormData = <T extends Record<string, unknown>>(data: T): FormData => {
-    const formData = new FormData();
-    for (const key in data) {
-        const value = data[key];
-        if (value !== undefined && value !== null) {
-            if (value instanceof File) {
-                formData.append(key, value, value.name);
-            } else if (typeof value === 'object' && !Array.isArray(value)) {
-                // handle object flattening if needed
-            } else {
-                formData.append(key, String(value));
-            }
-        }
+  const formData = new FormData();
+  for (const key in data) {
+    const value = data[key];
+    if (value !== undefined && value !== null) {
+      if (value instanceof File) {
+        formData.append(key, value, value.name);
+      } else if (typeof value === 'object' && !Array.isArray(value)) {
+        formData.append(key, JSON.stringify(value));
+      } else {
+        formData.append(key, String(value));
+      }
     }
-    return formData;
+  }
+  return formData;
+};
+
+// =================================================================
+// --- JOURNAL API FUNCTIONS ---
+// =================================================================
+
+export const getJournalEntriesAPI = async (params?: {
+  q?: string;
+  tags?: string;
+  filter?: 'weekly' | 'monthly';
+}): Promise<JournalEntry[]> => {
+  const response = await api.get<JournalEntry[]>('journal/entries/', { params });
+  return response.data;
+};
+
+export const createJournalEntryAPI = async (data: JournalFormData): Promise<JournalEntry> => {
+  const response = await api.post<JournalEntry>('journal/entries/', data);
+  return response.data;
+};
+
+export const updateJournalEntryAPI = async (id: number, data: JournalFormData): Promise<JournalEntry> => {
+  const response = await api.patch<JournalEntry>(`journal/entries/${id}/`, data);
+  return response.data;
+};
+
+export const deleteJournalEntryAPI = async (id: number): Promise<void> => {
+  await api.delete(`journal/entries/${id}/`);
+};
+
+export const getJournalTagsAPI = async (): Promise<Tag[]> => {
+  const response = await api.get<Tag[]>('journal/tags/');
+  return response.data;
+};
+
+// =================================================================
+// --- DOWNLOAD & SHARE JOURNALS ---
+// =================================================================
+
+export const downloadJournalsAPI = async (): Promise<void> => {
+  const response = await api.get('journal/entries/download/', { responseType: 'blob' });
+  const blobData = response.data as Blob;
+  const url = window.URL.createObjectURL(blobData);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'soulcare_journal.md');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+interface ShareResponse {
+  detail?: string;
+  message?: string;
+  success?: boolean;
+  [key: string]: unknown;
+}
+
+export const shareJournalEntryAPI = async (id: number): Promise<ShareResponse> => {
+  const response = await api.post<ShareResponse>(`journal/entries/${id}/share/`);
+  return response.data;
 };

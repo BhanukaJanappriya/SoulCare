@@ -48,7 +48,9 @@ INSTALLED_APPS = [
     'prescriptions',
     'appointments',
     'blog.apps.BlogConfig',
-    'moodtracker'
+    'moodtracker',
+    'journal'
+
 
 
 
