@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 from .models import Tag, JournalEntry
+from authapp.serializers import CounselorProfileSerializer
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,12 +19,13 @@ class JournalEntrySerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    shared_with_counselor = CounselorProfileSerializer(read_only=True)
 
     class Meta:
         model = JournalEntry
         fields = [
             'id', 'title', 'content', 'mood_emoji', 'is_private',
-            'created_at', 'updated_at', 'tags', 'tag_names'
+            'created_at', 'updated_at', 'tags', 'tag_names','shared_with_counselor'
         ]
         read_only_fields = ['patient'] # Patient is set automatically
 

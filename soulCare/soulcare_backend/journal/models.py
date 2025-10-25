@@ -1,7 +1,7 @@
 # journal/models.py
 
 from django.db import models
-from authapp.models import PatientProfile
+from authapp.models import PatientProfile, CounselorProfile
 
 class Tag(models.Model):
     """Represents a tag that can be associated with a journal entry, e.g., 'gratitude', 'work'."""
@@ -20,6 +20,13 @@ class JournalEntry(models.Model):
     is_private = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    shared_with_counselor = models.ForeignKey(
+        CounselorProfile,
+        on_delete=models.SET_NULL, # If counselor is deleted, don't delete the journal
+        null=True,
+        blank=True,
+        related_name='shared_journal_entries'
+    )
 
     class Meta:
         ordering = ['-created_at'] # Show the newest entries first

@@ -6,18 +6,20 @@ import {
   getJournalEntriesAPI,
   deleteJournalEntryAPI,
   getJournalTagsAPI,
-  downloadJournalsAPI
+  downloadJournalsAPI,
+  shareJournalEntryAPI
 } from '@/api';
 import { JournalEntry, Tag } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
-// --- Import UI Components (you likely have these) ---
+// --- Import UI Components ---
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { JournalEntryDialog } from '@/components/dialogs/JournalEntryDialog';
+import { Share2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +32,16 @@ import {
 } from "@/components/ui/alert-dialog"
 import { BookOpen, Search, Plus, Trash2, Pencil, Download } from 'lucide-react';
 
+// ✅ FIX: Proper error type interface
+interface ApiError {
+  response?: {
+    data?: {
+      detail?: string;
+      [key: string]: unknown;
+    };
+  };
+  message?: string;
+}
 
 export default function PatientJournal() {
     const { toast } = useToast();
@@ -43,6 +55,25 @@ export default function PatientJournal() {
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
     const [entryToEdit, setEntryToEdit] = useState<JournalEntry | null>(null);
 
+    // ✅ FIX: Type-safe share mutation
+    const shareMutation = useMutation({
+        mutationFn: shareJournalEntryAPI,
+        onSuccess: (data) => {
+            toast({
+                title: "Success",
+                description: data.detail || "Journal entry shared successfully!"
+            });
+            queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
+        },
+        onError: (error: ApiError) => {
+            const errorMessage = error.response?.data?.detail || error.message || "Could not share the entry.";
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: errorMessage
+            });
+        },
+    });
 
     // --- React Query Hooks for Data Fetching and Mutations ---
 
@@ -67,8 +98,13 @@ export default function PatientJournal() {
             queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
             queryClient.invalidateQueries({ queryKey: ['journalTags'] }); // Tags might change
         },
-        onError: () => {
-            toast({ variant: "destructive", title: "Error", description: "Could not delete entry." });
+        onError: (error: ApiError) => {
+            const errorMessage = error.response?.data?.detail || error.message || "Could not delete entry.";
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: errorMessage
+            });
         },
     });
 
@@ -78,8 +114,13 @@ export default function PatientJournal() {
         onSuccess: () => {
             toast({ title: "Success", description: "Your journal download has started." });
         },
-        onError: () => {
-             toast({ variant: "destructive", title: "Error", description: "Could not download journal." });
+        onError: (error: ApiError) => {
+            const errorMessage = error.response?.data?.detail || error.message || "Could not download journal.";
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: errorMessage
+            });
         }
     });
 
@@ -116,6 +157,9 @@ export default function PatientJournal() {
         setIsFormDialogOpen(true);
     }
 
+    const handleShareEntry = (entryId: number) => {
+        shareMutation.mutate(entryId);
+    }
 
     return (
         <div className="container mx-auto px-6 py-8">
@@ -131,7 +175,11 @@ export default function PatientJournal() {
                 <Button onClick={openNewDialog}>
                     <Plus className="w-4 h-4 mr-2" /> New Entry
                 </Button>
-                <Button variant="outline" onClick={() => downloadMutation.mutate()} disabled={downloadMutation.isPending}>
+                <Button
+                    variant="outline"
+                    onClick={() => downloadMutation.mutate()}
+                    disabled={downloadMutation.isPending}
+                >
                     <Download className="w-4 h-4 mr-2" />
                     {downloadMutation.isPending ? 'Downloading...' : 'Download as Document'}
                 </Button>
@@ -149,18 +197,22 @@ export default function PatientJournal() {
                         />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {isLoadingTags ? <p>Loading tags...</p> :
-                            availableTags?.map(tag => (
+                        {isLoadingTags ? (
+                            <p className="text-sm text-muted-foreground">Loading tags...</p>
+                        ) : availableTags && availableTags.length > 0 ? (
+                            availableTags.map(tag => (
                                 <Badge
                                     key={tag.id}
                                     variant={selectedTags.includes(tag.name) ? 'default' : 'secondary'}
                                     onClick={() => handleTagClick(tag.name)}
-                                    className="cursor-pointer"
+                                    className="cursor-pointer hover:opacity-80 transition-opacity"
                                 >
                                     {tag.name}
                                 </Badge>
                             ))
-                        }
+                        ) : (
+                            <p className="text-sm text-muted-foreground">No tags available</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -168,44 +220,89 @@ export default function PatientJournal() {
             {/* Journal Entries Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {isLoadingEntries ? (
-                    <p>Loading your journal...</p>
+                    <div className="col-span-full text-center py-8">
+                        <p className="text-muted-foreground">Loading your journal...</p>
+                    </div>
                 ) : entries && entries.length > 0 ? (
                     entries.map(entry => (
-                        <Card key={entry.id} className="flex flex-col">
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <CardTitle className="text-lg">{entry.title}</CardTitle>
-                                    <span className="text-2xl">{entry.mood_emoji}</span>
+                        <Card key={entry.id} className="flex flex-col hover:shadow-lg transition-shadow">
+                            <CardHeader className="pb-3">
+                                <div className="flex justify-between items-start mb-2">
+                                    <CardTitle className="text-lg leading-tight">{entry.title}</CardTitle>
+                                    <span className="text-2xl ml-2">{entry.mood_emoji}</span>
                                 </div>
-                                <CardDescription>
+                                <CardDescription className="text-xs">
                                     {format(new Date(entry.created_at), 'MMMM d, yyyy')}
                                 </CardDescription>
+
+                                {/* Sharing Status Badge */}
+                                {entry.shared_with_counselor && (
+                                    <Badge variant="secondary" className="w-fit mt-2 text-xs">
+                                        Shared with {entry.shared_with_counselor.full_name}
+                                    </Badge>
+                                )}
                             </CardHeader>
-                            <CardContent className="flex-grow space-y-4">
-                                <p className="text-text-muted text-sm line-clamp-3">
+                            <CardContent className="flex-grow space-y-4 pb-4">
+                                <p className="text-text-muted text-sm line-clamp-3 leading-relaxed">
                                     {entry.content}
                                 </p>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1">
                                     {entry.tags.map(tag => (
-                                        <Badge key={tag.id} variant="outline">{tag.name}</Badge>
+                                        <Badge key={tag.id} variant="outline" className="text-xs">
+                                            {tag.name}
+                                        </Badge>
                                     ))}
                                 </div>
                             </CardContent>
-                            <div className="p-4 border-t flex justify-between items-center">
-                                <Button variant="ghost" className="flex-1 justify-start">Read</Button>
-                                <div className="flex gap-2">
-                                    <Button size="icon" variant="ghost" onClick={() => openEditDialog(entry)}>
-                                        <Pencil className="w-4 h-4" />
+                            <div className="p-4 border-t flex justify-between items-center bg-muted/20">
+                                <Button variant="ghost" className="flex-1 justify-start text-sm">
+                                    Read Full Entry
+                                </Button>
+                                <div className="flex gap-1">
+                                    {/* Share Button - Only show if not already shared */}
+                                    {!entry.shared_with_counselor && (
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => handleShareEntry(entry.id)}
+                                            disabled={shareMutation.isPending}
+                                            className="h-8 w-8"
+                                            title="Share with counselor"
+                                        >
+                                            <Share2 className="w-3 h-3" />
+                                        </Button>
+                                    )}
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => openEditDialog(entry)}
+                                        className="h-8 w-8"
+                                        title="Edit entry"
+                                    >
+                                        <Pencil className="w-3 h-3" />
                                     </Button>
-                                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => confirmDelete(entry.id)}>
-                                        <Trash2 className="w-4 h-4" />
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="text-destructive h-8 w-8"
+                                        onClick={() => confirmDelete(entry.id)}
+                                        title="Delete entry"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
                                     </Button>
                                 </div>
                             </div>
                         </Card>
                     ))
                 ) : (
-                    <p>No journal entries found. Why not create one?</p>
+                    <div className="col-span-full text-center py-12">
+                        <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-text-dark mb-2">No journal entries found</h3>
+                        <p className="text-muted-foreground mb-4">Start your journaling journey by creating your first entry</p>
+                        <Button onClick={openNewDialog}>
+                            <Plus className="w-4 h-4 mr-2" /> Create Your First Entry
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -226,13 +323,20 @@ export default function PatientJournal() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete your journal entry.
+                            This action cannot be undone. This will permanently delete your journal entry
+                            and remove it from our servers.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                            Delete
+                        <AlertDialogCancel onClick={() => setEntryToDelete(null)}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-destructive hover:bg-destructive/90"
+                            disabled={deleteMutation.isPending}
+                        >
+                            {deleteMutation.isPending ? 'Deleting...' : 'Delete Entry'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

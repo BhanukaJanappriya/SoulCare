@@ -217,6 +217,8 @@ export interface JournalEntry {
   created_at: string; // ISO date string
   updated_at: string; // ISO date string
   tags: Tag[];
+  shared_with_counselor: { full_name: string } | null;
+
 }
 
 // For creating or updating
