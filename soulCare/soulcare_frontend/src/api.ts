@@ -2,6 +2,9 @@
 
 import axios from 'axios';
 import {
+    JournalEntry,
+    JournalFormData,
+    Tag,
     PatientOption,
     PrescriptionInput,
     PrescriptionData,
@@ -101,4 +104,87 @@ export const createFormData = <T extends Record<string, unknown>>(data: T): Form
         }
     }
     return formData;
+};
+
+
+// =================================================================
+// --- JOURNAL API FUNCTIONS ---
+// =================================================================
+
+// Fetch all journal entries with optional filtering
+export const getJournalEntriesAPI = async (params?: { q?: string; tags?: string }): Promise<JournalEntry[]> => {
+  try {
+    const response = await api.get<JournalEntry[]>('journal/entries/', { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching journal entries:", error);
+    throw error;
+  }
+};
+
+// Create a new journal entry
+export const createJournalEntryAPI = async (data: JournalFormData): Promise<JournalEntry> => {
+    try {
+        const response = await api.post<JournalEntry>('journal/entries/', data);
+        return response.data;
+    } catch (error) {
+        console.error("Error creating journal entry:", error);
+        throw error;
+    }
+};
+
+// Update an existing journal entry
+export const updateJournalEntryAPI = async (id: number, data: JournalFormData): Promise<JournalEntry> => {
+    try {
+        const response = await api.patch<JournalEntry>(`journal/entries/${id}/`, data);
+        return response.data;
+    } catch (error) {
+        console.error(`Error updating journal entry ${id}:`, error);
+        throw error;
+    }
+};
+
+// Delete a journal entry
+export const deleteJournalEntryAPI = async (id: number): Promise<void> => {
+    try {
+        await api.delete(`journal/entries/${id}/`);
+    } catch (error) {
+        console.error(`Error deleting journal entry ${id}:`, error);
+        throw error;
+    }
+};
+
+// Fetch all unique tags used by the user
+export const getJournalTagsAPI = async (): Promise<Tag[]> => {
+    try {
+        const response = await api.get<Tag[]>('journal/tags/');
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching journal tags:", error);
+        throw error;
+    }
+};
+
+// Function to trigger journal download
+export const downloadJournalsAPI = async (): Promise<void> => {
+    try {
+        const response = await api.get('journal/entries/download/', {
+            responseType: 'blob', // Important to handle the file download
+        });
+
+        // ✅ FIX: Type assertion for blob data
+        const blobData = response.data as Blob;
+
+        const url = window.URL.createObjectURL(new Blob([blobData]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'soulcare_journal.md');
+        document.body.appendChild(link);
+        link.click();
+        link.remove(); // Clean up
+        window.URL.revokeObjectURL(url); // ✅ Also add cleanup for the URL
+    } catch (error) {
+        console.error("Error downloading journals:", error);
+        throw error;
+    }
 };
