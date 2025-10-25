@@ -9,7 +9,10 @@ import {
   PatientOption,
   PrescriptionInput,
   PrescriptionData,
-  PatientDetailData
+  PatientDetailData,
+  Appointment,
+  Conversation,
+  ChatMessage,
 } from '@/types';
 
 const TOKEN_KEY = 'access';
@@ -204,4 +207,55 @@ interface ShareResponse {
 export const shareJournalEntryAPI = async (id: number): Promise<ShareResponse> => {
   const response = await api.post<ShareResponse>(`journal/entries/${id}/share/`);
   return response.data;
+};
+
+export const getPatientAppointments = async (patientId: string | number): Promise<Appointment[]> => {
+  try {
+    // Uses 'api' instance and adds a query parameter
+    const response = await api.get<Appointment[]>(`appointments/`, {
+      params: { patient_id: patientId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching appointments for patient ID ${patientId}:`, error);
+    throw error;
+  }
+};
+
+
+export const getPatientPrescriptions = async (patientId: string | number): Promise<PrescriptionData[]> => {
+  try {
+    // Uses 'api' instance and adds a query parameter
+    const response = await api.get<PrescriptionData[]>(`prescriptions/`, {
+      params: { patient_id: patientId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching prescriptions for patient ID ${patientId}:`, error);
+    throw error;
+  }
+};
+
+
+// Function to fetch the user's contact list (based on appointments)
+export const getContactList = async (): Promise<Conversation[]> => {
+  try {
+    // This uses the 'api' instance, as the URL is /api/chat/
+    const response = await api.get<Conversation[]>('chat/contacts/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching contact list:", error);
+    throw error;
+  }
+};
+
+// Function to fetch the message history for a single conversation
+export const getMessageHistory = async (conversationId: number): Promise<ChatMessage[]> => {
+  try {
+    const response = await api.get<ChatMessage[]>(`chat/conversations/${conversationId}/messages/`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching messages for conversation ${conversationId}:`, error);
+    throw error;
+  }
 };

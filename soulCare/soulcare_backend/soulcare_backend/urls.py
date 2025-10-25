@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/', include('blog.urls')),
     path('api/mood/', include('moodtracker.urls')),
     path('api/journal/', include('journal.urls')),
+    path('api/chat/', include('chat.urls')),
 
 
 

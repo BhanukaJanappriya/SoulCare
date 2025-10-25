@@ -18,12 +18,27 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         Filter prescriptions based on the user's role.
         """
         user = self.request.user
+        
+        # --- NEW: Check for patient_id filter from the doctor ---
+        patient_id = self.request.query_params.get('patient_id')
+        
         if user.role == 'doctor':
-            # A doctor can see all prescriptions they have issued
-            return Prescription.objects.filter(doctor=user)
+            queryset = Prescription.objects.filter(doctor=user)
+            
+            # If a patient_id is provided in the URL, filter the queryset further
+            if patient_id:
+                try:
+                    return queryset.filter(patient_id=int(patient_id))
+                except (ValueError, TypeError):
+                    return Prescription.objects.none()
+            
+            # If no patient_id, return all prescriptions for the doctor (original behavior)
+            return queryset
+            
         elif user.role == 'user':
-            # A patient can see all prescriptions they have received
+            # Patient logic remains unchanged
             return Prescription.objects.filter(patient=user)
+            
         return Prescription.objects.none() # Other roles see nothing
 
     def perform_create(self, serializer):

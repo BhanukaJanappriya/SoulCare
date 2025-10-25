@@ -47,6 +47,7 @@ import ProviderDetailPage from "./pages/Patient/ProviderDetailPage";
 import PatientGames from "./pages/Patient/PatientGames";
 import PatientPrescriptions from "./pages/Patient/PatientPrescriptions";
 import MoodTracker from "./pages/Patient/MoodTracker";
+import PatientMessages from "./pages/Patient/PatientMessages";
 
 const queryClient = new QueryClient();
 
@@ -204,6 +205,8 @@ const App = () => (
               <Route path="profile" element={<Profile />} />
               <Route path="prescriptions" element={<PatientPrescriptions />} />
               <Route path="mood" element={<MoodTracker />} />
+              <Route path="messages" element={<PatientMessages />} />
+
             </Route>
 
             <Route

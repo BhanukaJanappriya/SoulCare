@@ -1,0 +1,68 @@
+# Partner Guide: Updating to the Real-Time Chat Feature
+
+You already have the project set up, so here are the **only** steps you need to run to get the new chat functionality working after you `git pull` the latest code.
+
+## 1. Backend Update (Critical)
+
+There are new Python packages, a new database (Redis), and a new way to run the server.
+
+### Step 1: Install New Python Dependencies
+
+1.  Activate your virtual environment:
+    ```bash
+    # On Windows
+    .\venv\Scripts\activate
+    
+    # On macOS/Linux
+    source venv/bin/activate
+    ```
+
+2.  Install the new packages from the updated `requirements.txt` file:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Step 2: Install and Run Redis
+
+The new chat system needs a Redis server to pass messages in real-time. This is a **one-time install**.
+
+* **On Windows:**
+    1.  Download the `.msi` (installer) from [the official Microsoft archive on GitHub](https://github.com/microsoftarchive/redis/releases).
+    2.  Run the installer. The default settings are fine. This will install Redis and run it as a Windows service automatically.
+* **On macOS (with Homebrew):**
+    1.  Run `brew install redis`
+    2.  Run `brew services start redis`
+
+(You must have your MySQL server from XAMPP/WAMP running *and* this new Redis service running).
+
+### Step 3: Run Migrations
+
+We added a new `chat` app, so we need to update the database tables.
+
+1.  Make sure your MySQL server is running.
+2.  Run the migrate command:
+    ```bash
+    python manage.py migrate
+    ```
+
+### Step 4: Run the Server (New Command)
+
+**IMPORTANT:** We no longer use `python manage.py runserver`. We must use the `daphne` server to handle both HTTP and WebSocket traffic.
+
+* To run the backend server now, use this command:
+    ```bash
+    daphne -p 8000 soulcare_backend.asgi:application
+    ```
+
+Your backend is now running and ready for chat!
+
+## 2. Frontend Update
+
+1.  Navigate to the `soulcare_frontend` folder.
+2.  Run `npm install` just in case (it's good practice after a pull).
+3.  Run the frontend server as usual:
+    ```bash
+    npm run dev
+    ```
+
+That's it! Both your backend (Daphne) and frontend (npm) servers should be running, along with your MySQL and Redis services.
