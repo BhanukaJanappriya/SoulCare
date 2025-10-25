@@ -1,7 +1,7 @@
 // src/api.ts
 
 import axios from 'axios';
-import type { AxiosRequestConfig, AxiosError } from 'axios';
+import type { InternalAxiosRequestConfig, AxiosError } from 'axios';
 import {
   JournalEntry,
   JournalFormData,
@@ -26,13 +26,10 @@ export const api = axios.create({
 });
 
 // --- Request Interceptor (Attach JWT Token) ---
-const addAuthToken = (config: AxiosRequestConfig): AxiosRequestConfig => {
+const addAuthToken = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
   const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    };
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 };
