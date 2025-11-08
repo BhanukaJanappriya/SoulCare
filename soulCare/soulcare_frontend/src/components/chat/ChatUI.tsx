@@ -1,5 +1,5 @@
 // src/components/chat/ChatUI.tsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense, lazy } from "react"; // Added Suspense and lazy
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getContactList, getMessageHistory } from "@/api";
 import { User, Conversation, ChatMessage } from "@/types";
@@ -18,23 +18,32 @@ import {
   Loader2,
   AlertTriangle,
   MessageSquare,
+  Smile, // <-- Added new icon
 } from "lucide-react";
 import { format, parseISO, isToday, isYesterday } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"; // <-- Added Popover
+import type { EmojiClickData } from "emoji-picker-react"; // <-- Added Emoji types
+
+// --- Lazy load the emoji picker for performance ---
+const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
 interface ChatUIProps {
   user: User; // The currently logged-in user
 }
 
-// Helper function to get WebSocket URL
+// Helper function to get WebSocket URL (unchanged)
 const getWebSocketURL = (conversationId: number) => {
   const token = localStorage.getItem("accessToken");
-  // Assumes your backend runs on localhost:8000
   return `ws://localhost:8000/ws/chat/${conversationId}/?token=${token}`;
 };
 
-// Helper function to format timestamps
+// Helper function to format timestamps (unchanged)
 const formatTimestamp = (isoString: string) => {
   const date = parseISO(isoString);
   if (isToday(date)) {
@@ -54,70 +63,57 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
   const webSocket = useRef<WebSocket | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch the contact list
+  // 1. Fetch the contact list (unchanged)
   const { data: conversations, isLoading: isLoadingContacts, isError: isErrorContacts } = useQuery<Conversation[]>({
     queryKey: ["contacts"],
     queryFn: getContactList,
   });
 
-  // 2. Fetch messages for the selected conversation
+  // 2. Fetch messages for the selected conversation (unchanged)
   const {
     data: messages,
     isLoading: isLoadingMessages,
   } = useQuery<ChatMessage[]>({
     queryKey: ["messages", selectedConvo?.id],
     queryFn: () => getMessageHistory(selectedConvo!.id),
-    enabled: !!selectedConvo, // Only fetch if a conversation is selected
+    enabled: !!selectedConvo,
   });
 
-  // 3. Handle WebSocket connection
+  // 3. Handle WebSocket connection (unchanged)
   useEffect(() => {
-    // Close any existing connection
     if (webSocket.current) {
       webSocket.current.close();
     }
 
     if (selectedConvo) {
-      // Open a new WebSocket connection
       const ws = new WebSocket(getWebSocketURL(selectedConvo.id));
 
-      ws.onopen = () => {
-        console.log(`WebSocket connected for conversation ${selectedConvo.id}`);
-      };
+      ws.onopen = () => console.log(`WebSocket connected for conversation ${selectedConvo.id}`);
 
       ws.onmessage = (event) => {
         const newMessage: ChatMessage = JSON.parse(event.data);
 
-        // Add the new message to the query cache for this conversation
         queryClient.setQueryData<ChatMessage[]>(
           ["messages", selectedConvo.id],
           (oldMessages = []) => [...oldMessages, newMessage]
         );
 
-        // Update the "last_message" in the contact list cache
         queryClient.setQueryData<Conversation[]>(
           ["contacts"],
           (oldContacts = []) =>
             oldContacts.map((convo) =>
               convo.id === newMessage.conversation
-                ? { ...convo, last_message: newMessage }
+                ? { ...convo, last_message: newMessage, unread_count: (convo.id === selectedConvo.id ? 0 : (convo.unread_count || 0) + 1) }
                 : convo
             )
         );
       };
 
-      ws.onclose = () => {
-        console.log("WebSocket disconnected");
-      };
-
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
+      ws.onclose = () => console.log("WebSocket disconnected");
+      ws.onerror = (error) => console.error("WebSocket error:", error);
       webSocket.current = ws;
     }
 
-    // Cleanup: Close WebSocket on component unmount or when convo changes
     return () => {
       if (webSocket.current) {
         webSocket.current.close();
@@ -125,39 +121,55 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     };
   }, [selectedConvo, queryClient]);
 
-  // 4. Scroll to bottom when new messages arrive
+  
+  // 4. Scroll to bottom when new messages arrive (or when chat is opened)
   useEffect(() => {
-    if (messageListRef.current) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-    }
-  }, [messages]);
+    // We still use a timeout to wait for React to render the messages
+    setTimeout(() => {
+      if (messageListRef.current) {
+        // --- THIS IS THE FIX ---
+        // Find the actual scrollable viewport *inside* the Shadcn ScrollArea component
+        const viewport = messageListRef.current.querySelector(
+          '[data-radix-scroll-area-viewport]'
+        );
+        // --- END OF FIX ---
 
-  // 5. Handle sending a message
+        if (viewport) {
+          // Scroll this viewport to its full height
+          viewport.scrollTop = viewport.scrollHeight;
+        }
+      }
+      // Use a 50ms delay. This is more reliable than 0ms,
+      // as it gives the browser a full render cycle.
+    }, 50); 
+  }, [messages]); // This dependency is correct.
+
+
+  // 5. Handle sending a message (unchanged)
   const handleSendMessage = () => {
     if (!newMessage.trim() || !webSocket.current || webSocket.current.readyState !== WebSocket.OPEN) {
       return;
     }
-
-    // Send the message to the WebSocket server
-    webSocket.current.send(
-      JSON.stringify({
-        message: newMessage,
-      })
-    );
+    webSocket.current.send(JSON.stringify({ message: newMessage }));
     setNewMessage("");
   };
   
-  // 6. Filter conversations based on search term
+  // 6. Filter conversations (unchanged)
   const filteredConversations = conversations?.filter((conv) =>
     conv.other_user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     conv.other_user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // --- NEW: 7. Handle Emoji Click ---
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage((currentMessage) => currentMessage + emojiData.emoji);
+  };
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-150px)]"> {/* Adjusted height */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-150px)]">
       {/* --- Column 1: Conversations List --- */}
-      <Card className="lg:col-span-1 flex flex-col">
-        <CardHeader>
+      <Card className="lg:col-span-1 flex flex-col shadow-md">
+        <CardHeader className="border-b"> {/* Added border-b */}
           <CardTitle>Conversations</CardTitle>
           <div className="relative mt-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -170,9 +182,10 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
           </div>
         </CardHeader>
         <CardContent className="p-0 flex-1">
-          <ScrollArea className="h-[calc(100vh-300px)]">
+          {/* --- UPDATED: ScrollArea set to h-full --- */}
+          <ScrollArea className="h-full">
             {isLoadingContacts ? (
-              <div className="flex justify-center items-center h-full">
+              <div className="flex justify-center items-center h-full p-10">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : isErrorContacts ? (
@@ -187,19 +200,20 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                     <p className="text-sm">Contacts appear here after you have a scheduled appointment.</p>
                 </div>
             ) : (
-              <div className="space-y-1">
+              <div className="p-2 space-y-1"> {/* Added padding for list items */}
                 {filteredConversations?.map((convo) => (
-                  <div
+                  // --- UPDATED: Changed div to Button for better hover/click ---
+                  <Button
+                    variant="ghost"
                     key={convo.id}
                     className={cn(
-                      "p-4 cursor-pointer transition-colors hover:bg-muted/50",
-                      selectedConvo?.id === convo.id && "bg-muted"
+                      "w-full h-auto justify-start p-3", // Use justify-start
+                      selectedConvo?.id === convo.id && "bg-accent text-accent-foreground"
                     )}
                     onClick={() => setSelectedConvo(convo)}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 w-full">
                       <Avatar className="w-10 h-10">
-                         {/* Add AvatarImage if you have profile pics */}
                         <AvatarFallback>
                           {convo.other_user.full_name?.split(" ").map((n) => n[0]).join("") || convo.other_user.username[0].toUpperCase()}
                         </AvatarFallback>
@@ -209,7 +223,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                           <h4 className="font-medium text-sm truncate">
                             {convo.other_user.full_name || convo.other_user.username}
                           </h4>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
                             {convo.last_message && formatTimestamp(convo.last_message.timestamp)}
                           </span>
                         </div>
@@ -218,14 +232,14 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                             {convo.last_message?.content || "No messages yet."}
                           </p>
                           {convo.unread_count > 0 && (
-                            <Badge className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center p-0">
+                            <Badge className="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center p-0">
                               {convo.unread_count}
                             </Badge>
                           )}
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Button>
                 ))}
               </div>
             )}
@@ -234,10 +248,10 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
       </Card>
 
       {/* --- Column 2: Chat Area --- */}
-      <Card className="lg:col-span-2 flex flex-col">
+      <Card className="lg:col-span-2 flex flex-col shadow-md">
         {selectedConvo ? (
           <>
-            {/* Chat Header */}
+            {/* Chat Header (Unchanged) */}
             <CardHeader className="border-b">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -263,8 +277,8 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
               </div>
             </CardHeader>
 
-            {/* Messages */}
-            <CardContent className="flex-1 p-0">
+            {/* --- UPDATED: Messages --- */}
+            <CardContent className="flex-1 p-0 ">
               <ScrollArea className="h-[calc(100vh-380px)]" ref={messageListRef}>
                 <div className="p-4 space-y-4">
                   {isLoadingMessages ? (
@@ -276,22 +290,31 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                       <div
                         key={message.id}
                         className={cn(
-                          "flex",
+                          "flex items-end gap-2", // Use items-end to align avatar with bottom of bubble
                           message.sender.id === user.id ? "justify-end" : "justify-start"
                         )}
                       >
+                        {/* --- ADDED: Show avatar for receiver --- */}
+                        {message.sender.id !== user.id && (
+                           <Avatar className="w-8 h-8 flex-shrink-0">
+                            <AvatarFallback>
+                              {selectedConvo.other_user.full_name?.split(" ").map((n) => n[0]).join("") || selectedConvo.other_user.username[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <div
                           className={cn(
                             "max-w-[70%] p-3 rounded-lg shadow-sm",
+                            // --- UPDATED: Bubble styles ---
                             message.sender.id === user.id
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
+                              ? "bg-primary text-primary-foreground rounded-l-xl rounded-tr-xl"
+                              : "bg-muted text-foreground rounded-r-xl rounded-tl-xl"
                           )}
                         >
                           <p className="text-sm">{message.content}</p>
                           <p
                             className={cn(
-                              "text-xs mt-1",
+                              "text-xs mt-1 text-right", // Align timestamp to the right
                               message.sender.id === user.id
                                 ? "text-primary-foreground/70"
                                 : "text-muted-foreground/70"
@@ -307,26 +330,46 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
               </ScrollArea>
             </CardContent>
 
-            {/* Message Input */}
-            <div className="border-t p-4 bg-card">
-              <div className="flex gap-3">
-                <Textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  rows={1}
-                  className="flex-1 resize-none"
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
+            {/* --- UPDATED: Message Input with Emoji Picker --- */}
+            <div className="border-t p-3 bg-card">
+              <div className="flex gap-2 items-center">
+                {/* --- Input area now has a border --- */}
+                <div className="flex-1 relative flex items-center border rounded-lg">
+                  <Textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    rows={1}
+                    className="flex-1 resize-none border-0 shadow-none focus-visible:ring-0 pr-10" // Remove border
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  {/* --- Emoji Popover Trigger --- */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground">
+                        <Smile className="w-5 h-5" />
+                        <span className="sr-only">Add emoji</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 border-0">
+                      {/* Lazy-load the picker */}
+                      <Suspense fallback={<div className="p-4"><Loader2 className="w-6 h-6 animate-spin"/></div>}>
+                        <EmojiPicker onEmojiClick={onEmojiClick} />
+                      </Suspense>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                {/* --- Send Button --- */}
                 <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim()}
                   size="icon"
+                  className="flex-shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -334,7 +377,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
             </div>
           </>
         ) : (
-          // --- Placeholder when no conversation is selected ---
+          // --- Placeholder (Unchanged) ---
           <CardContent className="flex items-center justify-center h-full">
             <div className="text-center text-muted-foreground">
               <MessageSquare className="w-16 h-16 mx-auto mb-4" />
