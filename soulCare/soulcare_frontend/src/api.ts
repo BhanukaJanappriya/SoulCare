@@ -243,3 +243,13 @@ export const getMessageHistory = async (conversationId: number): Promise<ChatMes
     throw error;
   }
 };
+
+export const deleteMessageAPI = async (messageId: number): Promise<void> => {
+  try {
+    // Uses 'api' instance to call DELETE /api/chat/messages/<id>/
+    await api.delete(`chat/messages/${messageId}/`);
+  } catch (error) {
+    console.error(`Error deleting message ${messageId}:`, error);
+    throw error;
+  }
+};
