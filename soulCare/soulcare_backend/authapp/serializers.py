@@ -5,6 +5,19 @@ from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderS
 #from appointments.serializers import AppointmentReadSerializer
 #from prescriptions.serializers import PrescriptionSerializer
 
+
+def validate_nic_uniqueness(nic_value):
+    """
+    Checks if an NIC already exists in ANY profile.
+    """
+    if PatientProfile.objects.filter(nic=nic_value).exists():
+        return False
+    if DoctorProfile.objects.filter(nic=nic_value).exists():
+        return False
+    if CounselorProfile.objects.filter(nic=nic_value).exists():
+        return False
+    return True
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -40,6 +53,12 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'password','full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues']
+        
+        
+    def validate_nic(self, value):
+        if not validate_nic_uniqueness(value):
+            raise serializers.ValidationError("An account with this NIC card number already exists.")
+        return value
 
     def create(self, validated_data):
 
@@ -83,6 +102,12 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'password','full_name','nic', 'contact_number','specialization','availability','license_number']
+        
+    
+    def validate_nic(self, value):
+        if not validate_nic_uniqueness(value):
+            raise serializers.ValidationError("An account with this NIC card number already exists.")
+        return value
 
     def create(self, validated_data):
         # Pop DoctorProfile-specific fields
@@ -124,6 +149,11 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'password','full_name','nic', 'expertise', 'contact_number','license_number']
+        
+    def validate_nic(self, value):
+        if not validate_nic_uniqueness(value):
+            raise serializers.ValidationError("An account with this NIC card number already exists.")
+        return value
 
     def create(self, validated_data):
         # Pop CounselorProfile-specific fields
