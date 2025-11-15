@@ -14,6 +14,7 @@ import {
   Appointment,
   Conversation,
   ChatMessage,
+  ProviderStatsData,
 } from '@/types';
 
 // FIX 2: Use the correct key that AuthContext saves
@@ -250,6 +251,31 @@ export const deleteMessageAPI = async (messageId: number): Promise<void> => {
     await api.delete(`chat/messages/${messageId}/`);
   } catch (error) {
     console.error(`Error deleting message ${messageId}:`, error);
+    throw error;
+  }
+};
+
+//DOCTOR COUNSELOR STAT BOARD FUNCTIONS
+
+export const getProviderDashboardStats = async (): Promise<ProviderStatsData> => {
+  try {
+    // Uses axiosInstance because the URL is /api/auth/
+    const response = await axiosInstance.get<ProviderStatsData>('provider/dashboard-stats/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching provider stats:", error);
+    throw error;
+  }
+};
+
+
+export const getAppointments = async (params?: { date?: string }): Promise<Appointment[]> => {
+  try {
+    // Uses 'api' instance (baseURL /api/)
+    const response = await api.get<Appointment[]>('appointments/', { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
     throw error;
   }
 };

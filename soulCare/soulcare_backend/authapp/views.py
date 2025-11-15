@@ -8,10 +8,11 @@ from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
 from rest_framework.exceptions import PermissionDenied, NotFound
-from .models import User,ProviderSchedule
+from .models import User,ProviderSchedule,DoctorProfile, CounselorProfile
 from django.db.models import Count, Q
 from datetime import date,datetime,timedelta
 from appointments.models import Appointment
+from chat.models import Conversation, Message
 
 
 class LoginView(APIView):
@@ -336,3 +337,58 @@ class PatientDetailView(generics.RetrieveAPIView):
         # E.g., patient = User.objects.prefetch_related('patient_appointments', 'prescriptions_as_patient').get(pk=patient.pk)
 
         return patient
+    
+
+class ProviderDashboardStatsView(APIView):
+    """
+    API endpoint to get dashboard statistics for a logged-in provider (doctor/counselor).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        
+        if user.role not in ['doctor', 'counselor']:
+            return Response({"error": "User is not a provider."}, status=status.HTTP_403_FORBIDDEN)
+
+        # --- 1. Total Patients ---
+        # Get all unique patient IDs from appointments where this user is the provider
+        patient_ids = Appointment.objects.filter(provider=user).values_list('patient_id', flat=True).distinct()
+        total_patients = len(patient_ids)
+
+        # --- 2. Appointments Today ---
+        today = date.today()
+        appointments_today = Appointment.objects.filter(
+            provider=user,
+            date=today,
+            status='scheduled' # Only count 'scheduled' appointments
+        ).count()
+
+        # --- 3. Pending Messages ---
+        # Find all conversations for this provider
+        user_conversations = Conversation.objects.filter(provider=user)
+        # Count all messages in these conversations that are unread AND not sent by the provider
+        pending_messages = Message.objects.filter(
+            conversation__in=user_conversations,
+            is_read=False
+        ).exclude(sender=user).count()
+
+        # --- 4. Average Rating ---
+        average_rating = 5.0 # Default
+        try:
+            if user.role == 'doctor' and hasattr(user, 'doctorprofile'):
+                average_rating = user.doctorprofile.rating
+            elif user.role == 'counselor' and hasattr(user, 'counselorprofile'):
+                average_rating = user.counselorprofile
+        except (DoctorProfile.DoesNotExist, CounselorProfile.DoesNotExist):
+            pass # Keep the default 5.0 if profile somehow doesn't exist
+
+        # --- Compile Stats ---
+        stats_data = {
+            'total_patients': total_patients,
+            'appointments_today': appointments_today,
+            'pending_messages': pending_messages,
+            'average_rating': average_rating,
+        }
+        
+        return Response(stats_data, status=status.HTTP_200_OK)
