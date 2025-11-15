@@ -4,11 +4,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics, status
 from django.db.models import Q
 from authapp.models import User
 from appointments.models import Appointment
 from .models import Conversation, Message
 from .serializers import ConversationListSerializer, MessageSerializer
+from .permissions import IsSender
 
 class ContactListView(APIView):
     """
@@ -90,3 +92,45 @@ class MessageListView(APIView):
             
         except Conversation.DoesNotExist:
             return Response({"detail": "Conversation not found."}, status=404)
+        
+
+
+class MessageDetailView(generics.RetrieveDestroyAPIView):
+    """
+    API endpoint for retrieving or deleting a single message.
+    DELETE /api/chat/messages/<id>/
+    """
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated, IsSender] # Only the sender can delete
+    lookup_field = 'pk' # Use the message ID from the URL
+
+    def destroy(self, request, *args, **kwargs):
+        message = self.get_object()
+        conversation_id = message.conversation.id
+        message_id = message.id
+        
+        # Delete the message from the database
+        self.perform_destroy(message)
+        
+        # --- Real-time Broadcast ---
+        # After deleting, we need to tell the WebSocket consumer to broadcast this deletion
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+
+            channel_layer = get_channel_layer()
+            group_name = f"chat_{conversation_id}"
+
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    "type": "chat.delete_message", # This calls the 'chat_delete_message' handler in your consumer
+                    "message_id": message_id,
+                },
+            )
+        except Exception as e:
+            # Log this error, as it means the real-time delete failed
+            print(f"Error broadcasting message deletion: {e}")
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
