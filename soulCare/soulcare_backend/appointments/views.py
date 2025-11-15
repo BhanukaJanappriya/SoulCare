@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from .models import Appointment
 from .serializers import AppointmentReadSerializer, AppointmentWriteSerializer
 from authapp.models import User
+from datetime import date
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -47,10 +48,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return queryset
             
         elif user.role == 'user':
-            # Patient logic remains unchanged
-            return Appointment.objects.filter(patient=user).select_related('provider__doctorprofile', 'provider__counselorprofile')
+            queryset = Appointment.objects.filter(patient=user).select_related('provider__doctorprofile', 'provider__counselorprofile')
+        
+        
+        filter_date_str = self.request.query_params.get('date')
+        if filter_date_str:
+            if filter_date_str == 'today':
+                queryset = queryset.filter(date=date.today())
+            else:
+                try:
+                    # Filter by a specific ISO date (YYYY-MM-DD)
+                    filter_date = date.fromisoformat(filter_date_str)
+                    queryset = queryset.filter(date=filter_date)
+                except ValueError:
+                    pass # Ignore invalid date formats
+        # --- END OF ADDED BLOCK ---
             
-        return Appointment.objects.none()
+        # Order by date and time
+        return queryset.order_by('date', 'time')
     
     
     def perform_create(self, serializer):

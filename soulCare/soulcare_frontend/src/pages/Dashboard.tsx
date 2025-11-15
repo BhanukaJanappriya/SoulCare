@@ -1,4 +1,5 @@
-import React from "react";
+// src/pages/Dashboard.tsx
+import React, { useMemo } from "react"; // <-- Import useMemo
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -8,91 +9,99 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { RightSidebar } from "@/components/layout/RightSidebar";
 import {
   Users,
   Calendar,
   FileText,
   Star,
-  TrendingUp,
   Clock,
   MessageSquare,
   Activity,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
-import { RightSidebar } from "@/components/layout/RightSidebar";
+import { useQuery } from "@tanstack/react-query";
+import { getProviderDashboardStats, getAppointments } from "@/api";
+import { ProviderStatsData, Appointment } from "@/types";
+import { format, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
+// Helper component for stat cards (unchanged)
+const StatCard: React.FC<{
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: string;
+}> = ({ title, value, icon: Icon, color }) => {
+  return (
+    <Card className="healthcare-card shadow-sm">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">
+              {title}
+            </p>
+            <p className="text-2xl font-bold text-foreground mt-1">
+              {value}
+            </p>
+          </div>
+          <div className={`p-3 rounded-full bg-${color}/10`}>
+            <Icon className={`w-6 h-6 ${color}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Main Dashboard Component
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const stats = [
-    {
-      title: "Total Patients",
-      value: "24",
-      change: "+12%",
-      icon: Users,
-      color: "text-primary",
-    },
-    {
-      title: "Appointments Today",
-      value: "6",
-      change: "+2",
-      icon: Calendar,
-      color: "text-success",
-    },
-    {
-      title: "Pending Messages",
-      value: "3",
-      change: "-1",
-      icon: MessageSquare,
-      color: "text-warning",
-    },
-    {
-      title: "Average Rating",
-      value: "5.0",
-      change: "+0.2",
-      icon: Star,
-      color: "text-primary",
-    },
-  ];
+  // --- 1. Fetch Dashboard Stats (unchanged) ---
+  const { data: stats, isLoading: isLoadingStats } = useQuery<ProviderStatsData>({
+    queryKey: ["providerDashboardStats", user?.id],
+    queryFn: getProviderDashboardStats,
+  });
 
-  const recentAppointments = [
-    {
-      id: "1",
-      patient: "Sarah Johnson",
-      time: "10:00 AM",
-      type: "Follow-up",
-      status: "upcoming",
-    },
-    {
-      id: "2",
-      patient: "Mike Chen",
-      time: "11:30 AM",
-      type: "Consultation",
-      status: "upcoming",
-    },
-    {
-      id: "3",
-      patient: "Emma Wilson",
-      time: "2:00 PM",
-      type: "Therapy Session",
-      status: "upcoming",
-    },
-  ];
+  // --- 2. Fetch Today's Appointments (unchanged) ---
+  const { data: appointments, isLoading: isLoadingAppointments } = useQuery<Appointment[]>({
+    queryKey: ["appointments", "today"],
+    queryFn: () => getAppointments({ date: "today" }),
+  });
 
+  // --- NEW: 3. Filter for scheduled appointments ---
+  const scheduledAppointments = useMemo(() => {
+    if (!appointments) {
+      return [];
+    }
+    return appointments.filter(app => app.status === 'scheduled');
+  }, [appointments]);
+  // --- END OF NEW ---
+
+
+  // 4. Quick Action Button Handlers (unchanged)
+  const handleActionClick = (path: string) => {
+    navigate(path);
+  };
+  
+  // (Placeholder data for Recent Activity)
   const recentActivity = [
-    "New patient registration: Alex Morgan",
-    "Appointment confirmed for tomorrow at 9:00 AM",
-    'Blog post "Managing Anxiety" published',
-    "Prescription updated for patient ID #1234",
+    "New patient registered: Alex Morgan",
+    "Blog post 'Managing Anxiety' published",
   ];
 
   return (
-    <div className="min-h-screen healthcare-gradient pr-16">
+    <div className="min-h-screen healthcare-gradient pr-[5.5rem]">
       <RightSidebar />
 
-      <div className="p-6 max-w-7xl mx-auto">
-        {/* Header */}
+      <div className="p-6">
+        {/* Header (unchanged) */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-1">
             Welcome back, {user?.profile?.full_name?.split(" ")[0]}!
           </h1>
           <p className="text-muted-foreground">
@@ -100,128 +109,180 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid (unchanged) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={index} className="healthcare-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {stat.title}
-                      </p>
-                      <div className="flex items-center mt-1">
-                        <p className="text-2xl font-bold text-foreground">
-                          {stat.value}
-                        </p>
-                        <span className={`ml-2 text-sm ${stat.color}`}>
-                          {stat.change}
-                        </span>
-                      </div>
-                    </div>
-                    <Icon className={`w-8 h-8 ${stat.color}`} />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {isLoadingStats || !stats ? (
+            Array(4).fill(0).map((_, i) => (
+              <Card key={i} className="h-[108px] bg-card animate-pulse" />
+            ))
+          ) : (
+            <>
+              <StatCard
+                title="Total Patients"
+                value={stats.total_patients}
+                icon={Users}
+                color="text-primary"
+              />
+              <StatCard
+                title="Appointments Today"
+                value={stats.appointments_today}
+                icon={Calendar}
+                color="text-green-600"
+              />
+              <StatCard
+                title="Pending Messages"
+                value={stats.pending_messages}
+                icon={MessageSquare}
+                color="text-yellow-600"
+              />
+              <StatCard
+                title="Your Rating"
+                value={stats.average_rating.toFixed(1)}
+                icon={Star}
+                color="text-blue-600"
+              />
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Today's Appointments */}
-          <Card className="healthcare-card">
+          
+          {/* --- UPDATED: Today's Scheduled Appointments --- */}
+          <Card className="healthcare-card shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2" />
-                Today's Appointments
+                <Clock className="w-5 h-5 mr-2 text-primary" />
+                {/* 1. Title Changed */}
+                 Scheduled Appointments
               </CardTitle>
-              <CardDescription>
-                Your scheduled appointments for today
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentAppointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-background/50"
-                >
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {appointment.patient}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.type}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-primary">
-                      {appointment.time}
-                    </p>
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
-                      Upcoming
-                    </span>
-                  </div>
+              {isLoadingAppointments ? (
+                <div className="flex justify-center items-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
-              ))}
-              <Button variant="outline" className="w-full">
+              // 2. Use filtered list `scheduledAppointments`
+              ) : scheduledAppointments && scheduledAppointments.length > 0 ? (
+                scheduledAppointments.slice(0, 3).map((appointment) => ( // Show first 3
+                  <div
+                    key={appointment.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-background"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {appointment.patient.profile?.full_name || appointment.patient.username}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {appointment.notes || "No notes"}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-2">
+
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {format(parseISO(appointment.date), "PPP")} {/* e.g., Nov 7, 2025 */}
+                      </p>
+                      
+                      <p className="font-medium text-primary">
+                        {format(parseISO(`1970-01-01T${appointment.time}`), "p")}
+                      </p>
+                      {/* 3. Badge is now dynamically set and styled */}
+                      <Badge 
+                        variant="outline" 
+                        className="mt-1 capitalize bg-green-100 text-green-700 border-green-200"
+                      >
+                        {appointment.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                // 4. Updated empty message
+                <p className="text-muted-foreground text-sm text-center py-4">
+                  You have no scheduled appointments.
+                </p>
+              )}
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => handleActionClick('/appointments')}
+              >
                 View All Appointments
               </Button>
             </CardContent>
           </Card>
+          {/* --- END OF UPDATE --- */}
 
-          {/* Recent Activity */}
-          <Card className="healthcare-card">
+
+          {/* Recent Activity (Unchanged) */}
+          <Card className="healthcare-card shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Activity className="w-5 h-5 mr-2" />
+                <Activity className="w-5 h-5 mr-2 text-primary" />
                 Recent Activity
               </CardTitle>
-              <CardDescription>
-                Latest updates and notifications
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-start space-x-3 p-3 rounded-lg bg-background/50"
-                >
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
-                  <p className="text-sm text-foreground">{activity}</p>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full">
-                View All Activity
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start space-x-3 p-3 rounded-lg bg-background"
+                  >
+                    <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-sm text-foreground">{activity}</p>
+                  </div>
+                ))
+              ) : (
+                 <p className="text-muted-foreground text-sm text-center py-4">
+                  No recent activity to show.
+                 </p>
+              )}
+              <Button variant="outline" className="w-full" disabled>
+                View All Activity (TBD)
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions (Unchanged) */}
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">
             Quick Actions
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button className="healthcare-button-primary h-20 flex-col space-y-2">
+            <Button
+              variant="outline"
+              className="h-20 flex-col space-y-2"
+              onClick={() => handleActionClick('/appointments')}
+            >
               <Calendar className="w-6 h-6" />
-              <span>New Appointment</span>
+              <span>Appointments</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col space-y-2">
+            <Button
+              variant="outline"
+              className="h-20 flex-col space-y-2"
+              onClick={() => handleActionClick('/patients')}
+            >
               <Users className="w-6 h-6" />
-              <span>Add Patient</span>
+              <span>My Patients</span>
             </Button>
             {user?.role === "doctor" && (
-              <Button variant="outline" className="h-20 flex-col space-y-2">
+              <Button
+                variant="outline"
+                className="h-20 flex-col space-y-2"
+                onClick={() => handleActionClick('/prescriptions')}
+              >
                 <FileText className="w-6 h-6" />
-                <span>Write Prescription</span>
+                <span>Prescriptions</span>
               </Button>
             )}
-            <Button variant="outline" className="h-20 flex-col space-y-2">
+            <Button
+              variant="outline"
+              className="h-20 flex-col space-y-2"
+              onClick={() => handleActionClick('/messages')}
+            >
               <MessageSquare className="w-6 h-6" />
-              <span>Send Message</span>
+              <span>Messages</span>
             </Button>
           </div>
         </div>

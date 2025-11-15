@@ -1,7 +1,8 @@
 // src/api.ts
 
 import axios from 'axios';
-import type { InternalAxiosRequestConfig, AxiosError } from 'axios';
+// FIX 1: Use the correct public types from axios
+import type { AxiosRequestConfig, AxiosError } from 'axios';
 import {
   JournalEntry,
   JournalFormData,
@@ -17,9 +18,11 @@ import {
   HabitInput,
   HabitToggleInput,
   HabitToggleResponse
+  ProviderStatsData,
 } from '@/types';
 
-const TOKEN_KEY = 'access';
+// FIX 2: Use the correct key that AuthContext saves
+const TOKEN_KEY = 'accessToken'; 
 
 // Base API URL
 const API_BASE_URL = 'http://localhost:8000/api/';
@@ -34,35 +37,34 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-const addAuthToken = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-  // Always use the same key to get the token.
-  const token = localStorage.getItem(TOKEN_KEY);
+// --- Interceptor Functions ---
 
-  if (token && config.headers) {
+// This function adds the token to a request
+const addAuthToken = (config) => {
+  const token = localStorage.getItem(TOKEN_KEY); // Reads 'accessToken'
+  
+  // Ensure config.headers exists
+  config.headers = config.headers || {};
+
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 };
 
-
-// This function handles any errors during the request setup.
+// This function handles request errors (like network down)
 const handleRequestError = (error: AxiosError) => {
   console.error('Request Interceptor Error:', error);
   return Promise.reject(error);
 };
 
-
-// Apply interceptors
-api.interceptors.request.use(addAuthToken, handleRequestError);
-
+// This function handles response errors (like 401 Unauthorized)
 const handleResponseError = (error: AxiosError) => {
-  // Check if the error is a 401 Unauthorized response.
   if (error.response?.status === 401) {
     console.warn('Authentication token is invalid or expired. Redirecting to login.');
-    // Remove the invalid token.
     localStorage.removeItem(TOKEN_KEY);
-    // Redirect the user to the login page to re-authenticate.
-    // This prevents the app from getting stuck in a broken state.
+    
+    // Redirect to login, but avoid a loop if we are already on the login page
     if (window.location.pathname !== '/auth/login') {
       window.location.href = '/auth/login';
     }
@@ -70,46 +72,26 @@ const handleResponseError = (error: AxiosError) => {
   return Promise.reject(error);
 };
 
-api.interceptors.request.use(
-  (config) => {
-    // 1. Retrieve the access token from localStorage.
-    //    (Your login logic should save the token here).
-    const token = localStorage.getItem('access');
+// --- Apply Interceptors ---
 
-    // 2. If the token exists, add it to the request headers.
-    if (token) {
-      // The 'Authorization' header is the standard way to send tokens.
-      // The format 'Bearer <token>' is required by Django REST Framework SimpleJWT.
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
+// FIX 3: Apply the interceptors to BOTH 'api' AND 'axiosInstance'
+// This will fix all your 401 errors.
 
-    // 3. Return the modified config object so the request can proceed.
-    return config;
-  },
-  (error) => {
-    // Handle any errors that might occur during the setup.
-    return Promise.reject(error);
-  }
-);
+// Apply to 'api' (for prescriptions, appointments, chat, etc.)
+api.interceptors.request.use(addAuthToken, handleRequestError);
+api.interceptors.response.use((response) => response, handleResponseError);
 
+// Apply to 'axiosInstance' (for auth/user, auth/doctors/my-patients, etc.)
+axiosInstance.interceptors.request.use(addAuthToken, handleRequestError);
+axiosInstance.interceptors.response.use((response) => response, handleResponseError);
+
+// (Your old, duplicate interceptors have been removed)
 export default api;
-
-
-// --- Response Interceptor (Handle 401) ---
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
 
 
 // =================================================================
 // --- DOCTOR / PATIENT API FUNCTIONS ---
+// (No changes needed here)
 // =================================================================
 
 export const getDoctorPatients = async (): Promise<PatientOption[]> => {
@@ -134,6 +116,7 @@ export const getPatientDetailsAPI = async (patientId: string | number): Promise<
 
 // =================================================================
 // --- FORM DATA CREATOR ---
+// (No changes needed here)
 // =================================================================
 export const createFormData = <T extends Record<string, unknown>>(data: T): FormData => {
   const formData = new FormData();
@@ -154,6 +137,7 @@ export const createFormData = <T extends Record<string, unknown>>(data: T): Form
 
 // =================================================================
 // --- JOURNAL API FUNCTIONS ---
+// (No changes needed here)
 // =================================================================
 
 export const getJournalEntriesAPI = async (params?: {
@@ -186,6 +170,7 @@ export const getJournalTagsAPI = async (): Promise<Tag[]> => {
 
 // =================================================================
 // --- DOWNLOAD & SHARE JOURNALS ---
+// (No changes needed here)
 // =================================================================
 
 export const downloadJournalsAPI = async (): Promise<void> => {
@@ -215,7 +200,6 @@ export const shareJournalEntryAPI = async (id: number): Promise<ShareResponse> =
 
 export const getPatientAppointments = async (patientId: string | number): Promise<Appointment[]> => {
   try {
-    // Uses 'api' instance and adds a query parameter
     const response = await api.get<Appointment[]>(`appointments/`, {
       params: { patient_id: patientId }
     });
@@ -229,7 +213,6 @@ export const getPatientAppointments = async (patientId: string | number): Promis
 
 export const getPatientPrescriptions = async (patientId: string | number): Promise<PrescriptionData[]> => {
   try {
-    // Uses 'api' instance and adds a query parameter
     const response = await api.get<PrescriptionData[]>(`prescriptions/`, {
       params: { patient_id: patientId }
     });
@@ -241,10 +224,13 @@ export const getPatientPrescriptions = async (patientId: string | number): Promi
 };
 
 
-// Function to fetch the user's contact list (based on appointments)
+// =================================================================
+// --- CHAT API FUNCTIONS ---
+// (No changes needed here)
+// =================================================================
+
 export const getContactList = async (): Promise<Conversation[]> => {
   try {
-    // This uses the 'api' instance, as the URL is /api/chat/
     const response = await api.get<Conversation[]>('chat/contacts/');
     return response.data;
   } catch (error) {
@@ -253,7 +239,6 @@ export const getContactList = async (): Promise<Conversation[]> => {
   }
 };
 
-// Function to fetch the message history for a single conversation
 export const getMessageHistory = async (conversationId: number): Promise<ChatMessage[]> => {
   try {
     const response = await api.get<ChatMessage[]>(`chat/conversations/${conversationId}/messages/`);
@@ -295,4 +280,38 @@ export const toggleHabitCompletionAPI = async (
         { completed } as HabitToggleInput
     );
     return response.data;
+};
+export const deleteMessageAPI = async (messageId: number): Promise<void> => {
+  try {
+    // Uses 'api' instance to call DELETE /api/chat/messages/<id>/
+    await api.delete(`chat/messages/${messageId}/`);
+  } catch (error) {
+    console.error(`Error deleting message ${messageId}:`, error);
+    throw error;
+  }
+};
+
+//DOCTOR COUNSELOR STAT BOARD FUNCTIONS
+
+export const getProviderDashboardStats = async (): Promise<ProviderStatsData> => {
+  try {
+    // Uses axiosInstance because the URL is /api/auth/
+    const response = await axiosInstance.get<ProviderStatsData>('provider/dashboard-stats/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching provider stats:", error);
+    throw error;
+  }
+};
+
+
+export const getAppointments = async (params?: { date?: string }): Promise<Appointment[]> => {
+  try {
+    // Uses 'api' instance (baseURL /api/)
+    const response = await api.get<Appointment[]>('appointments/', { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+    throw error;
+  }
 };
