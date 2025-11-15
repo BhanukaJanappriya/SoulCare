@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'appointments',
     'blog.apps.BlogConfig',
     'moodtracker',
-    'journal'
+    'journal',
+    'habits',
 
     'chat'
 
@@ -113,7 +114,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'GDR@1101',
+        'PASSWORD': 'Bhanuka@2001',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -174,5 +175,5 @@ CHANNEL_LAYERS = {
         "CONFIG": {
             "hosts": [("127.0.0.1", 6379)],
         },
-    },   
+    },
 }

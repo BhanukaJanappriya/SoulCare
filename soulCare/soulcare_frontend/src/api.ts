@@ -13,6 +13,10 @@ import {
   Appointment,
   Conversation,
   ChatMessage,
+  Habit,
+  HabitInput,
+  HabitToggleInput,
+  HabitToggleResponse
 } from '@/types';
 
 const TOKEN_KEY = 'access';
@@ -258,4 +262,37 @@ export const getMessageHistory = async (conversationId: number): Promise<ChatMes
     console.error(`Error fetching messages for conversation ${conversationId}:`, error);
     throw error;
   }
+};
+
+// =================================================================
+// --- HABITS API FUNCTIONS ---
+// =================================================================
+
+export const getHabitsAPI = async (): Promise<Habit[]> => {
+    // Fetches the user's habits list
+    const response = await api.get<Habit[]>('habits/');
+    return response.data;
+};
+
+export const createHabitAPI = async (habitData: HabitInput): Promise<Habit> => {
+    // Creates a new habit
+    const response = await api.post<Habit>('habits/', habitData);
+    return response.data;
+};
+
+export const deleteHabitAPI = async (habitId: string | number): Promise<void> => {
+    // Deletes a habit by ID
+    await api.delete(`habits/${habitId}/`);
+};
+
+export const toggleHabitCompletionAPI = async (
+    habitId: string | number,
+    completed: boolean
+): Promise<HabitToggleResponse> => {
+    // Toggles the completion status and updates streak/current
+    const response = await api.post<HabitToggleResponse>(
+        `habits/${habitId}/toggle_completion/`,
+        { completed } as HabitToggleInput
+    );
+    return response.data;
 };

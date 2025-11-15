@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -26,104 +26,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Target,
   Plus,
   Flame,
-  Calendar,
-  Clock,
   CheckCircle,
-  XCircle,
   TrendingUp,
-  BarChart3,
-  Edit,
   Trash2,
 } from "lucide-react";
+import api, {
+  getHabitsAPI,
+  createHabitAPI,
+  deleteHabitAPI,
+  toggleHabitCompletionAPI,
+} from "@/api";
 
-interface Habit {
-  id: string;
-  name: string;
-  description: string;
-  frequency: "daily" | "weekly" | "monthly";
-  target: number;
-  current: number;
-  streak: number;
-  category: string;
-  color: string;
-  completedToday: boolean;
+// --- IMPORT HABIT TYPES FROM THE CENTRAL TYPES FILE ---
+import { Habit, HabitInput } from "@/types"; // Habit type is for API transport (string dates)
+
+// --- FIX: Define a type for local component state using Date objects ---
+// We use Omit<> to exclude the string date properties and redefine them as Date.
+type HabitWithDate = Omit<Habit, "createdAt" | "lastCompleted"> & {
   createdAt: Date;
   lastCompleted?: Date;
-}
+};
+
+// Type for the form state, using HabitInput structure but allowing a specific frequency type
+type NewHabitFormState = Omit<HabitInput, "color"> & {
+  frequency: "daily" | "weekly" | "monthly";
+};
 
 const PatientHabits: React.FC = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
 
-  const [habits, setHabits] = useState<Habit[]>([
-    {
-      id: "1",
-      name: "Morning Meditation",
-      description: "Start the day with 10 minutes of mindfulness",
-      frequency: "daily",
-      target: 10,
-      current: 7,
-      streak: 7,
-      category: "Mental Health",
-      color: "hsl(var(--primary))",
-      completedToday: true,
-      createdAt: new Date("2024-01-01"),
-      lastCompleted: new Date(),
-    },
-    {
-      id: "2",
-      name: "Daily Walk",
-      description: "30 minutes of walking or light exercise",
-      frequency: "daily",
-      target: 30,
-      current: 22,
-      streak: 5,
-      category: "Physical Health",
-      color: "hsl(142, 71%, 45%)",
-      completedToday: false,
-      createdAt: new Date("2024-01-01"),
-    },
-    {
-      id: "3",
-      name: "Water Intake",
-      description: "Drink 8 glasses of water throughout the day",
-      frequency: "daily",
-      target: 8,
-      current: 6,
-      streak: 6,
-      category: "Physical Health",
-      color: "hsl(195, 100%, 50%)",
-      completedToday: false,
-      createdAt: new Date("2024-01-01"),
-    },
-    {
-      id: "4",
-      name: "Journal Writing",
-      description: "Reflect on the day and write thoughts",
-      frequency: "daily",
-      target: 1,
-      current: 4,
-      streak: 4,
-      category: "Mental Health",
-      color: "hsl(280, 100%, 70%)",
-      completedToday: false,
-      createdAt: new Date("2024-01-01"),
-    },
-  ]);
+  // FIX: Use the new HabitWithDate type for the habits state
+  const [habits, setHabits] = useState<HabitWithDate[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const [newHabit, setNewHabit] = useState({
+  // Use the refined type for the form state
+  const [newHabit, setNewHabit] = useState<NewHabitFormState>({
     name: "",
     description: "",
-    frequency: "daily" as const,
+    frequency: "daily",
     target: 1,
     category: "Mental Health",
   });
@@ -139,38 +86,99 @@ const PatientHabits: React.FC = () => {
     "Productivity",
   ];
 
-  const toggleHabitCompletion = (habitId: string) => {
+  // --- API CALLS ---
+
+  const fetchHabits = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Use the dedicated API function (returns Habit[] with string dates)
+      const data = await getHabitsAPI();
+
+      // FIX: Map the Habit[] data into HabitWithDate[] format for state
+      const formattedHabits: HabitWithDate[] = data.map((h) => ({
+        // Spread all common properties
+        ...h,
+        // Convert ISO string to Date object
+        createdAt: new Date(h.createdAt as string),
+        // Convert lastCompleted string/null to Date object or undefined
+        lastCompleted: h.lastCompleted
+          ? new Date(h.lastCompleted as string)
+          : undefined,
+      }));
+
+      setHabits(formattedHabits);
+    } catch (error) {
+      console.error("Error fetching habits:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load habits.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchHabits();
+  }, [fetchHabits]);
+
+  // FIX: Change 'habit' parameter to use the local state type
+  const toggleHabitCompletion = async (habit: HabitWithDate) => {
+    const newCompletionState = !habit.completedToday;
+    const habitId = habit.id;
+
+    const originalHabits = habits;
+
+    // Optimistic UI update: Toggle local state for immediate feedback
     setHabits((prev) =>
-      prev.map((habit) => {
-        if (habit.id === habitId) {
-          const completed = !habit.completedToday;
-          return {
-            ...habit,
-            completedToday: completed,
-            current: completed
-              ? habit.current + 1
-              : Math.max(0, habit.current - 1),
-            streak: completed
-              ? habit.streak + 1
-              : Math.max(0, habit.streak - 1),
-            lastCompleted: completed ? new Date() : habit.lastCompleted,
-          };
-        }
-        return habit;
-      })
+      prev.map((h) =>
+        h.id === habitId ? { ...h, completedToday: newCompletionState } : h
+      )
     );
 
-    toast({
-      title: habits.find((h) => h.id === habitId)?.completedToday
-        ? "Habit unmarked!"
-        : "Great job!",
-      description: habits.find((h) => h.id === habitId)?.completedToday
-        ? "Keep going with your habits!"
-        : "You've completed another habit today!",
-    });
+    try {
+      // Use the dedicated API function (returns HabitToggleResponse with Habit/string dates)
+      const response = await toggleHabitCompletionAPI(
+        habitId,
+        newCompletionState
+      );
+
+      // FIX: Convert the returned Habit object back into HabitWithDate for the state
+      const updatedHabitData: HabitWithDate = {
+        ...response.habit,
+        createdAt: new Date(response.habit.createdAt as string),
+        lastCompleted: response.habit.lastCompleted
+          ? new Date(response.habit.lastCompleted as string)
+          : undefined,
+      };
+
+      // Update state with the *actual* data returned from the backend
+      setHabits((prev) =>
+        prev.map((h) => (h.id === habitId ? updatedHabitData : h))
+      );
+
+      toast({
+        title: newCompletionState ? "Great job!" : "Habit unmarked!",
+        description: newCompletionState
+          ? "You've completed another habit today!"
+          : "Keep going with your habits!",
+      });
+    } catch (error) {
+      console.error("Error toggling habit completion:", error);
+      // Revert state on error
+      setHabits(originalHabits);
+      toast({
+        title: "Error",
+        description: `Failed to ${
+          newCompletionState ? "complete" : "unmark"
+        } habit.`,
+        variant: "destructive",
+      });
+    }
   };
 
-  const addNewHabit = () => {
+  const addNewHabit = async () => {
     if (!newHabit.name.trim()) {
       toast({
         title: "Error",
@@ -180,49 +188,82 @@ const PatientHabits: React.FC = () => {
       return;
     }
 
-    const habit: Habit = {
-      id: Date.now().toString(),
+    // Prepare HabitInput structure (with generated color)
+    const habitData: HabitInput = {
       ...newHabit,
-      current: 0,
-      streak: 0,
       color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-      completedToday: false,
-      createdAt: new Date(),
     };
 
-    setHabits((prev) => [...prev, habit]);
-    setNewHabit({
-      name: "",
-      description: "",
-      frequency: "daily",
-      target: 1,
-      category: "Mental Health",
-    });
-    setIsAddingHabit(false);
+    try {
+      // Use the dedicated API function (returns Habit with string dates)
+      const data = await createHabitAPI(habitData);
 
-    toast({
-      title: "Habit added!",
-      description: "Your new habit has been created successfully.",
-    });
+      // FIX: Format the returned Habit (string dates) for local HabitWithDate state
+      const createdHabit: HabitWithDate = {
+        ...data,
+        createdAt: new Date(data.createdAt as string),
+        lastCompleted: data.lastCompleted
+          ? new Date(data.lastCompleted as string)
+          : undefined,
+      };
+
+      setHabits((prev) => [...prev, createdHabit]);
+      setNewHabit({
+        name: "",
+        description: "",
+        frequency: "daily",
+        target: 1,
+        category: "Mental Health",
+      });
+      setIsAddingHabit(false);
+
+      toast({
+        title: "Habit added!",
+        description: "Your new habit has been created successfully.",
+      });
+    } catch (error) {
+      console.error("Error adding new habit:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create new habit.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const deleteHabit = (habitId: string) => {
-    setHabits((prev) => prev.filter((h) => h.id !== habitId));
-    toast({
-      title: "Habit deleted",
-      description: "The habit has been removed from your list.",
-    });
+  const deleteHabit = async (habitId: string | number) => {
+    try {
+      // Use the dedicated API function
+      await deleteHabitAPI(habitId);
+
+      // Update state only after successful API call
+      setHabits((prev) => prev.filter((h) => h.id !== habitId));
+
+      toast({
+        title: "Habit deleted",
+        description: "The habit has been removed from your list.",
+      });
+    } catch (error) {
+      console.error("Error deleting habit:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete habit.",
+        variant: "destructive",
+      });
+    }
   };
+
+  // --- STATS CALCULATIONS ---
 
   const completedHabitsToday = habits.filter((h) => h.completedToday).length;
   const totalHabits = habits.length;
   const completionRate =
     totalHabits > 0 ? (completedHabitsToday / totalHabits) * 100 : 0;
 
+  const bestStreak = Math.max(...habits.map((h) => h.streak), 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      
-
       <main className="p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
@@ -299,7 +340,9 @@ const PatientHabits: React.FC = () => {
                       <Label>Frequency</Label>
                       <Select
                         value={newHabit.frequency}
-                        onValueChange={(value: any) =>
+                        onValueChange={(
+                          value: "daily" | "weekly" | "monthly"
+                        ) =>
                           setNewHabit((prev) => ({ ...prev, frequency: value }))
                         }
                       >
@@ -344,78 +387,92 @@ const PatientHabits: React.FC = () => {
             </Dialog>
           </div>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Target className="w-5 h-5 text-primary" />
+          {/* Stats Overview (Show skeleton while loading) */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <Skeleton className="h-10 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Target className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Total Habits
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {totalHabits}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Total Habits
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {totalHabits}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Completed Today
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {completedHabitsToday}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Completed Today
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {completedHabitsToday}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                    <Flame className="w-5 h-5 text-orange-500" />
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                      <Flame className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Best Streak
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {bestStreak}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Best Streak</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {Math.max(...habits.map((h) => h.streak), 0)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-blue-500" />
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Completion Rate
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {completionRate.toFixed(0)}%
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Completion Rate
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {completionRate.toFixed(0)}%
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Progress Overview */}
           <Card>
@@ -432,87 +489,97 @@ const PatientHabits: React.FC = () => {
 
           {/* Habits List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {habits.map((habit) => (
-              <Card key={habit.id} className="relative">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: habit.color }}
-                        />
-                        {habit.name}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        {habit.description}
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteHabit(habit.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">{habit.category}</Badge>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Flame className="w-4 h-4 text-orange-500" />
-                        {habit.streak} day streak
+            {loading
+              ? // Habit List Skeleton
+                [...Array(4)].map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-4">
+                      <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                  </Card>
+                ))
+              : habits.map((habit) => (
+                  <Card key={habit.id} className="relative">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: habit.color }}
+                            />
+                            {habit.name}
+                          </CardTitle>
+                          <CardDescription className="mt-1">
+                            {habit.description}
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteHabit(habit.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {habit.current}/{habit.target} {habit.frequency}
-                    </div>
-                  </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline">{habit.category}</Badge>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Flame className="w-4 h-4 text-orange-500" />
+                            {habit.streak} day streak
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {habit.current}/{habit.target} {habit.frequency}
+                        </div>
+                      </div>
 
-                  <Progress
-                    value={(habit.current / habit.target) * 100}
-                    className="h-2"
-                  />
-
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={habit.completedToday}
-                        onCheckedChange={() => toggleHabitCompletion(habit.id)}
-                        id={`habit-${habit.id}`}
+                      <Progress
+                        value={(habit.current / habit.target) * 100}
+                        className="h-2"
                       />
-                      <Label
-                        htmlFor={`habit-${habit.id}`}
-                        className={`text-sm ${
-                          habit.completedToday
-                            ? "line-through text-muted-foreground"
-                            : ""
-                        }`}
-                      >
-                        Mark as completed today
-                      </Label>
-                    </div>
-                    {habit.completedToday && (
-                      <Badge
-                        variant="default"
-                        className="bg-green-500 hover:bg-green-600"
-                      >
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Done
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={habit.completedToday}
+                            onCheckedChange={() => toggleHabitCompletion(habit)}
+                            id={`habit-${habit.id}`}
+                          />
+                          <Label
+                            htmlFor={`habit-${habit.id}`}
+                            className={`text-sm ${
+                              habit.completedToday
+                                ? "line-through text-muted-foreground"
+                                : ""
+                            }`}
+                          >
+                            Mark as completed today
+                          </Label>
+                        </div>
+                        {habit.completedToday && (
+                          <Badge
+                            variant="default"
+                            className="bg-green-500 hover:bg-green-600"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Done
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
           </div>
 
-          {habits.length === 0 && (
+          {/* No Habits Placeholder */}
+          {!loading && habits.length === 0 && (
             <Card className="py-12">
               <CardContent className="text-center">
                 <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
