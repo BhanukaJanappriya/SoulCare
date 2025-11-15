@@ -60,19 +60,6 @@ export interface AdminUserListItem {
   date_joined: string;
 }
 
-/*export interface Appointment {
-  id: string;
-  patientId: string;
-  providerId: string;
-  providerRole: UserRole;
-  date: Date;
-  duration: number; // in minutes
-  type: 'consultation' | 'follow-up' | 'therapy' | 'emergency';
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
-  notes?: string;
-  prescription?: Prescription;
-  createdAt: Date;
-}*/
 
 export interface User {
   id: number; // Corrected to number
@@ -287,4 +274,11 @@ export interface HabitToggleInput {
 export interface HabitToggleResponse {
     status: string; // e.g., "Habit marked as completed"
     habit: Habit; // The updated habit object from the server
+}
+
+export interface ProviderStatsData {
+  total_patients: number;
+  appointments_today: number;
+  pending_messages: number;
+  average_rating: number;
 }
