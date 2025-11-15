@@ -247,3 +247,10 @@ export interface Conversation {
   last_message: ChatMessage | null; // The most recent message object
   unread_count: number;
 }
+
+export interface ProviderStatsData {
+  total_patients: number;
+  appointments_today: number;
+  pending_messages: number;
+  average_rating: number;
+}
