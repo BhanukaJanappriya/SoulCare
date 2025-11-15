@@ -58,9 +58,12 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Called when we receive a message from the client (as JSON).
         """
-        message_content = content.get('message')
-        if not message_content or not self.user.is_authenticated:
-            return
+        message_content = content.get('message','type')
+        
+        if message_content == 'chat_message':
+            message_content = content.get('message')
+            if not message_content or not self.user.is_authenticated:
+                return
 
         # --- FIX: Create AND Serialize in async-safe blocks ---
 
@@ -104,6 +107,22 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         
         # Send the message (as a JSON string) to the client
         await self.send_json(content=message)
+        
+        
+    async def chat_delete_message(self, event):
+        """
+        Handler for the 'chat.delete_message' type event.
+        Receives this event from the MessageDetailView.
+        """
+        message_id = event['message_id']
+        
+        # Broadcast the ID of the deleted message to the client
+        await self.send_json(content={
+            'type': 'delete_message', # Send a custom type to the frontend
+            'message_id': message_id
+        })
+        
+    
 
     # --- Database Helper Methods ---
 

@@ -193,7 +193,7 @@ const PatientDetailPage: React.FC = () => {
                          </div>
                     </div>
                      <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-                        <Button size="sm"><Mail className="mr-2 h-4 w-4" /> Message (TBD)</Button>
+                        <Button size="sm"><Mail className="mr-2 h-4 w-4" onClick={() => navigate('/messages')}  /> Message (TBD)</Button>
                      </div>
                 </CardHeader>
             </Card>
@@ -250,9 +250,6 @@ const PatientDetailPage: React.FC = () => {
                     <CardContent>
                         {/* Render the new component */}
                         <RecentAppointmentsList patientId={patient.id} />
-                        <Button variant="outline" size="sm" className="mt-4" onClick={() => toast({ title: "Action", description: "Navigate to schedule" })}>
-                            Schedule New
-                        </Button>
                     </CardContent>
                 </Card>
                  <Card className="shadow-sm">

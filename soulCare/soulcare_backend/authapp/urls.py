@@ -1,5 +1,5 @@
 from django.urls import path,include
-from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView,ProviderScheduleViewSet,ProviderAvailabilityView,ProviderDetailView,DoctorPatientsView,PatientDetailView
+from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView,ProviderScheduleViewSet,ProviderAvailabilityView,ProviderDetailView,DoctorPatientsView,PatientDetailView, ProviderDashboardStatsView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -26,5 +26,7 @@ urlpatterns = [
     path('doctors/my-patients/', DoctorPatientsView.as_view(), name='doctor-patients-list'), #for prescription patient dropdown menu
     
     path('patients/<int:pk>/', PatientDetailView.as_view(), name='patient-detail'),
+    
+    path('provider/dashboard-stats/', ProviderDashboardStatsView.as_view(), name='provider-dashboard-stats'),
 ]
 
