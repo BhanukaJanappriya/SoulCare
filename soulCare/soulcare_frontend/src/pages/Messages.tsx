@@ -3,7 +3,14 @@ import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { ChatUI } from "@/components/chat/ChatUI";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageSquare } from "lucide-react"; // <-- Import MessageSquare icon
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"; // <-- Import Card components
 
 const Messages: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -21,16 +28,27 @@ const Messages: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground pr-[5.5rem]">
       <RightSidebar />
       <div className="p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-1">Messages</h1>
-          <p className="text-muted-foreground">
-            Communicate securely with your patients.
-          </p>
-        </div>
-        
+        {/* --- UPDATED HEADER --- */}
+        <Card className="mb-8 shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <MessageSquare className="h-8 w-8 text-primary" />
+              <div>
+                <CardTitle className="text-2xl font-bold">Messages</CardTitle>
+                <CardDescription className="mt-1">
+                  {user.role === 'user' 
+                    ? "Chat with your doctors and counselors." 
+                    : "Communicate securely with your patients."
+                  }
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        {/* --- END UPDATED HEADER --- */}
+
         {/* Render the reusable chat UI */}
         <ChatUI user={user} />
-        
       </div>
     </div>
   );
