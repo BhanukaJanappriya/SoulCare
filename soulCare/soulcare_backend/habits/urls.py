@@ -1,8 +1,17 @@
-# from django.urls import path
-# from .views import HabitListCreate, HabitDetail, HabitToggleCompletion
+# soulcare_backend/habits/urls.py
 
-# urlpatterns = [
-#     path('habits/', HabitListCreate.as_view(), name='habit-list-create'),
-#     path('habits/<int:pk>/', HabitDetail.as_view(), name='habit-detail'),
-#     path('habits/<int:pk>/toggle/', HabitToggleCompletion.as_view(), name='habit-toggle'),
-# ]
+from rest_framework.routers import DefaultRouter
+from .views import HabitViewSet
+
+router = DefaultRouter()
+router.register(r'habits', HabitViewSet, basename='habit')
+
+urlpatterns = router.urls
+
+# This will create routes like:
+# GET /api/habits/ -> List habits
+# POST /api/habits/ -> Create habit
+# GET /api/habits/1/ -> Retrieve habit
+# PATCH/PUT /api/habits/1/ -> Update habit
+# DELETE /api/habits/1/ -> Delete habit
+# POST /api/habits/1/toggle_completion/ -> Toggle completion

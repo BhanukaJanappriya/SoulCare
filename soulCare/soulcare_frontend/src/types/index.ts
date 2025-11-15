@@ -248,9 +248,43 @@ export interface Conversation {
   unread_count: number;
 }
 
-export interface ProviderStatsData {
-  total_patients: number;
-  appointments_today: number;
-  pending_messages: number;
-  average_rating: number;
+
+// =================================================================
+// --- HABITS TYPES ---
+// =================================================================
+
+export interface Habit {
+  id: string | number; // Django uses number, but frontend sometimes uses string for temporary IDs
+  name: string;
+  description: string;
+  frequency: "daily" | "weekly" | "monthly";
+  target: number;
+  current: number;
+  streak: number;
+  category: string;
+  color: string;
+  completedToday: boolean; // Mapped from completed_today
+  createdAt: string; // Keep as string (ISO date string) for transport
+  lastCompleted?: string | null; // Keep as string (ISO date string) or null for transport
+}
+
+// Data structure for creating a new habit (what React sends to POST /habits/)
+export interface HabitInput {
+    name: string;
+    description: string;
+    frequency: 'daily' | 'weekly' | 'monthly';
+    target: number;
+    category: string;
+    color: string;
+}
+
+// Data structure for the POST /habits/{id}/toggle_completion/ body
+export interface HabitToggleInput {
+    completed: boolean;
+}
+
+// Data structure for the POST /habits/{id}/toggle_completion/ response
+export interface HabitToggleResponse {
+    status: string; // e.g., "Habit marked as completed"
+    habit: Habit; // The updated habit object from the server
 }
