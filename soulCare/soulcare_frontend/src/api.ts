@@ -17,12 +17,12 @@ import {
   Habit,
   HabitInput,
   HabitToggleInput,
-  HabitToggleResponse
-  ProviderStatsData,
+  HabitToggleResponse,
+  ProviderStatsData
 } from '@/types';
 
 // FIX 2: Use the correct key that AuthContext saves
-const TOKEN_KEY = 'accessToken'; 
+const TOKEN_KEY = 'accessToken';
 
 // Base API URL
 const API_BASE_URL = 'http://localhost:8000/api/';
@@ -42,7 +42,7 @@ export const api = axios.create({
 // This function adds the token to a request
 const addAuthToken = (config) => {
   const token = localStorage.getItem(TOKEN_KEY); // Reads 'accessToken'
-  
+
   // Ensure config.headers exists
   config.headers = config.headers || {};
 
@@ -63,7 +63,7 @@ const handleResponseError = (error: AxiosError) => {
   if (error.response?.status === 401) {
     console.warn('Authentication token is invalid or expired. Redirecting to login.');
     localStorage.removeItem(TOKEN_KEY);
-    
+
     // Redirect to login, but avoid a loop if we are already on the login page
     if (window.location.pathname !== '/auth/login') {
       window.location.href = '/auth/login';
