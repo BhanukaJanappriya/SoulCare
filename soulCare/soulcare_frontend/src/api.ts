@@ -17,8 +17,10 @@ import {
   Habit,
   HabitInput,
   HabitToggleInput,
-  HabitToggleResponse
+  HabitToggleResponse,
   ProviderStatsData,
+  ContentItem,
+  ContentFormData,
 } from '@/types';
 
 // FIX 2: Use the correct key that AuthContext saves
@@ -312,6 +314,93 @@ export const getAppointments = async (params?: { date?: string }): Promise<Appoi
     return response.data;
   } catch (error) {
     console.error("Error fetching appointments:", error);
+    throw error;
+  }
+};
+
+
+// =================================================================
+// --- CONTENT LIBRARY API FUNCTIONS ---
+// =================================================================
+
+/**
+ * (Provider) Fetches the provider's own content library.
+ */
+export const getContentItems = async (): Promise<ContentItem[]> => {
+  try {
+    const response = await api.get<ContentItem[]>('content/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching content items:", error);
+    throw error;
+  }
+};
+
+/**
+ * (Provider) Uploads a new content item.
+ * We must use FormData for file uploads.
+ */
+export const createContentItem = async (data: ContentFormData): Promise<ContentItem> => {
+  // Use your existing createFormData helper, or build one
+  const formData = new FormData();
+  formData.append('title', data.title);
+  formData.append('description', data.description);
+  formData.append('type', data.type);
+  formData.append('file', data.file, data.file.name);
+  formData.append('tags_input', data.tags); // Send tags as comma-separated string
+
+  try {
+    const response = await api.post<ContentItem>('content/', formData, {
+      // Set the content type for file uploads
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error creating content item:", error);
+    throw error;
+  }
+};
+
+/**
+ * (Provider) Deletes a content item by its ID.
+ */
+export const deleteContentItem = async (id: number): Promise<void> => {
+  try {
+    await api.delete(`content/${id}/`);
+  } catch (error) {
+    console.error(`Error deleting content item ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * (Provider) Shares a content item with a list of patients.
+ */
+export const shareContentItem = async ({ id, patientIds }: { id: number; patientIds: number[] }): Promise<ContentItem> => {
+  try {
+    // This calls the custom 'share' action on the backend view
+    const response = await api.patch<ContentItem>(
+      `content/${id}/share/`,
+      { patient_ids: patientIds } // Send the list of IDs
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error sharing content item ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * (Patient) Fetches content items that have been shared with the logged-in patient.
+ */
+export const getSharedContentForPatient = async (): Promise<ContentItem[]> => {
+  try {
+    const response = await api.get<ContentItem[]>('content/shared-with-me/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching shared content:", error);
     throw error;
   }
 };

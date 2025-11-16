@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Bell,
   LogOut,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +59,7 @@ const PatientSidebar: React.FC = () => {
     { name: "Appointments", href: "/patient/appointments", icon: Calendar },
     { name: "Prescriptions", href: "/patient/prescriptions", icon: Pill},
     { name: "Messages", href: "/patient/messages", icon: MessageSquare },
+    { name: "My Library", href: "/patient/content", icon: Library },
     { name: "Blogs", href: "/patient/blogs", icon: FileText },
     { name: "Games", href: "/patient/games", icon: Gamepad2 },
     { name: "Journal", href: "/patient/journal", icon: BookOpen },
