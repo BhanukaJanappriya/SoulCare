@@ -170,15 +170,24 @@ export interface BlogPost {
 }
 
 export interface ContentItem {
-  id: string;
-  authorId: string;
+  id: number;
+  owner: BasicUserInfo;
   title: string;
   description: string;
-  type: 'video' | 'audio' | 'document' | 'image';
-  url: string;
+  type: "video" | "audio" | "document" | "image";
+  file: string; // This will be the direct URL to the file
   tags: string[];
-  patientIds: string[]; // patients this content is shared with
-  createdAt: Date;
+  shared_with: BasicUserInfo[];
+  created_at: string; // ISO date string
+}
+
+export interface ContentFormData {
+  title: string;
+  description: string;
+  type: "video" | "audio" | "document" | "image";
+  file: File; // The actual file object
+  tags: string;
+  // patientIds are handled by a separate 'share' action
 }
 
 export interface Notification {
@@ -287,4 +296,12 @@ export interface HabitToggleInput {
 export interface HabitToggleResponse {
     status: string; // e.g., "Habit marked as completed"
     habit: Habit; // The updated habit object from the server
+}
+
+
+export interface ProviderStatsData {
+  total_patients: number;
+  appointments_today: number;
+  pending_messages: number;
+  average_rating: number;
 }

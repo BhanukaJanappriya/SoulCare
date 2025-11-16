@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/journal/', include('journal.urls')),
     path('api/chat/', include('chat.urls')),
     path('api/', include('habits.urls')), 
+    path('api/content/', include('content.urls')),
 
 
 
