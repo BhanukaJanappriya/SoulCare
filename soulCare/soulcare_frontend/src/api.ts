@@ -116,6 +116,16 @@ export const getPatientDetailsAPI = async (patientId: string | number): Promise<
   return response.data;
 };
 
+export const deletePrescriptionAPI = async (prescriptionId: number): Promise<void> => {
+  try {
+    // Uses 'api' instance (baseURL /api/)
+    await api.delete(`prescriptions/${prescriptionId}/`);
+  } catch (error) {
+    console.error(`Error deleting prescription ${prescriptionId}:`, error);
+    throw error;
+  }
+};
+
 // =================================================================
 // --- FORM DATA CREATOR ---
 // (No changes needed here)

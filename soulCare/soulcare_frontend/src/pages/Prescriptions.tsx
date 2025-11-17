@@ -1,43 +1,63 @@
 // src/pages/Prescriptions.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react'; // Removed useEffect, not needed
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-// Import API functions
-import { getPrescriptionsAPI, createPrescriptionAPI, getDoctorPatients } from '@/api';
+// --- Import deletePrescriptionAPI ---
+import {
+  getPrescriptionsAPI,
+  createPrescriptionAPI,
+  getDoctorPatients,
+  deletePrescriptionAPI, // <-- ADD THIS
+} from '@/api';
 // Import types
-import { PrescriptionData, MedicationData, PatientOption, PrescriptionFormData, PrescriptionInput } from '@/types'; // Use refined types
+import { PrescriptionData, MedicationData, PatientOption, PrescriptionFormData, PrescriptionInput } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, XCircle } from 'lucide-react';
+// --- Import icons for delete button ---
+import { PlusCircle, XCircle, Trash2, Loader2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+// --- Import AlertDialog for delete confirmation ---
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // --- Main Page Component ---
 const PrescriptionsPage: React.FC = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    
+    // --- State for the delete confirmation dialog ---
+    const [itemToDelete, setItemToDelete] = useState<PrescriptionData | null>(null);
 
     // Fetching prescriptions
     const { data: prescriptions = [], isLoading, error: fetchError } = useQuery<PrescriptionData[]>({
-        queryKey: ['prescriptions'], // Query key for doctor's prescriptions
-        queryFn: getPrescriptionsAPI, // Use function from api.ts
+        queryKey: ['prescriptions'],
+        queryFn: getPrescriptionsAPI,
     });
 
     // Mutation for creating prescriptions
-    const mutation = useMutation({
-        mutationFn: (newPrescription: PrescriptionInput) => createPrescriptionAPI(newPrescription),
+    const createMutation = useMutation({
+        mutationFn: createPrescriptionAPI,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
             toast({ title: "Success", description: "Prescription created successfully." });
-            setIsDialogOpen(false); // Close dialog on success
+            setIsCreateDialogOpen(false);
         },
         onError: (error: any) => {
             toast({
@@ -48,83 +68,161 @@ const PrescriptionsPage: React.FC = () => {
         }
     });
 
-    // Handle form submission: Convert form data structure to API input structure
+    // --- NEW: Mutation for deleting a prescription ---
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => deletePrescriptionAPI(id),
+        onSuccess: (_, deletedId) => {
+            // Optimistically update the UI by removing the deleted item
+            queryClient.setQueryData<PrescriptionData[]>(
+                ['prescriptions'],
+                (oldData = []) => oldData.filter((p) => p.id !== deletedId)
+            );
+            toast({ title: "Success", description: "Prescription deleted." });
+            setItemToDelete(null); // Close the dialog
+        },
+        onError: (error: any) => {
+            toast({
+                variant: "destructive",
+                title: "Error Deleting",
+                description: error.response?.data?.detail || error.message || "Failed to delete prescription."
+            });
+            setItemToDelete(null); // Close the dialog
+        }
+    });
+
+    // Handle form submission
     const handleFormSubmit = (formData: PrescriptionFormData) => {
-        // Validate patient ID selection
         const patientId = parseInt(formData.patient, 10);
         if (isNaN(patientId)) {
              toast({ variant: "destructive", title: "Validation Error", description: "Please select a patient." });
              return;
         }
 
+        // Note: Your PrescriptionInput already expects 'patient_id'
+        // But your form submit logic was passing 'patient'
         const apiData: PrescriptionInput = {
-            ...formData,
-            patient_id: patientId, // Convert patient ID string to number
+            patient_id: patientId, // Use the correct key
+            diagnosis: formData.diagnosis,
+            notes: formData.notes,
+            medications: formData.medications,
         };
-        mutation.mutate(apiData); // Trigger the mutation
+        createMutation.mutate(apiData);
+    };
+
+    const confirmDelete = () => {
+        if (itemToDelete) {
+            deleteMutation.mutate(itemToDelete.id);
+        }
     };
 
     return (
-        
-        <div className="pr-16 ">
-           <RightSidebar />
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Manage Prescriptions</h1>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button> <PlusCircle className="mr-2 h-4 w-4" /> Create New Prescription</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>New Prescription</DialogTitle>
-                        </DialogHeader>
-                        {/* Render Form, pass submit handler and loading state */}
-                        <PrescriptionForm onSubmit={handleFormSubmit} isLoading={mutation.isPending} />
-                    </DialogContent>
-                </Dialog>
-            </div>
+        <div className="pr-[5.5rem] p-6"> {/* Added padding */}
+            <RightSidebar />
+            
+            {/* --- STYLED HEADER --- */}
+            <Card className="mb-8 shadow-sm bg-card">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <FileText className="h-8 w-8 text-primary" />
+                    <div>
+                      <CardTitle className="text-2xl font-bold">Manage Prescriptions</CardTitle>
+                      <CardDescription className="mt-1">
+                        Create, view, and manage all patient prescriptions.
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                          <Button> <PlusCircle className="mr-2 h-4 w-4" /> Create New Prescription</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-2xl">
+                          <DialogHeader>
+                              <DialogTitle>New Prescription</DialogTitle>
+                          </DialogHeader>
+                          <PrescriptionForm onSubmit={handleFormSubmit} isLoading={createMutation.isPending} />
+                      </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+            </Card>
+            {/* --- END STYLED HEADER --- */}
+
 
             {/* Loading State */}
-            {isLoading && <p>Loading prescriptions...</p>}
+            {isLoading && (
+              <div className="flex justify-center items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            )}
 
             {/* Error State */}
             {fetchError && (
                  <Alert variant="destructive" className="mb-4">
-                   <AlertTitle>Error Loading Prescriptions</AlertTitle>
-                   <AlertDescription>{(fetchError as Error).message || "Could not load data."}</AlertDescription>
+                    <AlertTitle>Error Loading Prescriptions</AlertTitle>
+                    <AlertDescription>{(fetchError as Error).message || "Could not load data."}</AlertDescription>
                 </Alert>
             )}
 
             {/* Empty State */}
             {!isLoading && !fetchError && prescriptions.length === 0 && (
-                <p>No prescriptions have been issued yet.</p>
+                <Card className="mt-6 bg-card border border-dashed">
+                  <CardContent className="text-center py-12">
+                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-1">
+                      No Prescriptions Found
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Click "Create New Prescription" to get started.
+                    </p>
+                  </CardContent>
+                </Card>
             )}
 
             {/* Prescriptions List */}
             {!isLoading && !fetchError && prescriptions.length > 0 && (
                 <div className="space-y-6">
                     {prescriptions.map(p => (
-                        <Card key={p.id} className="shadow-md">
+                        <Card key={p.id} className="shadow-sm">
                             <CardHeader>
-                                <CardTitle>Prescription #{p.id}</CardTitle>
-                                <CardDescription>
-                                    Issued on: {format(new Date(p.date_issued), 'PPP')} {/* Nicer date format */}
-                                    {' | '}Patient: {p.patient.full_name} (NIC: {p.patient.nic}) {/* Display name */}
-                                </CardDescription>
+                                {/* --- UPDATED TITLE AND DESCRIPTION --- */}
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <CardTitle className="text-lg">
+                                      Prescription for {p.patient.full_name || p.patient.username}
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Issued on: {format(new Date(p.date_issued), 'PPP')}
+                                        {' | '}Patient NIC: {p.patient.nic || 'N/A'}
+                                        {' | '}Ref: #{p.id}
+                                    </CardDescription>
+                                  </div>
+                                  {/* --- NEW DELETE BUTTON --- */}
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-destructive hover:text-destructive/80"
+                                    onClick={() => setItemToDelete(p)}
+                                    disabled={deleteMutation.isPending && itemToDelete?.id === p.id}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span className="sr-only">Delete</span>
+                                  </Button>
+                                </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <h4 className="font-semibold mb-1 text-sm text-gray-600">Diagnosis:</h4>
-                                    <p className="text-gray-800">{p.diagnosis}</p>
+                                    <h4 className="font-semibold mb-1 text-sm text-muted-foreground">Diagnosis:</h4>
+                                    <p className="text-foreground">{p.diagnosis}</p>
                                 </div>
                                 {p.notes && (
                                      <div>
-                                        <h4 className="font-semibold mb-1 text-sm text-gray-600">Notes:</h4>
-                                        <p className="text-gray-800">{p.notes}</p>
+                                        <h4 className="font-semibold mb-1 text-sm text-muted-foreground">Notes:</h4>
+                                        <p className="text-foreground">{p.notes}</p>
                                     </div>
                                 )}
                                 <div>
-                                   <h4 className="font-semibold mb-2 text-sm text-gray-600">Medications:</h4>
+                                   <h4 className="font-semibold mb-2 text-sm text-muted-foreground">Medications:</h4>
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -136,7 +234,7 @@ const PrescriptionsPage: React.FC = () => {
                                         </TableHeader>
                                         <TableBody>
                                             {p.medications.map((med, index) => (
-                                                <TableRow key={`${p.id}-med-${index}`}> {/* More specific key */}
+                                                <TableRow key={`${p.id}-med-${index}`}>
                                                     <TableCell className="font-medium">{med.name}</TableCell>
                                                     <TableCell>{med.dosage}</TableCell>
                                                     <TableCell>{med.frequency}</TableCell>
@@ -151,29 +249,54 @@ const PrescriptionsPage: React.FC = () => {
                     ))}
                 </div>
             )}
+
+            {/* --- NEW: Delete Confirmation Dialog --- */}
+            <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the prescription for 
+                    <span className="font-medium"> {itemToDelete?.patient.full_name}</span> (Ref: #{itemToDelete?.id}). 
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={confirmDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      "Delete"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
 
-// --- Prescription Form Component (Still within the same file) ---
+// --- Prescription Form Component (Still within the same file, no changes) ---
 const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => void; isLoading: boolean }> = ({ onSubmit, isLoading }) => {
     const { toast } = useToast();
 
-    // --- State for Patient Dropdown ---
     const { data: patients = [], isLoading: isLoadingPatients, error: patientsError } = useQuery<PatientOption[]>({
-        queryKey: ['doctorPatients'], // Unique query key for doctor's patients
-        queryFn: getDoctorPatients, // Use API function
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        queryKey: ['doctorPatients'],
+        queryFn: getDoctorPatients,
+        staleTime: 5 * 60 * 1000,
     });
 
-    // --- State for Form Fields ---
     const [selectedPatientId, setSelectedPatientId] = useState<string>('');
     const [diagnosis, setDiagnosis] = useState('');
     const [notes, setNotes] = useState('');
     const [medications, setMedications] = useState<Omit<MedicationData, 'id'>[]>([{ name: '', dosage: '', frequency: '', instructions: '' }]);
 
-    // --- Medication Handlers ---
-     const handleMedicationChange = (index: number, field: keyof Omit<MedicationData, 'id'>, value: string) => {
+    const handleMedicationChange = (index: number, field: keyof Omit<MedicationData, 'id'>, value: string) => {
         const newMeds = [...medications];
         (newMeds[index] as any)[field] = value;
         setMedications(newMeds);
@@ -181,10 +304,8 @@ const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => voi
     const addMedication = () => setMedications([...medications, { name: '', dosage: '', frequency: '', instructions: '' }]);
     const removeMedication = (index: number) => setMedications(medications.filter((_, i) => i !== index));
 
-    // --- Form Submission ---
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Basic Client-Side Validation (consider adding more robust validation)
         if (!selectedPatientId) {
              toast({ variant: "destructive", title: "Error", description: "Please select a patient." });
              return;
@@ -200,14 +321,12 @@ const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => voi
         onSubmit({ patient: selectedPatientId, diagnosis, notes, medications });
     };
 
-     // Display error if patients fail to load
      if (patientsError) {
-        return <p className="text-red-500">Error loading patient list.</p>;
+         return <p className="text-red-500">Error loading patient list.</p>;
      }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"> {/* Added scroll */}
-            {/* Patient Selection */}
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
             <div>
                 <Label htmlFor="patientId">Patient *</Label>
                 <Select
@@ -228,13 +347,11 @@ const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => voi
                 </Select>
             </div>
 
-            {/* Diagnosis */}
             <div>
                 <Label htmlFor="diagnosis">Diagnosis *</Label>
                 <Textarea id="diagnosis" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} disabled={isLoading} required />
             </div>
 
-            {/* Medications Section */}
             <h3 className="font-semibold pt-4">Medications *</h3>
             {medications.map((med, index) => (
                 <Card key={index} className="border p-4 pt-8 rounded-md space-y-3 relative shadow-sm">
@@ -242,25 +359,25 @@ const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => voi
                          <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-red-500 hover:text-red-700" onClick={() => removeMedication(index)}>
                             <XCircle className="h-4 w-4" />
                             <span className="sr-only">Remove Medication</span>
-                         </Button>
+                        </Button>
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                          <div>
                             <Label htmlFor={`med-name-${index}`}>Name *</Label>
                             <Input id={`med-name-${index}`} placeholder="Medication Name" value={med.name} onChange={e => handleMedicationChange(index, 'name', e.target.value)} disabled={isLoading} required />
-                        </div>
+                         </div>
                          <div>
                             <Label htmlFor={`med-dosage-${index}`}>Dosage *</Label>
                             <Input id={`med-dosage-${index}`} placeholder="e.g., 500mg" value={med.dosage} onChange={e => handleMedicationChange(index, 'dosage', e.target.value)} disabled={isLoading} required />
-                        </div>
+                         </div>
                          <div>
                             <Label htmlFor={`med-freq-${index}`}>Frequency *</Label>
                             <Input id={`med-freq-${index}`} placeholder="e.g., Twice a day" value={med.frequency} onChange={e => handleMedicationChange(index, 'frequency', e.target.value)} disabled={isLoading} required />
-                        </div>
+                         </div>
                          <div>
                             <Label htmlFor={`med-instr-${index}`}>Instructions</Label>
                             <Input id={`med-instr-${index}`} placeholder="e.g., Take with food" value={med.instructions || ''} onChange={e => handleMedicationChange(index, 'instructions', e.target.value)} disabled={isLoading} />
-                        </div>
+                         </div>
                     </div>
                 </Card>
             ))}
@@ -268,13 +385,11 @@ const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => voi
                 <PlusCircle className="w-4 h-4 mr-2" /> Add Medication
             </Button>
 
-            {/* Additional Notes */}
             <div className="pt-4">
                 <Label htmlFor="notes">Additional Notes</Label>
                 <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={isLoading} />
             </div>
 
-            {/* Submit Button */}
             <Button type="submit" className="w-full mt-4" disabled={isLoading}>
                 {isLoading ? 'Saving...' : 'Save Prescription'}
             </Button>
@@ -282,4 +397,4 @@ const PrescriptionForm: React.FC<{ onSubmit: (data: PrescriptionFormData) => voi
     );
 };
 
-export default PrescriptionsPage; // Ensure default export name matches filename convention
+export default PrescriptionsPage;
