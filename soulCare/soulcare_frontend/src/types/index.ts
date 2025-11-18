@@ -28,6 +28,8 @@ export interface DoctorProfile {
   availability: string;
   license_number: string;
   rating?: number;
+  profile_picture?: string | null; 
+  bio?: string | null; 
 }
 
 export interface CounselorProfile {
@@ -37,6 +39,8 @@ export interface CounselorProfile {
   expertise: string;
   license_number: string;
   rating?: number;
+  profile_picture?: string | null;
+  bio?: string | null;
 }
 
 export interface PatientProfile {
@@ -46,6 +50,7 @@ export interface PatientProfile {
   address: string;
   dob: string; // Dates come as strings from JSON
   health_issues: string | null;
+  profile_picture?: string | null;
 }
 
 
