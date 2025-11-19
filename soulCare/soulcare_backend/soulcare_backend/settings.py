@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'chat',
     'chatbot',
     'games',
+    'content'
 
 
 
@@ -115,7 +116,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'Bhanuka@2001',
+        'PASSWORD': 'GDR@1101',
         'HOST': 'localhost',
         'PORT': '3306',
     }

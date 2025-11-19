@@ -23,6 +23,10 @@ class BlogPostSerializer(serializers.ModelSerializer):
 
     # tags is stored as a string in the Model, but your frontend uses an array (string[])
     # We override the field to handle the conversion
+    
+    author_name = serializers.SerializerMethodField()
+    author_role = serializers.SerializerMethodField()
+    
     tags = serializers.SerializerMethodField()
 
     # Override the default to allow writing (creating/updating) the tags field
@@ -33,7 +37,7 @@ class BlogPostSerializer(serializers.ModelSerializer):
         # The fields list must match the keys in your mock JSON data
         fields = [
             'id', 'authorId', 'title', 'content', 'excerpt', 'tags',
-            'status', 'publishedAt', 'createdAt', 'updatedAt', 'tags_input'
+            'status', 'publishedAt', 'createdAt', 'updatedAt', 'tags_input', 'author_name', 'author_role'
         ]
         # Make createdAt and updatedAt read-only as Django handles them
         read_only_fields = ['createdAt', 'updatedAt']
@@ -41,6 +45,16 @@ class BlogPostSerializer(serializers.ModelSerializer):
     # Method to convert the comma-separated string from the model into a list/array for JSON
     def get_tags(self, obj):
         return [tag.strip() for tag in obj.tags.split(',') if tag.strip()]
+    
+    
+    def get_author_name(self, obj):
+        # Try to get the full name from the profile, fallback to username
+        return obj.author.get_full_name() or obj.author.username
+    
+    
+    def get_author_role(self, obj):
+        return obj.author.role
+    
 
     # Method to handle incoming data during create/update
     def validate(self, data):
