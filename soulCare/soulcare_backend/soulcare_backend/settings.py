@@ -53,8 +53,9 @@ INSTALLED_APPS = [
     'moodtracker',
     'journal',
     'habits',
-
-    'chat'
+    'chat',
+    'chatbot',
+    'games',
 
 
 
