@@ -33,6 +33,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManageDoctorsPage from "./pages/admin/ManageDoctorsPage";
 import ManageCounselorsPage from "./pages/admin/ManageCounselorsPage";
 import ManagePatientsPage from "./pages/admin/ManagePatientsPage";
+import ManageBlogsPage from "./pages/admin/ManageBlogsPage";
 
 //Patient imports
 import PatientLayout from "./components/layout/PatientLayout";
@@ -211,6 +212,10 @@ const App = () => (
 
             </Route>
 
+
+            
+               {/* --- Admin Routes --- */}
+
             <Route
               path="/admin"
               element={
@@ -227,6 +232,8 @@ const App = () => (
                 element={<ManageCounselorsPage />}
               />
               <Route path="manage-patients" element={<ManagePatientsPage />} />
+              <Route path="manage-blogs" element={<ManageBlogsPage />} />
+              
             </Route>
 
             {/* --- Not Found Route --- */}
