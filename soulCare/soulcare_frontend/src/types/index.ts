@@ -28,6 +28,8 @@ export interface DoctorProfile {
   availability: string;
   license_number: string;
   rating?: number;
+  profile_picture?: string | null;
+  bio?: string | null;
 }
 
 export interface CounselorProfile {
@@ -37,6 +39,8 @@ export interface CounselorProfile {
   expertise: string;
   license_number: string;
   rating?: number;
+  profile_picture?: string | null;
+  bio?: string | null;
 }
 
 export interface PatientProfile {
@@ -46,6 +50,7 @@ export interface PatientProfile {
   address: string;
   dob: string; // Dates come as strings from JSON
   health_issues: string | null;
+  profile_picture?: string | null;
 }
 
 
@@ -149,6 +154,8 @@ export interface BlogPost {
   title: string;
   content: string;
   excerpt: string;
+  author_name?: string;
+  author_role?: string;
   tags: string[];
   status: 'draft' | 'pending' | 'published' | 'rejected';
   publishedAt?: Date;
@@ -157,15 +164,24 @@ export interface BlogPost {
 }
 
 export interface ContentItem {
-  id: string;
-  authorId: string;
+  id: number;
+  owner: BasicUserInfo;
   title: string;
   description: string;
-  type: 'video' | 'audio' | 'document' | 'image';
-  url: string;
+  type: "video" | "audio" | "document" | "image";
+  file: string; // This will be the direct URL to the file
   tags: string[];
-  patientIds: string[]; // patients this content is shared with
-  createdAt: Date;
+  shared_with: BasicUserInfo[];
+  created_at: string; // ISO date string
+}
+
+export interface ContentFormData {
+  title: string;
+  description: string;
+  type: "video" | "audio" | "document" | "image";
+  file: File; // The actual file object
+  tags: string;
+  // patientIds are handled by a separate 'share' action
 }
 
 export interface Notification {
@@ -276,9 +292,34 @@ export interface HabitToggleResponse {
     habit: Habit; // The updated habit object from the server
 }
 
+
 export interface ProviderStatsData {
   total_patients: number;
   appointments_today: number;
   pending_messages: number;
   average_rating: number;
+}
+
+export interface ReactionTimePayload {
+  reaction_time_ms: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface MemoryGamePayload {
+  max_sequence_length: number;
+  total_attempts: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface StroopGamePayload {
+  total_correct: number;
+  interference_score_ms: number;
+  total_time_s: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
 }

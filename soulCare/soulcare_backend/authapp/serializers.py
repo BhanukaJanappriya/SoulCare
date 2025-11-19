@@ -186,18 +186,20 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
 class DoctorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorProfile
-        fields = ['full_name', 'nic', 'contact_number', 'specialization', 'availability', 'license_number','rating','profile_picture_url', 'bio']
+        fields = ['full_name', 'nic', 'contact_number', 'specialization', 'availability', 'license_number','rating','profile_picture', 'bio']
 
 
 class CounselorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CounselorProfile
-        fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number','rating','profile_picture_url', 'bio']
+        fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number','rating','profile_picture', 'bio']
+        
+
 
 class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
-        fields = ['full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues']
+        fields = ['full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues','profile_picture']
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -211,13 +213,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def get_profile(self, obj):
         if obj.role == 'doctor':
             profile = DoctorProfile.objects.get(user=obj)
-            return DoctorProfileSerializer(profile).data
+            return DoctorProfileSerializer(profile,context=self.context).data
         if obj.role == 'counselor':
             profile = CounselorProfile.objects.get(user=obj)
-            return CounselorProfileSerializer(profile).data
+            return CounselorProfileSerializer(profile,context=self.context).data
         if obj.role == 'user': # 'user' is the role for patients in your model
             profile = PatientProfile.objects.get(user=obj)
-            return PatientProfileSerializer(profile).data
+            return PatientProfileSerializer(profile,context=self.context).data
         return None
 
 
@@ -290,77 +292,69 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     # This remains SerializerMethodField for READ purposes (GET)
     profile = serializers.SerializerMethodField(read_only=True)
 
-    # These fields are where the incoming data is mapped (WRITE purposes)
-    # NOTE: The source='profile' is REMOVED to align with the update logic
-    patient_profile_update = PatientProfileUpdateSerializer(required=False) # <--- REMOVED source='patientprofile'
-    doctor_profile_update = DoctorProfileUpdateSerializer(required=False)   # <--- REMOVED source='doctorprofile'
-    counselor_profile_update = CounselorProfileUpdateSerializer(required=False) # <--- REMOVED source='counselorprofile'
-
+    # --- DEFINE FLAT WRITABLE FIELDS ---
+    # These allow the frontend to send data like 'bio', 'full_name', etc. directly
+    full_name = serializers.CharField(write_only=True, required=False)
+    contact_number = serializers.CharField(write_only=True, required=False)
+    bio = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    profile_picture = serializers.ImageField(write_only=True, required=False)
+    
+    # Role-specific fields
+    specialization = serializers.CharField(write_only=True, required=False)
+    expertise = serializers.CharField(write_only=True, required=False)
+    address = serializers.CharField(write_only=True, required=False)
+    health_issues = serializers.CharField(write_only=True, required=False)
+    # Note: We typically don't allow updating NIC via profile edit for security, 
+    # but you can add it if needed.
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'role', 'profile',
-            # Include the writable nested fields here:
-            'patient_profile_update', 'doctor_profile_update', 'counselor_profile_update'
+            # Include all the writable fields defined above
+            'full_name', 'contact_number', 'bio', 'profile_picture',
+            'specialization', 'expertise', 'address', 'health_issues'
         ]
-        read_only_fields = ['id', 'username', 'email', 'role', 'profile'] # Profile is now read-only
+        read_only_fields = ['id', 'username', 'email', 'role', 'profile']
 
-
-    # READ: Use the existing get_profile logic for reading the data (GET request)
+    # READ: Use the existing get_profile logic (No change here)
     def get_profile(self, obj):
-        # NOTE: You must ensure your existing UserDetailSerializer logic is compatible
-        # This will be used to send the profile data back to the frontend
-        if obj.role == 'doctor':
-            profile = DoctorProfile.objects.get(user=obj)
-            # Use the full DoctorProfileSerializer to include all read-only fields
-            return DoctorProfileSerializer(profile).data
-        # ... (add logic for Counselor and Patient, using their full serializers)
-        if obj.role == 'counselor':
-             # ... (return full CounselorProfileSerializer)
-             profile = CounselorProfile.objects.get(user=obj)
-             return CounselorProfileSerializer(profile).data
-        if obj.role == 'user':
-             # ... (return full PatientProfileSerializer)
-             profile = PatientProfile.objects.get(user=obj)
-             return PatientProfileSerializer(profile).data
+        if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            return DoctorProfileSerializer(obj.doctorprofile,context=self.context).data
+        if obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            return CounselorProfileSerializer(obj.counselorprofile,context=self.context).data
+        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return PatientProfileSerializer(obj.patientprofile,context=self.context).data
         return None
 
+    # WRITE: Custom update method to handle the profile fields
     def update(self, instance, validated_data):
-        # 1. Pop and Prepare Nested Profile Data BEFORE super().update()
-        profile_update_data = {}
-        for role_key in ['doctor_profile_update', 'counselor_profile_update', 'patient_profile_update']:
-            if role_key in validated_data:
-                profile_update_data[role_key] = validated_data.pop(role_key)
-
-        # 2. Update top-level User fields (Now 'validated_data' is safe)
-        instance = super().update(instance, validated_data)
-
-        # 3. Handle the nested profile update using the popped data
-        profile_data_field_name = f'{instance.role}_profile_update'
-
-        if profile_data_field_name in profile_update_data:
-            profile_validated_data = profile_update_data[profile_data_field_name]
-
-            # Get the correct Profile instance (e.g., instance.doctorprofile)
-            try:
-                profile_instance = getattr(instance, f'{instance.role}profile')
-            except AttributeError:
-                raise serializers.ValidationError({"detail": f"Profile instance not found for user role: {instance.role}."})
-
-            # 4. Get the correct Profile Serializer and validate/save
-            if instance.role == 'doctor':
-                profile_serializer = DoctorProfileUpdateSerializer(instance=profile_instance, data=profile_validated_data, partial=True)
-            elif instance.role == 'counselor':
-                profile_serializer = CounselorProfileUpdateSerializer(instance=profile_instance, data=profile_validated_data, partial=True)
-            elif instance.role == 'user':
-                profile_serializer = PatientProfileUpdateSerializer(instance=profile_instance, data=profile_validated_data, partial=True)
-            else:
-                return instance
-
-            profile_serializer.is_valid(raise_exception=True)
-            profile_serializer.save()
-            # print("--- DEBUG: Nested Profile SAVE Successful ---")
+        # 1. Update User fields (if any are editable in the future)
+        # For now, we just pass. 
+        # If you wanted to allow email updates, you'd pop it here.
+        
+        # 2. Identify the correct profile instance
+        profile = None
+        if instance.role == 'doctor':
+            profile = instance.doctorprofile
+        elif instance.role == 'counselor':
+            profile = instance.counselorprofile
+        elif instance.role == 'user':
+            profile = instance.patientprofile
+        
+        # 3. Update the profile instance with data from validated_data
+        if profile:
+            # List of all possible profile fields we accept
+            profile_fields = [
+                'full_name', 'contact_number', 'bio', 'profile_picture',
+                'specialization', 'expertise', 'address', 'health_issues'
+            ]
+            
+            for field in profile_fields:
+                if field in validated_data:
+                    setattr(profile, field, validated_data[field])
+            
+            profile.save()
 
         return instance
 
@@ -375,12 +369,15 @@ class ProviderListSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'role', 'profile']
 
     def get_profile(self, obj):
+        
+    
+        
         if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
-            return DoctorProfileSerializer(obj.doctorprofile).data
+            return DoctorProfileSerializer(obj.doctorprofile,context=self.context).data
         if obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
-            return CounselorProfileSerializer(obj.counselorprofile).data
+            return CounselorProfileSerializer(obj.counselorprofile,context=self.context).data
         if obj.role == 'user' and hasattr(obj, 'patientprofile'):
-            return PatientProfileSerializer(obj.patientprofile).data
+            return PatientProfileSerializer(obj.patientprofile,context=self.context).data
         return None
 
 

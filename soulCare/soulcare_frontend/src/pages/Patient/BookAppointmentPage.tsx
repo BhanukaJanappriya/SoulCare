@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, axiosInstance } from '@/api';
+// src/pages/Patient/BookAppointmentPage.tsx
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { axiosInstance } from '@/api';
 import { Provider } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
 import { User, Star, Stethoscope, Brain } from 'lucide-react';
-import { useNavigate,Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 // Fetches the list of all verified doctors and counselors
 const fetchProviders = async (): Promise<Provider[]> => {
@@ -26,13 +22,19 @@ const BookAppointmentPage: React.FC = () => {
     });
 
     if (isLoading) {
-        return <div className="p-6">Loading available doctors and counselors...</div>;
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <div className="text-lg text-muted-foreground">Loading available doctors and counselors...</div>
+            </div>
+        );
     }
 
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-bold mb-2">Find a Provider</h1>
-            <p className="text-muted-foreground mb-6">Browse our verified professionals and book an appointment.</p>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold mb-2">Find a Provider</h1>
+                <p className="text-muted-foreground">Browse our verified professionals and book an appointment.</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {providers.map(provider => (
                     <ProviderCard key={provider.id} provider={provider} />
@@ -44,41 +46,46 @@ const BookAppointmentPage: React.FC = () => {
 
 const ProviderCard: React.FC<{ provider: Provider }> = ({ provider }) => {
     const ProviderIcon = provider.role === 'doctor' ? Stethoscope : Brain;
+    
+    // Helper to access profile properties safely since 'Provider' type might be a union
+    const profile: any = provider.profile;
 
     return (
-        // The Dialog components are now removed from here
-        <Card className="flex flex-col">
-            <CardHeader className="items-center text-center">
-                <Avatar className="w-24 h-24 mb-4">
-                    <AvatarImage src={(provider.profile as any).profile_picture_url} />
-                    <AvatarFallback className="text-3xl bg-muted">
-                        <User />
+        <Card className="flex flex-col hover:shadow-md transition-shadow">
+            <CardHeader className="items-center text-center pb-2">
+                <Avatar className="w-24 h-24 mb-4 border-2 border-primary/10">
+                    <AvatarImage src={profile.profile_picture} alt={profile.full_name} />
+                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                        {profile.full_name ? profile.full_name.charAt(0).toUpperCase() : <User />}
                     </AvatarFallback>
                 </Avatar>
-                <CardTitle>{provider.profile.full_name}</CardTitle>
-                <CardDescription className="capitalize flex items-center gap-2">
-                    <ProviderIcon className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-xl">{profile.full_name}</CardTitle>
+                <CardDescription className="capitalize flex items-center gap-2 justify-center bg-muted/50 px-3 py-1 rounded-full text-xs font-medium mt-2">
+                    <ProviderIcon className="w-3 h-3" />
                     {provider.role}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="text-center space-y-4 flex-grow flex flex-col justify-between">
+            <CardContent className="text-center space-y-4 flex-grow flex flex-col justify-between pt-2">
                 <div>
-                    <p className="text-muted-foreground font-semibold">
-                        {'specialization' in provider.profile ? provider.profile.specialization : provider.profile.expertise}
+                    <p className="font-medium text-primary mb-2">
+                        {'specialization' in profile ? profile.specialization : profile.expertise}
                     </p>
-                    <p className="text-sm text-muted-foreground px-4 mt-2 h-20 overflow-hidden">
-                         {(provider.profile as any).bio || "No bio provided."}
+                    
+                    {/* --- BIO DISPLAY --- */}
+                    <p className="text-sm text-muted-foreground px-2 line-clamp-3">
+                         {profile.bio || "No bio provided yet."}
                     </p>
+                    {/* --- END BIO DISPLAY --- */}
+
                 </div>
-                <div className="mt-4">
-                     <div className="flex items-center justify-center mb-4">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
-                        <span className="font-semibold">{provider.profile.rating}</span>
+                <div className="mt-4 space-y-3">
+                     <div className="flex items-center justify-center gap-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-semibold">{profile.rating || "5.0"}</span>
+                        <span className="text-xs text-muted-foreground">/ 5.0</span>
                     </div>
 
-                    {/* --- THIS IS THE KEY CHANGE --- */}
-                    {/* The Button is now wrapped in a Link component */}
-                    <Link to={`/patient/providers/${provider.id}`}>
+                    <Link to={`/patient/providers/${provider.id}`} className="block w-full">
                         <Button className="w-full">
                             View Profile & Availability
                         </Button>
@@ -87,8 +94,6 @@ const ProviderCard: React.FC<{ provider: Provider }> = ({ provider }) => {
             </CardContent>
         </Card>
     );
-
-   
 };
 
 export default BookAppointmentPage;
