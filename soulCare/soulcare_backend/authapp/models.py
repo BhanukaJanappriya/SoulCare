@@ -43,7 +43,7 @@ class DoctorProfile(models.Model):
     profile_picture_url = models.URLField(max_length=500, blank=True, null=True)
     bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
     profile_picture = models.ImageField(upload_to='profiles/doctors/', blank=True, null=True)
-    bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
+    
     # Add other doctor fields you need here
 
 class CounselorProfile(models.Model):
@@ -57,7 +57,7 @@ class CounselorProfile(models.Model):
     profile_picture_url = models.URLField(max_length=500, blank=True, null=True)
     bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
     profile_picture = models.ImageField(upload_to='profiles/counselors/', blank=True, null=True)
-    bio = models.TextField(blank=True, null=True, help_text="A professional bio or statement for patients to see.")
+    
     # Add other counselor fields you need here
 
 

@@ -193,7 +193,7 @@ const PatientDetailPage: React.FC = () => {
                          </div>
                     </div>
                      <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-                        <Button size="sm"><Mail className="mr-2 h-4 w-4" onClick={() => navigate('/messages')}  /> Message (TBD)</Button>
+                        <Button size="sm" onClick={() => navigate('/messages')}> <Mail className="mr-2 h-4 w-4" /> Message (TBD)</Button>
                      </div>
                 </CardHeader>
             </Card>
