@@ -30,9 +30,9 @@ urlpatterns = [
     path('api/chat/', include('chat.urls')),
     path('api/', include('habits.urls')),
     path('api/chatbot/', include('chatbot.urls')),
-    path('api/games/', include('games.urls')), 
+    path('api/games/', include('mentalGames.urls')),
 
-    path('api/', include('habits.urls')), 
+    path('api/', include('habits.urls')),
     path('api/content/', include('content.urls')),
 
 
