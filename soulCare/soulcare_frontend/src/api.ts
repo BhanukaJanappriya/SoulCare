@@ -21,6 +21,7 @@ import {
   ProviderStatsData,
   ContentItem,
   ContentFormData,
+  BlogPost,
 } from '@/types';
 
 // FIX 2: Use the correct key that AuthContext saves
@@ -413,4 +414,28 @@ export const getSharedContentForPatient = async (): Promise<ContentItem[]> => {
     console.error("Error fetching shared content:", error);
     throw error;
   }
+};
+
+
+// =================================================================
+// --- BLOG ADMIN API FUNCTIONS ---
+// =================================================================
+
+// Reuse the existing endpoint but allow passing a specific status
+export const getAdminBlogsAPI = async (statusFilter: string = 'all'): Promise<BlogPost[]> => {
+  const response = await api.get<BlogPost[]>('blogs/', {
+    params: { status: statusFilter }
+  });
+  return response.data;
+};
+
+// Update status (Approve/Reject)
+export const updateBlogStatusAPI = async (id: string, status: 'published' | 'rejected'): Promise<BlogPost> => {
+  const response = await api.patch<BlogPost>(`blogs/${id}/`, { status });
+  return response.data;
+};
+
+// Delete Blog
+export const deleteBlogAPI = async (id: string): Promise<void> => {
+  await api.delete(`blogs/${id}/`);
 };

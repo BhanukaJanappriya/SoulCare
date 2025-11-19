@@ -167,6 +167,8 @@ export interface BlogPost {
   title: string;
   content: string;
   excerpt: string;
+  author_name?: string;
+  author_role?: string;
   tags: string[];
   status: 'draft' | 'pending' | 'published' | 'rejected';
   publishedAt?: Date;
