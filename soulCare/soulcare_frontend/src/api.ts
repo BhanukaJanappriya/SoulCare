@@ -18,7 +18,14 @@ import {
   HabitInput,
   HabitToggleInput,
   HabitToggleResponse,
-  ProviderStatsData
+  ProviderStatsData,
+  ContentItem,
+  ContentFormData,
+  BlogPost,
+  ReactionTimePayload,
+  MemoryGamePayload,
+  StroopGamePayload,
+
 } from '@/types';
 
 // FIX 2: Use the correct key that AuthContext saves
@@ -112,6 +119,16 @@ export const getPrescriptionsAPI = async (): Promise<PrescriptionData[]> => {
 export const getPatientDetailsAPI = async (patientId: string | number): Promise<PatientDetailData> => {
   const response = await axiosInstance.get<PatientDetailData>(`patients/${patientId}/`);
   return response.data;
+};
+
+export const deletePrescriptionAPI = async (prescriptionId: number): Promise<void> => {
+  try {
+    // Uses 'api' instance (baseURL /api/)
+    await api.delete(`prescriptions/${prescriptionId}/`);
+  } catch (error) {
+    console.error(`Error deleting prescription ${prescriptionId}:`, error);
+    throw error;
+  }
 };
 
 // =================================================================
@@ -312,6 +329,169 @@ export const getAppointments = async (params?: { date?: string }): Promise<Appoi
     return response.data;
   } catch (error) {
     console.error("Error fetching appointments:", error);
+    throw error;
+  }
+};
+
+
+// =================================================================
+// --- CONTENT LIBRARY API FUNCTIONS ---
+// =================================================================
+
+/**
+ * (Provider) Fetches the provider's own content library.
+ */
+export const getContentItems = async (): Promise<ContentItem[]> => {
+  try {
+    const response = await api.get<ContentItem[]>('content/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching content items:", error);
+    throw error;
+  }
+};
+
+/**
+ * (Provider) Uploads a new content item.
+ * We must use FormData for file uploads.
+ */
+export const createContentItem = async (data: ContentFormData): Promise<ContentItem> => {
+  // Use your existing createFormData helper, or build one
+  const formData = new FormData();
+  formData.append('title', data.title);
+  formData.append('description', data.description);
+  formData.append('type', data.type);
+  formData.append('file', data.file, data.file.name);
+  formData.append('tags_input', data.tags); // Send tags as comma-separated string
+
+  try {
+    const response = await api.post<ContentItem>('content/', formData, {
+      // Set the content type for file uploads
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error creating content item:", error);
+    throw error;
+  }
+};
+
+/**
+ * (Provider) Deletes a content item by its ID.
+ */
+export const deleteContentItem = async (id: number): Promise<void> => {
+  try {
+    await api.delete(`content/${id}/`);
+  } catch (error) {
+    console.error(`Error deleting content item ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * (Provider) Shares a content item with a list of patients.
+ */
+export const shareContentItem = async ({ id, patientIds }: { id: number; patientIds: number[] }): Promise<ContentItem> => {
+  try {
+    // This calls the custom 'share' action on the backend view
+    const response = await api.patch<ContentItem>(
+      `content/${id}/share/`,
+      { patient_ids: patientIds } // Send the list of IDs
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error sharing content item ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * (Patient) Fetches content items that have been shared with the logged-in patient.
+ */
+export const getSharedContentForPatient = async (): Promise<ContentItem[]> => {
+  try {
+    const response = await api.get<ContentItem[]>('content/shared-with-me/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching shared content:", error);
+    throw error;
+  }
+};
+
+
+// =================================================================
+// --- BLOG ADMIN API FUNCTIONS ---
+// =================================================================
+
+// Reuse the existing endpoint but allow passing a specific status
+export const getAdminBlogsAPI = async (statusFilter: string = 'all'): Promise<BlogPost[]> => {
+  const response = await api.get<BlogPost[]>('blogs/', {
+    params: { status: statusFilter }
+  });
+  return response.data;
+};
+
+// Update status (Approve/Reject)
+export const updateBlogStatusAPI = async (id: string, status: 'published' | 'rejected'): Promise<BlogPost> => {
+  const response = await api.patch<BlogPost>(`blogs/${id}/`, { status });
+  return response.data;
+};
+
+// Delete Blog
+export const deleteBlogAPI = async (id: string): Promise<void> => {
+  await api.delete(`blogs/${id}/`);
+};
+
+
+// =================================================================
+// --- GAMES API FUNCTIONS ---
+// =================================================================
+
+/**
+ * Saves the reaction time game results and matrix data to the Django API.
+ * The endpoint is POST /api/games/reaction-time/
+ */
+export const saveReactionTimeResult = async (data: ReactionTimePayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/reaction-time/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving reaction time result:', error);
+    throw error;
+  }
+};
+
+
+/**
+ * Saves the memory game results and matrix data to the Django API.
+ * The endpoint is POST /api/games/memory-game/
+ */
+export const saveMemoryGameResult = async (data: MemoryGamePayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/memory-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving memory game result:', error);
+    throw error;
+  }
+};
+
+
+/**
+ * Saves the Stroop game results and matrix data to the Django API.
+ * The endpoint is POST /api/games/stroop-game/
+ */
+export const saveStroopGameResult = async (data: StroopGamePayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/stroop-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving Stroop game result:', error);
     throw error;
   }
 };

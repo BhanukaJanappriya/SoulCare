@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Prescription
 from .serializers import PrescriptionSerializer
 from authapp.models import User # Import the User model
+from .permissions import IsDoctorAndOwner
 
 class PrescriptionViewSet(viewsets.ModelViewSet):
     """
@@ -11,7 +12,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     - Doctors and Patients can view prescriptions they are involved in.
     """
     serializer_class = PrescriptionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsDoctorAndOwner]
 
     def get_queryset(self):
         """

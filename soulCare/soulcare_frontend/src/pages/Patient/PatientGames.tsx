@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Brain,
   Play,
@@ -16,13 +16,118 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const MentalHealthGames: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState("all");
+// --- Custom Component Imports (Assume these are available locally or correctly imported) ---
+// Note: These must be imported from their respective file locations.
+import ReactionTimeGame from "./ReactionTimeGame";
+import MemoryGame from "./MemoryGame";
+import StroopGame from "./StroopGame";
 
-  // Mock data for games
+// --- Local UI Component Definitions (Kept from your original file for rendering accuracy) ---
+
+const ProgressBar = ({ value, className = "" }) => (
+  <div
+    className={`w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 ${className}`}
+  >
+    <div
+      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+      style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+    />
+  </div>
+);
+
+const Badge = ({ children, variant = "default", className = "" }) => {
+  const variants = {
+    default: "bg-primary text-primary-foreground",
+    secondary: "bg-secondary text-secondary-foreground",
+    outline: "border border-input bg-background",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${variants[variant]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+};
+
+const Button = ({
+  children,
+  variant = "default",
+  size = "default",
+  className = "",
+  ...props
+}) => {
+  const variants = {
+    default: "bg-primary text-primary-foreground hover:bg-primary/90",
+    outline:
+      "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+  };
+
+  const sizes = {
+    default: "h-10 px-4 py-2",
+    lg: "h-11 rounded-md px-8",
+  };
+
+  return (
+    <button
+      className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Card = ({ children, className = "" }) => (
+  <div
+    className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}
+  >
+    {children}
+  </div>
+);
+
+const CardHeader = ({ children, className = "" }) => (
+  <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>{children}</div>
+);
+
+const CardTitle = ({ children, className = "" }) => (
+  <h3
+    className={`text-2xl font-semibold leading-none tracking-tight ${className}`}
+  >
+    {children}
+  </h3>
+);
+
+const CardDescription = ({ children, className = "" }) => (
+  <p className={`text-sm text-muted-foreground ${className}`}>{children}</p>
+);
+
+const CardContent = ({ children, className = "" }) => (
+  <div className={`p-6 pt-0 ${className}`}>{children}</div>
+);
+
+// --- MAIN COMPONENT ---
+
+// Define possible games based on the ID we used in the URL paths
+type GameName =
+  | "reaction_time"
+  | "color_pattern_memory"
+  | "stroop_effect"
+  | "emotion_recognition"
+  | "visual_attention_tracker"
+  | "pattern_recognition"
+  | "mood_reflection_game"
+  | null;
+
+const PatientGames: React.FC = () => {
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [currentGame, setCurrentGame] = useState<GameName>(null); // State to control which game is visible
+
+  // Mock data for games (Updated with correct IDs and the new Stroop Game)
   const games = [
     {
-      id: 1,
+      id: "color_pattern_memory" as const, // <-- Updated ID for Memory Game
       title: "Color Pattern Memory",
       description:
         "Test your working memory and attention span with colorful sequences",
@@ -38,7 +143,7 @@ const MentalHealthGames: React.FC = () => {
       detectionFocus: ["Working Memory", "Attention Span", "Processing Speed"],
     },
     {
-      id: 2,
+      id: "emotion_recognition" as const,
       title: "Emotion Recognition",
       description:
         "Identify emotions from facial expressions to assess social cognition",
@@ -54,7 +159,7 @@ const MentalHealthGames: React.FC = () => {
       detectionFocus: ["Social Cognition", "Emotional Processing", "Empathy"],
     },
     {
-      id: 3,
+      id: "reaction_time" as const, // <-- Updated ID for Reaction Time Game
       title: "Reaction Time Challenge",
       description: "Quick response game to measure cognitive processing speed",
       category: "speed",
@@ -69,7 +174,26 @@ const MentalHealthGames: React.FC = () => {
       detectionFocus: ["Reaction Time", "Motor Speed", "Alertness"],
     },
     {
-      id: 4,
+      id: "stroop_effect" as const, // <-- NEW Stroop Effect Test
+      title: "Stroop Effect Test",
+      description: "Measures selective attention and cognitive interference.",
+      category: "attention",
+      difficulty: "Medium",
+      duration: "5 min",
+      completions: 1,
+      bestScore: 75,
+      icon: Eye,
+      gradient: "from-fuchsia-500 to-pink-600",
+      bgGradient:
+        "from-fuchsia-50 to-pink-50 dark:from-fuchsia-950/20 dark:to-pink-950/20",
+      detectionFocus: [
+        "Selective Attention",
+        "Cognitive Interference",
+        "Processing Speed",
+      ],
+    },
+    {
+      id: "visual_attention_tracker" as const,
       title: "Visual Attention Tracker",
       description: "Track moving objects to assess visual attention and focus",
       category: "attention",
@@ -84,7 +208,7 @@ const MentalHealthGames: React.FC = () => {
       detectionFocus: ["Visual Attention", "Sustained Focus", "Concentration"],
     },
     {
-      id: 5,
+      id: "pattern_recognition" as const,
       title: "Pattern Recognition",
       description:
         "Identify complex patterns to evaluate cognitive flexibility",
@@ -104,7 +228,7 @@ const MentalHealthGames: React.FC = () => {
       ],
     },
     {
-      id: 6,
+      id: "mood_reflection_game" as const,
       title: "Mood Reflection Game",
       description:
         "Interactive scenarios to assess emotional regulation skills",
@@ -152,91 +276,28 @@ const MentalHealthGames: React.FC = () => {
     }
   };
 
-  const ProgressBar = ({ value, className = "" }) => (
-    <div
-      className={`w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 ${className}`}
-    >
-      <div
-        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-      />
-    </div>
-  );
+  // --- Conditional Game Rendering Logic ---
 
-  const Badge = ({ children, variant = "default", className = "" }) => {
-    const variants = {
-      default: "bg-primary text-primary-foreground",
-      secondary: "bg-secondary text-secondary-foreground",
-      outline: "border border-input bg-background",
-    };
+  const handleGameEnd = useCallback(() => {
+    setCurrentGame(null); // Return to the dashboard view
+  }, []);
 
-    return (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${variants[variant]} ${className}`}
-      >
-        {children}
-      </span>
-    );
-  };
+  // 1. Reaction Time Game
+  if (currentGame === "reaction_time") {
+    return <ReactionTimeGame onGameEnd={handleGameEnd} />;
+  }
 
-  const Button = ({
-    children,
-    variant = "default",
-    size = "default",
-    className = "",
-    ...props
-  }) => {
-    const variants = {
-      default: "bg-primary text-primary-foreground hover:bg-primary/90",
-      outline:
-        "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-    };
+  // 2. Color Pattern Memory Game
+  if (currentGame === "color_pattern_memory") {
+    return <MemoryGame onGameEnd={handleGameEnd} />;
+  }
 
-    const sizes = {
-      default: "h-10 px-4 py-2",
-      lg: "h-11 rounded-md px-8",
-    };
+  // 3. Stroop Effect Test
+  if (currentGame === "stroop_effect") {
+    return <StroopGame onGameEnd={handleGameEnd} />;
+  }
 
-    return (
-      <button
-        className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className}`}
-        {...props}
-      >
-        {children}
-      </button>
-    );
-  };
-
-  const Card = ({ children, className = "" }) => (
-    <div
-      className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}
-    >
-      {children}
-    </div>
-  );
-
-  const CardHeader = ({ children, className = "" }) => (
-    <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>
-      {children}
-    </div>
-  );
-
-  const CardTitle = ({ children, className = "" }) => (
-    <h3
-      className={`text-2xl font-semibold leading-none tracking-tight ${className}`}
-    >
-      {children}
-    </h3>
-  );
-
-  const CardDescription = ({ children, className = "" }) => (
-    <p className={`text-sm text-muted-foreground ${className}`}>{children}</p>
-  );
-
-  const CardContent = ({ children, className = "" }) => (
-    <div className={`p-6 pt-0 ${className}`}>{children}</div>
-  );
-
+  // --- Dashboard Rendering (Default) ---
   return (
     <div className="p-6 min-h-screen bg-background">
       {/* Header Section */}
@@ -250,8 +311,9 @@ const MentalHealthGames: React.FC = () => {
         </p>
       </div>
 
-      {/* Stats Overview */}
+      {/* Stats Overview (Uses your original stat cards) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* ... (Your original Stat Cards JSX) ... */}
         <Card className="transform hover:scale-105 transition-transform duration-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -265,7 +327,6 @@ const MentalHealthGames: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
         <Card className="transform hover:scale-105 transition-transform duration-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -279,7 +340,6 @@ const MentalHealthGames: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
         <Card className="transform hover:scale-105 transition-transform duration-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -293,7 +353,6 @@ const MentalHealthGames: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
         <Card className="transform hover:scale-105 transition-transform duration-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -428,8 +487,12 @@ const MentalHealthGames: React.FC = () => {
                     />
                   </div>
 
-                  {/* Play Button */}
-                  <Button className="w-full group-hover:scale-105 transition-transform">
+                  {/* Play Button - Use setCurrentGame to launch the game component */}
+                  <Button
+                    className="w-full group-hover:scale-105 transition-transform"
+                    // Cast 'id' to GameName to resolve potential TS type issues
+                    onClick={() => setCurrentGame(game.id as GameName)}
+                  >
                     <Play className="w-4 h-4 mr-2" />
                     Play Game
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -495,4 +558,4 @@ const MentalHealthGames: React.FC = () => {
   );
 };
 
-export default MentalHealthGames;
+export default PatientGames;

@@ -380,7 +380,7 @@ class ProviderDashboardStatsView(APIView):
             if user.role == 'doctor' and hasattr(user, 'doctorprofile'):
                 average_rating = user.doctorprofile.rating
             elif user.role == 'counselor' and hasattr(user, 'counselorprofile'):
-                average_rating = user.counselorprofile
+                average_rating = user.counselorprofile.rating
         except (DoctorProfile.DoesNotExist, CounselorProfile.DoesNotExist):
             pass # Keep the default 5.0 if profile somehow doesn't exist
 

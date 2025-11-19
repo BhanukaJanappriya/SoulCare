@@ -32,6 +32,8 @@ urlpatterns = [
     path('api/chatbot/', include('chatbot.urls')),
     path('api/games/', include('games.urls')), 
 
+    path('api/', include('habits.urls')), 
+    path('api/content/', include('content.urls')),
 
 
 
