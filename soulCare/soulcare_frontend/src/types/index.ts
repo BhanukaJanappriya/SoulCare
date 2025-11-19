@@ -65,19 +65,6 @@ export interface AdminUserListItem {
   date_joined: string;
 }
 
-/*export interface Appointment {
-  id: string;
-  patientId: string;
-  providerId: string;
-  providerRole: UserRole;
-  date: Date;
-  duration: number; // in minutes
-  type: 'consultation' | 'follow-up' | 'therapy' | 'emergency';
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
-  notes?: string;
-  prescription?: Prescription;
-  createdAt: Date;
-}*/
 
 export interface User {
   id: number; // Corrected to number
@@ -311,4 +298,5 @@ export interface ProviderStatsData {
   appointments_today: number;
   pending_messages: number;
   average_rating: number;
+}
 }
