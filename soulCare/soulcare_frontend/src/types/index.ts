@@ -28,8 +28,8 @@ export interface DoctorProfile {
   availability: string;
   license_number: string;
   rating?: number;
-  profile_picture?: string | null; 
-  bio?: string | null; 
+  profile_picture?: string | null;
+  bio?: string | null;
 }
 
 export interface CounselorProfile {
@@ -299,4 +299,27 @@ export interface ProviderStatsData {
   pending_messages: number;
   average_rating: number;
 }
+
+export interface ReactionTimePayload {
+  reaction_time_ms: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface MemoryGamePayload {
+  max_sequence_length: number;
+  total_attempts: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface StroopGamePayload {
+  total_correct: number;
+  interference_score_ms: number;
+  total_time_s: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
 }

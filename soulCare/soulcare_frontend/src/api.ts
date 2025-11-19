@@ -18,11 +18,14 @@ import {
   HabitInput,
   HabitToggleInput,
   HabitToggleResponse,
-  ProviderStatsData
   ProviderStatsData,
   ContentItem,
   ContentFormData,
   BlogPost,
+  ReactionTimePayload,
+  MemoryGamePayload,
+  StroopGamePayload,
+
 } from '@/types';
 
 // FIX 2: Use the correct key that AuthContext saves
@@ -439,4 +442,56 @@ export const updateBlogStatusAPI = async (id: string, status: 'published' | 'rej
 // Delete Blog
 export const deleteBlogAPI = async (id: string): Promise<void> => {
   await api.delete(`blogs/${id}/`);
+};
+
+
+// =================================================================
+// --- GAMES API FUNCTIONS ---
+// =================================================================
+
+/**
+ * Saves the reaction time game results and matrix data to the Django API.
+ * The endpoint is POST /api/games/reaction-time/
+ */
+export const saveReactionTimeResult = async (data: ReactionTimePayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/reaction-time/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving reaction time result:', error);
+    throw error;
+  }
+};
+
+
+/**
+ * Saves the memory game results and matrix data to the Django API.
+ * The endpoint is POST /api/games/memory-game/
+ */
+export const saveMemoryGameResult = async (data: MemoryGamePayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/memory-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving memory game result:', error);
+    throw error;
+  }
+};
+
+
+/**
+ * Saves the Stroop game results and matrix data to the Django API.
+ * The endpoint is POST /api/games/stroop-game/
+ */
+export const saveStroopGameResult = async (data: StroopGamePayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/stroop-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving Stroop game result:', error);
+    throw error;
+  }
 };
