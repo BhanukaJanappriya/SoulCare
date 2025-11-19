@@ -55,8 +55,8 @@ INSTALLED_APPS = [
     'habits',
     'chat',
     'chatbot',
-    'games',
-    'content'
+    'mentalGames',
+    'content',
 
 
 
