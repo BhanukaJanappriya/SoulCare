@@ -15,6 +15,7 @@ from appointments.models import Appointment
 from chat.models import Conversation, Message
 
 
+
 class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -337,7 +338,7 @@ class PatientDetailView(generics.RetrieveAPIView):
         # E.g., patient = User.objects.prefetch_related('patient_appointments', 'prescriptions_as_patient').get(pk=patient.pk)
 
         return patient
-    
+
 
 class ProviderDashboardStatsView(APIView):
     """
@@ -347,7 +348,7 @@ class ProviderDashboardStatsView(APIView):
 
     def get(self, request, *args, **kwargs):
         user = request.user
-        
+
         if user.role not in ['doctor', 'counselor']:
             return Response({"error": "User is not a provider."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -390,5 +391,5 @@ class ProviderDashboardStatsView(APIView):
             'pending_messages': pending_messages,
             'average_rating': average_rating,
         }
-        
+
         return Response(stats_data, status=status.HTTP_200_OK)
