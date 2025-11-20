@@ -1,11 +1,16 @@
 from django.urls import path
-from .views import ReactionTimeResultListCreateView,MemoryGameResultListCreateView, StroopGameResultListCreateView, export_all_game_data_csv
+
+from .views import ReactionTimeResultListCreateView,MemoryGameResultListCreateView, StroopGameResultListCreateView,LongestNumberGameResultListCreateView,NumpuzGameResultListCreateView,numpuz_stats_view,longest_number_stats_view,export_all_game_data_csv
 urlpatterns = [
     # The view is a Class-Based View, so we call .as_view()
     path('reaction-time/', ReactionTimeResultListCreateView.as_view(), name='reaction-time-results'),
     path('memory-game/', MemoryGameResultListCreateView.as_view(), name='memory-game-results'),
     path('stroop-game/', StroopGameResultListCreateView.as_view(), name='stroop-game-results'),
+    path('longest-number/', LongestNumberGameResultListCreateView.as_view(), name='longest-number-list-create'),
+    path('longest-number-stats/', longest_number_stats_view, name='longest-number-stats'),
     path('export-all-data/', export_all_game_data_csv, name='export-all-game-data-csv'),
+    path('numpuz-game/', NumpuzGameResultListCreateView.as_view(), name='numpuz-game-list-create'),
+    path('numpuz-stats/', numpuz_stats_view, name='numpuz-stats'),
 
 
 ]
