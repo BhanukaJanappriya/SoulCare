@@ -25,6 +25,10 @@ import {
   ReactionTimePayload,
   MemoryGamePayload,
   StroopGamePayload,
+  LongestNumberPayload,
+  NumpuzGameStats,
+  NumpuzHistoryItem,
+  NumpuzPayload
 
 } from '@/types';
 
@@ -493,5 +497,75 @@ export const saveStroopGameResult = async (data: StroopGamePayload) => {
   } catch (error) {
     console.error('Error saving Stroop game result:', error);
     throw error;
+  }
+};
+
+export const saveLongestNumberResult = async (data: LongestNumberPayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/longest-number/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving longest number result:', error);
+    throw error;
+  }
+};
+
+export interface LongestNumberHistoryItem {
+    score: number;
+    time: number;
+    created_at: string;
+}
+export interface LongestNumberGameStats {
+    highest_score: number;
+    average_score: number;
+    total_plays: number;
+    total_time_ms: number;
+    history: LongestNumberHistoryItem[]; // Use the defined interface here
+}
+
+export const fetchLongestNumberStats = async (): Promise<LongestNumberGameStats> => {
+  try {
+    // We will create this stats endpoint in mentalGames/views.py and mentalGames/urls.py next.
+    const response = await api.get<LongestNumberGameStats>('/games/longest-number-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching longest number stats:', error);
+    // Return a default/mock structure on failure to prevent app crash
+    return {
+        highest_score: 0,
+        average_score: 0,
+        total_plays: 0,
+        total_time_ms: 0,
+        history: []
+    };
+  }
+};
+
+
+export const saveNumpuzResult = async (data: NumpuzPayload) => {
+  try {
+    const response = await api.post('/games/numpuz-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving numpuz game result:', error);
+    throw error;
+  }
+};
+
+
+export const fetchNumpuzStats = async (): Promise<NumpuzGameStats> => {
+  try {
+    const response = await api.get<NumpuzGameStats>('/games/numpuz-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching numpuz game stats:', error);
+    // Return a default/mock structure on failure to prevent app crash
+    return {
+        best_time_s: 0,
+        min_moves: 0,
+        total_plays: 0,
+        history: []
+    };
   }
 };

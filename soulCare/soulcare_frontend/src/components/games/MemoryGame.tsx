@@ -1,13 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 // Assuming these are your components from src/components/ui/
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { saveMemoryGameResult } from "../../api";
 import { MemoryGamePayload } from "../../types";
 import { Zap, Brain, Trophy } from "lucide-react";
@@ -18,7 +13,7 @@ import {
   SelectContent,
   SelectItem,
   SelectGroup,
-} from "../../components/ui/select";
+} from "../ui/select";
 
 // --- Constants ---
 type Color = "red" | "blue" | "green" | "yellow";
