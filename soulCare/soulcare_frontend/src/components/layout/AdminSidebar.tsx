@@ -10,6 +10,7 @@ import {
   LogOut,
   LayoutDashboard,
   FileText,
+  FolderOpen,
 } from 'lucide-react';
 
 // Define the navigation items for the admin panel
@@ -19,6 +20,8 @@ const adminNavItems = [
   { icon: UserCheck, label: "Manage Counselors", path: "/admin/manage-counselors" },
   { icon: Users, label: "Manage Patients", path: "/admin/manage-patients" },
   { icon: FileText, label: "Manage Blogs", path: "/admin/manage-blogs" },
+  { icon: FolderOpen, label: "Manage Contents", path: "/admin/manage-content" },
+
 ];
 
 export const AdminSidebar: React.FC = () => {

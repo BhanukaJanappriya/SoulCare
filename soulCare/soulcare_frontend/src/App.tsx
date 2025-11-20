@@ -34,6 +34,7 @@ import ManageDoctorsPage from "./pages/admin/ManageDoctorsPage";
 import ManageCounselorsPage from "./pages/admin/ManageCounselorsPage";
 import ManagePatientsPage from "./pages/admin/ManagePatientsPage";
 import ManageBlogsPage from "./pages/admin/ManageBlogsPage";
+import ManageContentPage from "./pages/admin/ManageContentPage";
 
 //Patient imports
 import PatientLayout from "./components/layout/PatientLayout";
@@ -233,6 +234,7 @@ const App = () => (
               />
               <Route path="manage-patients" element={<ManagePatientsPage />} />
               <Route path="manage-blogs" element={<ManageBlogsPage />} />
+              <Route path="manage-content" element={<ManageContentPage />} />
               
             </Route>
 

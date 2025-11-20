@@ -27,6 +27,10 @@ class ContentViewSet(viewsets.ModelViewSet):
         Providers can only see and manage their *own* content.
         """
         user = self.request.user
+        
+        if user.role == 'admin' or user.is_superuser:
+            return ContentItem.objects.all().order_by('-created_at')
+        
         if user.role not in ['doctor', 'counselor']:
             return ContentItem.objects.none()
         return ContentItem.objects.filter(owner=user)
