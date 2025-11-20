@@ -1,12 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { saveStroopGameResult } from "../../api";
 import { StroopGamePayload } from "../../types";
 import { Zap, Eye, Target } from "lucide-react";
@@ -17,7 +12,7 @@ import {
   SelectContent,
   SelectItem,
   SelectGroup,
-} from "../../components/ui/select";
+} from "../ui/select";
 // --- Constants ---
 type ColorName = "RED" | "BLUE" | "GREEN" | "YELLOW";
 type ColorCode =

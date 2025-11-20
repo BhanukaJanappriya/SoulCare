@@ -80,16 +80,16 @@ class LongestNumberGameResultSerializer(serializers.ModelSerializer):
         model = LongestNumberGameResult
         fields = [
             'id',
+            'user',
             'max_number_length',
-            'total_attempts',
             'total_reaction_time_ms',
+            'total_attempts',
             'post_game_mood',
             'perceived_effort',
             'stress_reduction_rating',
-            'user',
             'created_at'
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'user','created_at']
 
 class NumpuzGameResultSerializer(serializers.ModelSerializer):
     perceived_effort = serializers.IntegerField(required=False)

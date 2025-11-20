@@ -1,3 +1,5 @@
+import api from "@/api";
+
 export type UserRole = 'user'|'doctor' | 'counselor'|'admin';
 
 export interface Provider {
@@ -322,4 +324,54 @@ export interface StroopGamePayload {
   post_game_mood: number;
   perceived_effort: number;
   stress_reduction_rating: number;
+}
+
+export interface LongestNumberPayload {
+  max_number_length: number;
+  total_attempts: number;
+  total_reaction_time_ms: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+// === NEW INTERFACES FOR LONGEST NUMBER GAME STATS ===
+export interface LongestNumberHistoryItem {
+    score: number;
+    time: number;
+    created_at: string;
+}
+
+export interface LongestNumberGameStats {
+    highest_score: number;
+    average_score: number;
+    total_plays: number;
+    history: LongestNumberHistoryItem[];
+}
+
+// =================================================================
+// --- NUMPUZ GAME
+// =================================================================
+
+export interface NumpuzPayload {
+  time_taken_s: number;
+  puzzle_size: string; // e.g., "3x3", "4x4"
+  moves_made: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface NumpuzHistoryItem {
+  score: number; // We'll use moves_made for score
+  time_taken_s: number;
+  puzzle_size: string;
+  created_at: string;
+}
+
+export interface NumpuzGameStats {
+  best_time_s: number;
+  min_moves: number;
+  total_plays: number;
+  history: NumpuzHistoryItem[];
 }

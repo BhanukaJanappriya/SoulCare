@@ -18,10 +18,11 @@ import {
 
 // --- Custom Component Imports (Assume these are available locally or correctly imported) ---
 // Note: These must be imported from their respective file locations.
-import ReactionTimeGame from "./ReactionTimeGame";
-import MemoryGame from "./MemoryGame";
-import StroopGame from "./StroopGame";
-
+import ReactionTimeGame from "../../components/games/ReactionTimeGame";
+import MemoryGame from "../../components/games/MemoryGame";
+import StroopGame from "../../components/games/StroopGame";
+import LongestNumberGame from "../../components/games/LongestNumberGame";
+import NumpuzGame from "../../components/games/NumpuzGame";
 // --- Local UI Component Definitions (Kept from your original file for rendering accuracy) ---
 
 const ProgressBar = ({ value, className = "" }) => (
@@ -115,9 +116,11 @@ type GameName =
   | "color_pattern_memory"
   | "stroop_effect"
   | "emotion_recognition"
+  | "numpuz_game"
   | "visual_attention_tracker"
   | "pattern_recognition"
   | "mood_reflection_game"
+  | "longest_number"
   | null;
 
 const PatientGames: React.FC = () => {
@@ -142,6 +145,41 @@ const PatientGames: React.FC = () => {
         "from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20",
       detectionFocus: ["Working Memory", "Attention Span", "Processing Speed"],
     },
+
+    {
+      id: "longest_number" as const, // The new ID
+      title: "Longest Number Recall",
+      description:
+        "Test your digital memory span by recalling increasingly long numbers.",
+      category: "memory", // Matches the Longest Number Game focus
+      difficulty: "Medium",
+      duration: "5 min",
+      completions: 0,
+      bestScore: 0,
+      icon: Brain, // Same icon as Memory game or another suitable one
+      gradient: "from-teal-500 to-cyan-600",
+      bgGradient:
+        "from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20",
+      detectionFocus: ["Working Memory", "Digital Span", "Short-Term Recall"],
+    },
+
+    {
+      id: "numpuz_game" as const, // <-- ID MUST MATCH
+      title: "Numpuz Sliding Puzzle",
+      description:
+        "A classic 15-puzzle to test problem-solving and spatial reasoning.",
+      category: "logic",
+      difficulty: "Medium",
+      duration: "10 min",
+      completions: 5,
+      bestScore: 120,
+      icon: Target,
+      gradient: "from-red-500 to-pink-600",
+      bgGradient:
+        "from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20",
+      detectionFocus: ["Problem Solving", "Cognitive Flexibility", "Planning"],
+    },
+
     {
       id: "emotion_recognition" as const,
       title: "Emotion Recognition",
@@ -295,6 +333,14 @@ const PatientGames: React.FC = () => {
   // 3. Stroop Effect Test
   if (currentGame === "stroop_effect") {
     return <StroopGame onGameEnd={handleGameEnd} />;
+  }
+
+  if (currentGame === "longest_number") {
+    return <LongestNumberGame onGameEnd={handleGameEnd} />; // The component we will create next
+  }
+
+  if (currentGame === "numpuz_game") {
+    return <NumpuzGame onGameEnd={handleGameEnd} />;
   }
 
   // --- Dashboard Rendering (Default) ---
