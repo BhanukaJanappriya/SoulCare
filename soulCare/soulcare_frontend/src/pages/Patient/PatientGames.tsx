@@ -23,6 +23,7 @@ import MemoryGame from "../../components/games/MemoryGame";
 import StroopGame from "../../components/games/StroopGame";
 import LongestNumberGame from "../../components/games/LongestNumberGame";
 import NumpuzGame from "../../components/games/NumpuzGame";
+import AdditionsGame from "@/components/games/AdditionsGame";
 // --- Local UI Component Definitions (Kept from your original file for rendering accuracy) ---
 
 const ProgressBar = ({ value, className = "" }) => (
@@ -117,6 +118,7 @@ type GameName =
   | "stroop_effect"
   | "emotion_recognition"
   | "numpuz_game"
+  | "additions_game"
   | "visual_attention_tracker"
   | "pattern_recognition"
   | "mood_reflection_game"
@@ -178,6 +180,27 @@ const PatientGames: React.FC = () => {
       bgGradient:
         "from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20",
       detectionFocus: ["Problem Solving", "Cognitive Flexibility", "Planning"],
+    },
+
+    {
+      id: "additions_game" as const,
+      title: "Quick Addition Challenge",
+      description:
+        "Fast-paced mental math to improve concentration and processing speed.",
+      category: "speed",
+      difficulty: "Easy",
+      duration: "3 min",
+      completions: 15,
+      bestScore: 95, // Example: highest score is % correct
+      icon: Target, // Or a Plus icon if you have one imported
+      gradient: "from-orange-500 to-red-600",
+      bgGradient:
+        "from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20",
+      detectionFocus: [
+        "Processing Speed",
+        "Working Memory",
+        "Numerical Fluency",
+      ],
     },
 
     {
@@ -343,6 +366,10 @@ const PatientGames: React.FC = () => {
     return <NumpuzGame onGameEnd={handleGameEnd} />;
   }
 
+  if (currentGame === "additions_game") {
+    // This component must be imported at the top
+    return <AdditionsGame onGameEnd={handleGameEnd} />;
+  }
   // --- Dashboard Rendering (Default) ---
   return (
     <div className="p-6 min-h-screen bg-background">

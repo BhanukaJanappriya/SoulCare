@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ReactionTimeResult, MemoryGameResult, StroopGameResult,LongestNumberGameResult,NumpuzGameResult
+from .models import ReactionTimeResult, MemoryGameResult, StroopGameResult,LongestNumberGameResult,NumpuzGameResult,AdditionsGameResult
 
 
 class ReactionTimeResultSerializer(serializers.ModelSerializer):
@@ -105,6 +105,28 @@ class NumpuzGameResultSerializer(serializers.ModelSerializer):
             'time_taken_s',
             'puzzle_size',
             'moves_made',
+            'post_game_mood',
+            'perceived_effort',
+            'stress_reduction_rating',
+            'user',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+class AdditionsGameResultSerializer(serializers.ModelSerializer):
+    perceived_effort = serializers.IntegerField(required=False)
+    stress_reduction_rating = serializers.IntegerField(required=False)
+    post_game_mood = serializers.IntegerField(required=False)
+
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = AdditionsGameResult
+        fields = [
+            'id',
+            'total_correct',
+            'time_taken_s',
+            'difficulty_level',
             'post_game_mood',
             'perceived_effort',
             'stress_reduction_rating',

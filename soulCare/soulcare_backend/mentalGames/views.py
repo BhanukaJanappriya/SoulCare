@@ -6,8 +6,8 @@ from django.http import HttpResponse # New Import for CSV response
 import csv # New Import
 import io
 from django.db.models import Max, Avg, Count, Sum, Min
-from .models import ReactionTimeResult, MemoryGameResult, StroopGameResult,LongestNumberGameResult,NumpuzGameResult
-from .serializers import ReactionTimeResultSerializer, MemoryGameResultSerializer, StroopGameResultSerializer,LongestNumberGameResultSerializer,NumpuzGameResultSerializer
+from .models import ReactionTimeResult, MemoryGameResult, StroopGameResult,AdditionsGameResult,LongestNumberGameResult,NumpuzGameResult
+from .serializers import ReactionTimeResultSerializer, MemoryGameResultSerializer, StroopGameResultSerializer,LongestNumberGameResultSerializer,NumpuzGameResultSerializer,AdditionsGameResultSerializer
 from authapp.permissions import IsAdminOrCounselor
 
 class ReactionTimeResultListCreateView(generics.ListCreateAPIView):
@@ -234,6 +234,59 @@ def numpuz_stats_view(request):
     stats = {
         'best_time_s': round(aggregates['best_time'] or 0, 2),
         'min_moves': aggregates['min_moves'] or 0,
+        'total_plays': aggregates['total_plays'],
+        'history': formatted_history,
+    }
+
+    return Response(stats)
+
+class AdditionsGameResultListCreateView(generics.ListCreateAPIView):
+    # Only authenticated users can access this endpoint
+    permission_classes = [IsAuthenticated]
+    serializer_class = AdditionsGameResultSerializer
+
+    # For GET requests: show only the current user's results
+    def get_queryset(self):
+        return AdditionsGameResult.objects.filter(user=self.request.user)
+
+    # For POST requests: automatically attach the logged-in user
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def additions_stats_view(request):
+    """
+    Fetches the current user's highest correct score, average correct score, and total plays
+    for the Additions Game.
+    """
+    user_results = AdditionsGameResult.objects.filter(user=request.user)
+
+    # 1. Calculate Aggregate Stats
+    aggregates = user_results.aggregate(
+        highest_correct=Max('total_correct'),
+        avg_correct=Avg('total_correct'),
+        total_plays=Count('id')
+    )
+
+    # 2. Get Recent History (e.g., last 10 results, sorted by highest correct DESC)
+    history_data = user_results.order_by('-total_correct', 'time_taken_s')[:10].values('total_correct', 'time_taken_s', 'difficulty_level', 'created_at')
+
+    # Format the history data for the frontend
+    formatted_history = [
+        {
+            'score': item['total_correct'],
+            'time': item['time_taken_s'],
+            'difficulty': item['difficulty_level'],
+            'created_at': item['created_at'].isoformat()
+        }
+        for item in history_data
+    ]
+
+    stats = {
+        'highest_correct': aggregates['highest_correct'] or 0,
+        'avg_correct': round(aggregates['avg_correct'] or 0, 1),
         'total_plays': aggregates['total_plays'],
         'history': formatted_history,
     }
