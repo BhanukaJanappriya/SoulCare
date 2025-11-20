@@ -13,6 +13,7 @@ from django.db.models import Count, Q
 from datetime import date,datetime,timedelta
 from appointments.models import Appointment
 from chat.models import Conversation, Message
+from .utils import send_account_pending_email, send_account_verified_email
 
 
 
@@ -54,6 +55,8 @@ class DoctorRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        
+        send_account_pending_email(user)
 
         response_data = {
             "id": user.id,
@@ -78,6 +81,8 @@ class CounselorRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        
+        send_account_pending_email(user)
 
         response_data = {
             "id": user.id,
@@ -122,13 +127,26 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
 
     serializer_class = AdminUserManagementSerializer
-
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         role = self.request.query_params.get('role')
         if role:
             return queryset.filter(role=role)
         return queryset
+    
+    def perform_update(self, serializer):
+    # Get the user object BEFORE the update
+        instance = serializer.instance
+        old_verified_status = instance.is_verified
+
+        # Perform the update
+        updated_user = serializer.save()
+
+        # Check if status changed from False to True
+        if not old_verified_status and updated_user.is_verified:
+            send_account_verified_email(updated_user)
+    
 
 
 class AdminDashboardStatsView(APIView):

@@ -50,7 +50,8 @@ import PatientGames from "./pages/Patient/PatientGames";
 import PatientPrescriptions from "./pages/Patient/PatientPrescriptions";
 import MoodTracker from "./pages/Patient/MoodTracker";
 import PatientMessages from "./pages/Patient/PatientMessages";
-import PatientContent from "./pages/Patient/PatientContent"
+import PatientContent from "./pages/Patient/PatientContent";
+import PatientProfile from "./pages/Patient/PatientProfile";
 
 const queryClient = new QueryClient();
 
@@ -205,7 +206,7 @@ const App = () => (
               <Route path="journal" element={<PatientJournal />} />
               <Route path="meditation" element={<MeditationPage />} />
               <Route path="games" element={<PatientGames />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="profile" element={<PatientProfile />} />
               <Route path="prescriptions" element={<PatientPrescriptions />} />
               <Route path="mood" element={<MoodTracker />} />
               <Route path="messages" element={<PatientMessages />} />
