@@ -6,6 +6,7 @@ from .models import Appointment
 from .serializers import AppointmentReadSerializer, AppointmentWriteSerializer
 from authapp.models import User
 from datetime import date
+from authapp.utils import send_appointment_approved_email
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -100,8 +101,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if new_status == 'completed' and appointment.status != 'scheduled':
             return Response({'error': 'Only scheduled appointments can be marked as completed.'}, status=status.HTTP_400_BAD_REQUEST)
         
+        old_status = appointment.status
         appointment.status = new_status
         appointment.save()
+        
+        if old_status == 'pending' and new_status == 'scheduled':
+            send_appointment_approved_email(appointment)
         
         # Return the updated appointment data using the read serializer
         serializer = AppointmentReadSerializer(appointment)

@@ -116,7 +116,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'Bhanuka@2001',
+        'PASSWORD': 'Giha#1234',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -179,3 +179,15 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+
+# --- EMAIL CONFIGURATION ---
+# For Development: This prints emails to the console/terminal
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Default settings (required even for console backend)
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'SoulCare <noreply@soulcare.com>'

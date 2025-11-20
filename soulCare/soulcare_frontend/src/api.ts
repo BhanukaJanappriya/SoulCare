@@ -549,6 +549,19 @@ export const saveNumpuzResult = async (data: NumpuzPayload) => {
     return response.data;
   } catch (error) {
     console.error('Error saving numpuz game result:', error);
+
+// =================================================================
+// --- ADMIN CONTENT API ---
+// =================================================================
+
+// Admins reuse the GET /content/ endpoint. 
+// The backend now returns ALL items if the user is an admin.
+export const getAllContentItemsAPI = async (): Promise<ContentItem[]> => {
+  try {
+    const response = await api.get<ContentItem[]>('content/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching all content items:", error);
     throw error;
   }
 };
@@ -569,3 +582,4 @@ export const fetchNumpuzStats = async (): Promise<NumpuzGameStats> => {
     };
   }
 };
+export const deleteContentItemAPI = deleteContentItem;
