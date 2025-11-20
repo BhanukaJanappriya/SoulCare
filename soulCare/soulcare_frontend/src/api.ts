@@ -550,6 +550,10 @@ export const saveNumpuzResult = async (data: NumpuzPayload) => {
   } catch (error) {
     console.error('Error saving numpuz game result:', error);
 
+  }
+
+};
+
 // =================================================================
 // --- ADMIN CONTENT API ---
 // =================================================================
@@ -567,6 +571,9 @@ export const getAllContentItemsAPI = async (): Promise<ContentItem[]> => {
 };
 
 
+export const deleteContentItemAPI = deleteContentItem;
+
+
 export const fetchNumpuzStats = async (): Promise<NumpuzGameStats> => {
   try {
     const response = await api.get<NumpuzGameStats>('/games/numpuz-stats/');
@@ -582,4 +589,5 @@ export const fetchNumpuzStats = async (): Promise<NumpuzGameStats> => {
     };
   }
 };
-export const deleteContentItemAPI = deleteContentItem;
+
+

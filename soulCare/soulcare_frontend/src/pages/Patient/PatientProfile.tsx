@@ -64,7 +64,6 @@ export default function PatientProfilePage() {
         if (!user) return;
         setIsSaving(true);
 
-        // Prepare flat data for the backend
         const updateData: Record<string, any> = {
             full_name: formData.full_name,
             contact_number: formData.contact_number,
@@ -83,7 +82,6 @@ export default function PatientProfilePage() {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            // Refresh user context to show new data/image
             const token = localStorage.getItem('accessToken');
             if (token) await fetchUser(token);
 
@@ -117,18 +115,21 @@ export default function PatientProfilePage() {
     const displayImage = file ? URL.createObjectURL(file) : (profile.profile_picture || undefined);
 
     return (
-        <div className="container max-w-6xl mx-auto px-6 py-10 space-y-8">
+        // FIX: Added pr-[5.5rem] to prevent the fixed RightSidebar from covering content
+        <div className="container max-w-6xl mx-auto px-6 py-10 space-y-8 pr-[5.5rem]">
+            
             {/* --- Header Section --- */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6">
+            {/* Added relative and z-index to ensure it stays above background elements but below sidebar */}
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 top-0 pt-2">
                 <div>
                     <h1 className="text-4xl font-bold text-foreground tracking-tight">My Profile</h1>
                     <p className="text-muted-foreground mt-1">Manage your personal information and health records.</p>
                 </div>
                 <Button
-                    variant={isEditing ? "default" : "secondary"}
+                    variant="default"
                     size="lg"
                     className="shadow-sm transition-all"
-                    onClick={isEditing ? handleSave : () => setIsEditing(true)}
+                    onClick={() => isEditing ? handleSave() : setIsEditing(true)}
                     disabled={isSaving}
                 >
                     {isEditing ? (

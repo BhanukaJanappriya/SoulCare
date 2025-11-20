@@ -6,7 +6,7 @@ from .models import Appointment
 from .serializers import AppointmentReadSerializer, AppointmentWriteSerializer
 from authapp.models import User
 from datetime import date
-from authapp.utils import send_appointment_approved_email
+from authapp.utils import send_appointment_approved_email,send_appointment_cancelled_email
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -107,6 +107,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         if old_status == 'pending' and new_status == 'scheduled':
             send_appointment_approved_email(appointment)
+            
+        elif new_status == 'cancelled' and old_status != 'cancelled':
+            send_appointment_cancelled_email(appointment, cancelled_by_role='provider')
         
         # Return the updated appointment data using the read serializer
         serializer = AppointmentReadSerializer(appointment)
@@ -132,6 +135,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         appointment.status = 'cancelled'
         appointment.save()
+        
+        send_appointment_cancelled_email(appointment, cancelled_by_role='patient')
         
         # Return the updated appointment data
         serializer = AppointmentReadSerializer(appointment)

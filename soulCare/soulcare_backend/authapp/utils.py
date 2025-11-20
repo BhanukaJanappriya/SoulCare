@@ -96,3 +96,67 @@ def send_appointment_approved_email(appointment):
     The SoulCare Team
     """
     send_notification_email(subject, message, [patient.email])
+    
+
+def send_appointment_cancelled_email(appointment, cancelled_by_role):
+    patient = appointment.patient
+    provider = appointment.provider
+    
+    provider_name = provider.username
+    try:
+        if provider.role == 'doctor' and hasattr(provider, 'doctorprofile'):
+            provider_name = provider.doctorprofile.full_name
+        elif provider.role == 'counselor' and hasattr(provider, 'counselorprofile'):
+            provider_name = provider.counselorprofile.full_name
+    except Exception:
+        pass
+
+    patient_name = patient.username
+    try:
+        if hasattr(patient, 'patientprofile'):
+             patient_name = patient.patientprofile.full_name
+    except Exception:
+        pass
+
+    if cancelled_by_role == 'patient':
+        recipient = [provider.email]
+        subject = "SoulCare - Appointment Cancelled by Patient"
+        message = f"""
+        Hello {provider_name},
+        The appointment with {patient_name} on {appointment.date} at {appointment.time} has been CANCELLED.
+        """
+    else:
+        recipient = [patient.email]
+        subject = "SoulCare - IMPORTANT: Appointment Cancelled"
+        message = f"""
+        Hello {patient_name},
+        Your appointment with {provider_name} on {appointment.date} at {appointment.time} has been CANCELLED.
+        """
+
+    send_notification_email(subject, message, recipient)
+    
+    
+def send_content_shared_email(content_item, patient):
+    provider = content_item.owner
+    provider_name = provider.username
+    try:
+        if provider.role == 'doctor' and hasattr(provider, 'doctorprofile'):
+            provider_name = provider.doctorprofile.full_name
+        elif provider.role == 'counselor' and hasattr(provider, 'counselorprofile'):
+            provider_name = provider.counselorprofile.full_name
+    except Exception:
+        pass
+    
+    subject = f"SoulCare - New Resource Shared: {content_item.title}"
+    message = f"""
+    Hello {patient.username},
+
+    {provider_name} has shared a new resource with you: "{content_item.title}".
+    Log in to your dashboard to view it.
+
+    Best regards,
+    The SoulCare Team
+    """
+    send_notification_email(subject, message, [patient.email])
+    
+    
