@@ -249,3 +249,58 @@ class NumpuzGameResult(models.Model):
     class Meta:
         verbose_name = "Numpuz Game Result"
         ordering = ['-created_at']
+
+
+class AdditionsGameResult(models.Model):
+    # --- Core Game Result ---
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='additions_game_results',
+        help_text="The user who performed the test."
+    )
+    # The score will be the number of correct answers
+    total_correct = models.IntegerField(
+        help_text="The total number of correct answers."
+    )
+    # Time taken to answer the questions
+    time_taken_s = models.FloatField(
+        help_text="The total time taken to complete the test (in seconds)."
+    )
+    # The highest difficulty level reached or solved (e.g., max number of digits)
+    difficulty_level = models.IntegerField(
+        default=1,
+        help_text="The highest level of difficulty solved (e.g., number of terms, max value)."
+    )
+
+    # --- Mood and Matrix Data (Same matrix questions for consistency) ---
+    MOOD_CHOICES = ReactionTimeResult.MOOD_CHOICES # Re-use the mood choices
+
+    post_game_mood = models.IntegerField(
+        choices=MOOD_CHOICES,
+        default=3,
+        help_text="User's reported mood after completing the game (1-5 scale)."
+    )
+
+    perceived_effort = models.IntegerField(
+        null=True, blank=True,
+        help_text="How much effort did you feel you exerted? (1=None, 10=Max)"
+    )
+
+    stress_reduction_rating = models.IntegerField(
+        null=True, blank=True,
+        help_text="Do you feel calmer after the game? (1=No, 10=Definitely Yes)"
+    )
+
+    # --- Standard Metadata ---
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Timestamp of when the result was recorded."
+    )
+
+    def __str__(self):
+        return f"{self.user.username}'s Additions Score: {self.total_correct} in {self.time_taken_s}s"
+
+    class Meta:
+        verbose_name = "Additions Game Result"
+        ordering = ['-created_at']

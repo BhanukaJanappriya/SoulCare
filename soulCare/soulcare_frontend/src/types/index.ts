@@ -375,3 +375,26 @@ export interface NumpuzGameStats {
   total_plays: number;
   history: NumpuzHistoryItem[];
 }
+
+export interface AdditionsGamePayload {
+  total_correct: number;
+  time_taken_s: number;
+  difficulty_level: number; // Max level reached
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface AdditionsGameHistoryItem {
+  score: number; // Total correct
+  time: number; // Time taken in seconds
+  difficulty: number; // Max difficulty level
+  created_at: string;
+}
+
+export interface AdditionsGameStats {
+  highest_correct: number; // Max total_correct achieved
+  avg_correct: number;
+  total_plays: number;
+  history: AdditionsGameHistoryItem[];
+}

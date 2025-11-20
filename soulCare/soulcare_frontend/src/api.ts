@@ -28,7 +28,9 @@ import {
   LongestNumberPayload,
   NumpuzGameStats,
   NumpuzHistoryItem,
-  NumpuzPayload
+  NumpuzPayload,
+  AdditionsGamePayload,
+  AdditionsGameStats
 
 } from '@/types';
 
@@ -554,11 +556,36 @@ export const saveNumpuzResult = async (data: NumpuzPayload) => {
 
 };
 
+export const saveAdditionsResult = async (data: AdditionsGamePayload) => {
+  try {
+    const response = await api.post('/games/additions-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving additions game result:', error);
+    throw error;
+  }
+};
+
+export const fetchAdditionsStats = async (): Promise<AdditionsGameStats> => {
+  try {
+    const response = await api.get<AdditionsGameStats>('/games/additions-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching additions game stats:', error);
+    return {
+        highest_correct: 0,
+        avg_correct: 0,
+        total_plays: 0,
+        history: []
+    };
+  }
+};
+
 // =================================================================
 // --- ADMIN CONTENT API ---
 // =================================================================
 
-// Admins reuse the GET /content/ endpoint. 
+// Admins reuse the GET /content/ endpoint.
 // The backend now returns ALL items if the user is an admin.
 export const getAllContentItemsAPI = async (): Promise<ContentItem[]> => {
   try {
