@@ -143,3 +143,109 @@ class StroopGameResult(models.Model):
     class Meta:
         verbose_name = "Stroop Game Result"
         ordering = ['-created_at']
+
+
+class LongestNumberGameResult(models.Model):
+    # --- Core Game Result ---
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='longest_number_results',
+        help_text="The user who performed the test."
+    )
+    # The score will be the highest successful number length (e.g., 8 digits)
+    max_number_length = models.IntegerField(
+        help_text="The highest length of the number successfully recalled."
+    )
+    total_reaction_time_ms = models.IntegerField(
+        default=0, # Use 0 as default if the game is failed immediately
+        help_text="The total time in milliseconds spent inputting the correct answers across all successful levels."
+    )
+    total_attempts = models.IntegerField(
+        help_text="The total number of trials/attempts made."
+    )
+
+    # --- Mood and Matrix Data (Same matrix questions for consistency) ---
+    MOOD_CHOICES = ReactionTimeResult.MOOD_CHOICES # Re-use the mood choices
+
+    post_game_mood = models.IntegerField(
+        choices=MOOD_CHOICES,
+        default=3,
+        help_text="User's reported mood after completing the game (1-5 scale)."
+    )
+
+    perceived_effort = models.IntegerField(
+        null=True, blank=True,
+        help_text="How much effort did you feel you exerted? (1=None, 10=Max)"
+    )
+
+    stress_reduction_rating = models.IntegerField(
+        null=True, blank=True,
+        help_text="Do you feel calmer after the game? (1=No, 10=Definitely Yes)"
+    )
+
+    # --- Standard Metadata ---
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Timestamp of when the result was recorded."
+    )
+
+    def __str__(self):
+        return f"{self.user.username}'s Longest Number Score: {self.max_number_length}"
+
+    class Meta:
+        verbose_name = "Longest Number Game Result"
+        ordering = ['-created_at']
+
+class NumpuzGameResult(models.Model):
+    # --- Core Game Result ---
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='numpuz_results',
+        help_text="The user who performed the test."
+    )
+    # The primary score will be the time taken to solve the puzzle
+    time_taken_s = models.FloatField(
+        help_text="The time taken to solve the puzzle (in seconds)."
+    )
+    # The complexity/size of the grid solved (e.g., 3x3, 4x4)
+    puzzle_size = models.CharField(
+        max_length=10,
+        help_text="The size of the puzzle solved (e.g., '3x3', '4x4')."
+    )
+    moves_made = models.IntegerField(
+        help_text="The total number of moves made to solve the puzzle."
+    )
+
+    # --- Mood and Matrix Data (Same matrix questions for consistency) ---
+    MOOD_CHOICES = ReactionTimeResult.MOOD_CHOICES # Re-use the mood choices
+
+    post_game_mood = models.IntegerField(
+        choices=MOOD_CHOICES,
+        default=3,
+        help_text="User's reported mood after completing the game (1-5 scale)."
+    )
+
+    perceived_effort = models.IntegerField(
+        null=True, blank=True,
+        help_text="How much effort did you feel you exerted? (1=None, 10=Max)"
+    )
+
+    stress_reduction_rating = models.IntegerField(
+        null=True, blank=True,
+        help_text="Do you feel calmer after the game? (1=No, 10=Definitely Yes)"
+    )
+
+    # --- Standard Metadata ---
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Timestamp of when the result was recorded."
+    )
+
+    def __str__(self):
+        return f"{self.user.username}'s Numpuz Score: {self.time_taken_s}s on {self.puzzle_size}"
+
+    class Meta:
+        verbose_name = "Numpuz Game Result"
+        ordering = ['-created_at']
