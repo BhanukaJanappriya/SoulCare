@@ -6,6 +6,7 @@ from .serializers import BlogPostSerializer
 from .permissions import IsAuthorOrAdmin
 from django.utils import timezone
 from django.db.models import Q # For complex queries
+from authapp.utils import send_blog_status_email
 
 class BlogPostViewSet(viewsets.ModelViewSet):
     # Base queryset
@@ -73,7 +74,18 @@ class BlogPostViewSet(viewsets.ModelViewSet):
 
     # Logic to handle publishedAt update when status changes to 'published'
     def perform_update(self, serializer):
-        if serializer.validated_data.get('status') == 'published' and not serializer.instance.publishedAt:
+        instance = serializer.instance
+        old_status = instance.status
+        new_status = serializer.validated_data.get('status', old_status)
+
+        # 1. Handle Publish Date
+        if new_status == 'published' and not instance.publishedAt:
              serializer.validated_data['publishedAt'] = timezone.now()
 
+        # 2. Save the changes
         serializer.save()
+
+        # 3. Trigger Email if status changed to 'published' or 'rejected'
+        if old_status != new_status and new_status in ['published', 'rejected']:
+            # We pass the *updated* instance to the email function
+            send_blog_status_email(instance, new_status)

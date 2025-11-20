@@ -1,5 +1,3 @@
-# blog/serializers.py
-
 from rest_framework import serializers
 from .models import BlogPost
 from authapp.models import User
@@ -9,7 +7,6 @@ class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'first_name', 'last_name', 'email']
-        # You would typically add a first_name/last_name field to your User model
 
 class BlogPostSerializer(serializers.ModelSerializer):
     # Rename 'author' (Django field) to 'authorId' (Frontend expectation)
@@ -18,11 +15,6 @@ class BlogPostSerializer(serializers.ModelSerializer):
         source='author',
         read_only=True
     )
-    # Optional: If you want to include the author's full name, uncomment and adjust:
-    # author_name = serializers.CharField(source='author.get_full_name', read_only=True)
-
-    # tags is stored as a string in the Model, but your frontend uses an array (string[])
-    # We override the field to handle the conversion
     
     author_name = serializers.SerializerMethodField()
     author_role = serializers.SerializerMethodField()
@@ -44,13 +36,25 @@ class BlogPostSerializer(serializers.ModelSerializer):
 
     # Method to convert the comma-separated string from the model into a list/array for JSON
     def get_tags(self, obj):
-        return [tag.strip() for tag in obj.tags.split(',') if tag.strip()]
-    
+        if obj.tags:
+            # Split the string by comma, strip whitespace, and filter out empty strings
+            return [tag.strip() for tag in obj.tags.split(',') if tag.strip()]
+        return [] # Return an empty array if tags are blank
     
     def get_author_name(self, obj):
         # Try to get the full name from the profile, fallback to username
-        return obj.author.get_full_name() or obj.author.username
-    
+        # This logic needs to be robust to handle users without profiles
+        try:
+            if obj.author.role == 'doctor' and hasattr(obj.author, 'doctorprofile'):
+                return obj.author.doctorprofile.username
+            elif obj.author.role == 'counselor' and hasattr(obj.author, 'counselorprofile'):
+                return obj.author.counselorprofile.username
+            elif obj.author.role == 'user' and hasattr(obj.author, 'patientprofile'):
+                return obj.author.patientprofile.username
+        except Exception:
+            pass
+            
+        return obj.author.username
     
     def get_author_role(self, obj):
         return obj.author.role
@@ -70,13 +74,3 @@ class BlogPostSerializer(serializers.ModelSerializer):
                  data['publishedAt'] = timezone.now()
 
         return data
-
-    def create(self, validated_data):
-        # We need to manually add the author, typically from the request user
-        # For now, we'll assign to the first User in the database
-        try:
-            validated_data['author'] = User.objects.first()
-        except User.DoesNotExist:
-             raise serializers.ValidationError("No users found to assign as author.")
-
-        return BlogPost.objects.create(**validated_data)
