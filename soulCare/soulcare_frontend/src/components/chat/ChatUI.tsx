@@ -1,7 +1,5 @@
-// src/components/chat/ChatUI.tsx
 import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useMutation
-// --- ADD deleteMessageAPI ---
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getContactList, getMessageHistory, deleteMessageAPI } from "@/api";
 import { User, Conversation, ChatMessage } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +18,7 @@ import {
   AlertTriangle,
   MessageSquare,
   Smile,
-  Trash2, // <-- ADDED DELETE ICON
+  Trash2,
 } from "lucide-react";
 import { format, parseISO, isToday, isYesterday } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,7 +29,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { EmojiClickData } from "emoji-picker-react";
-// --- ADD ALERT DIALOG ---
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast"; // <-- Import useToast
+import { useToast } from "@/hooks/use-toast";
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
@@ -50,7 +47,6 @@ interface ChatUIProps {
   user: User;
 }
 
-// ... (getWebSocketURL and formatTimestamp helpers are unchanged) ...
 const getWebSocketURL = (conversationId: number) => {
   const token = localStorage.getItem("accessToken");
   return `ws://localhost:8000/ws/chat/${conversationId}/?token=${token}`;
@@ -65,17 +61,14 @@ const formatTimestamp = (isoString: string) => {
 
 export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
   const queryClient = useQueryClient();
-  const { toast } = useToast(); // <-- Add toast
+  const { toast } = useToast();
   const [selectedConvo, setSelectedConvo] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const webSocket = useRef<WebSocket | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
-
-  // --- ADD STATE FOR DELETE DIALOG ---
   const [messageToDelete, setMessageToDelete] = useState<ChatMessage | null>(null);
 
-  // 1. Fetch contact list (unchanged)
   const {
     data: conversations,
     isLoading: isLoadingContacts,
@@ -85,27 +78,19 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     queryFn: getContactList,
   });
 
-  // 2. Fetch messages (unchanged)
-  const { data: messages, isLoading: isLoadingMessages } = useQuery<
-    ChatMessage[]
-  >({
+  const { data: messages, isLoading: isLoadingMessages } = useQuery<ChatMessage[]>({
     queryKey: ["messages", selectedConvo?.id],
     queryFn: () => getMessageHistory(selectedConvo!.id),
     enabled: !!selectedConvo,
   });
 
-  // --- NEW: Mutation for Deleting a Message ---
   const deleteMessageMutation = useMutation({
     mutationFn: (messageId: number) => deleteMessageAPI(messageId),
     onSuccess: (_, deletedMessageId) => {
-      // Note: The real-time broadcast will handle the UI update,
-      // but we can show a toast here.
       toast({
         title: "Message Deleted",
         description: "Your message has been removed.",
       });
-
-      // We must invalidate 'contacts' to refetch the correct 'last_message'
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
     onError: (error) => {
@@ -117,7 +102,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     },
   });
 
-  // 3. Handle WebSocket connection
   useEffect(() => {
     if (webSocket.current) {
       webSocket.current.close();
@@ -127,33 +111,23 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
       ws.onopen = () =>
         console.log(`WebSocket connected for conversation ${selectedConvo.id}`);
 
-      // --- UPDATED: ws.onmessage handler ---
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        // Check the 'type' of the incoming message
         if (data.type === "delete_message") {
-          // --- HANDLE DELETE BROADCAST ---
           const deletedMessageId = data.message_id;
-
-          // Remove the deleted message from the React Query cache
           queryClient.setQueryData<ChatMessage[]>(
             ["messages", selectedConvo.id],
             (oldMessages = []) =>
               oldMessages.filter((msg) => msg.id !== deletedMessageId)
           );
-          // Also invalidate contacts to refetch the 'last_message'
           queryClient.invalidateQueries({ queryKey: ["contacts"] });
         } else {
-          // --- HANDLE NEW MESSAGE (existing logic) ---
-          // 'data' is the message object if type is not specified
           const newMessage: ChatMessage = data;
-
           queryClient.setQueryData<ChatMessage[]>(
             ["messages", selectedConvo.id],
             (oldMessages = []) => [...oldMessages, newMessage]
           );
-
           queryClient.setQueryData<Conversation[]>(
             ["contacts"],
             (oldContacts = []) =>
@@ -172,7 +146,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
           );
         }
       };
-      // --- END OF UPDATED HANDLER ---
 
       ws.onclose = () => console.log("WebSocket disconnected");
       ws.onerror = (error) => console.error("WebSocket error:", error);
@@ -185,7 +158,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     };
   }, [selectedConvo, queryClient]);
 
-  // 4. Scroll to bottom (unchanged, but use the correct version)
   useEffect(() => {
     setTimeout(() => {
       if (messageListRef.current) {
@@ -199,7 +171,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     }, 50);
   }, [messages]);
 
-  // 5. Handle sending a message
   const handleSendMessage = () => {
     if (
       !newMessage.trim() ||
@@ -208,7 +179,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     ) {
       return;
     }
-    // --- UPDATED: Send message with a 'type' ---
     webSocket.current.send(
       JSON.stringify({
         type: "chat_message",
@@ -218,7 +188,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     setNewMessage("");
   };
 
-  // 6. Filter conversations (unchanged)
   const filteredConversations = conversations?.filter(
     (conv) =>
       conv.other_user.full_name
@@ -227,12 +196,10 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
       conv.other_user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 7. Handle Emoji Click (unchanged)
   const onEmojiClick = (emojiData: EmojiClickData) => {
     setNewMessage((currentMessage) => currentMessage + emojiData.emoji);
   };
 
-  // --- NEW: 8. Functions to handle delete flow ---
   const handleDeleteClick = (message: ChatMessage) => {
     setMessageToDelete(message);
   };
@@ -240,18 +207,18 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
   const confirmDelete = () => {
     if (messageToDelete) {
       deleteMessageMutation.mutate(messageToDelete.id);
-      setMessageToDelete(null); // Close dialog
+      setMessageToDelete(null);
     }
   };
 
   const cancelDelete = () => {
-    setMessageToDelete(null); // Close dialog
+    setMessageToDelete(null);
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-150px)]">
       {/* --- Column 1: Conversations List --- */}
-      <Card className="lg:col-span-1 flex flex-col shadow-md">
+      <Card className="lg:col-span-1 flex flex-col shadow-md overflow-hidden">
         <CardHeader className="border-b">
           <CardTitle>Conversations</CardTitle>
           <div className="relative mt-2">
@@ -264,7 +231,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
             />
           </div>
         </CardHeader>
-        <CardContent className="p-0 flex-1">
+        <CardContent className="p-0 flex-1 min-h-0">
           <ScrollArea className="h-full">
             {isLoadingContacts ? (
               <div className="flex justify-center items-center h-full p-10">
@@ -296,8 +263,8 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                     )}
                     onClick={() => setSelectedConvo(convo)}
                   >
-                    <div className="flex items-center gap-3 w-full">
-                      <Avatar className="w-10 h-10">
+                    <div className="flex items-center gap-3 w-full overflow-hidden">
+                      <Avatar className="w-10 h-10 flex-shrink-0">
                         <AvatarFallback>
                           {convo.other_user.full_name
                             ?.split(" ")
@@ -306,7 +273,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                             convo.other_user.username[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 text-left">
                         <div className="flex justify-between items-center">
                           <h4 className="font-medium text-sm truncate">
                             {convo.other_user.full_name ||
@@ -318,11 +285,11 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                           </span>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="text-xs text-muted-foreground truncate break-words whitespace-pre-wrap flex-1 min-w-0 pr-2">
                             {convo.last_message?.content || "No messages yet."}
                           </p>
                           {convo.unread_count > 0 && (
-                            <Badge className="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center p-0">
+                            <Badge className="bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center p-0 flex-shrink-0">
                               {convo.unread_count}
                             </Badge>
                           )}
@@ -338,11 +305,11 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
       </Card>
 
       {/* --- Column 2: Chat Area --- */}
-      <Card className="lg:col-span-2 flex flex-col shadow-md">
+      <Card className="lg:col-span-2 flex flex-col shadow-md overflow-hidden">
         {selectedConvo ? (
           <>
-            {/* Chat Header (Unchanged) */}
-            <CardHeader className="border-b">
+            {/* Chat Header */}
+            <CardHeader className="border-b flex-shrink-0">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10">
@@ -379,9 +346,9 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
               </div>
             </CardHeader>
 
-            {/* --- UPDATED: Messages --- */}
-            <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-[calc(100vh-380px)]" ref={messageListRef}>
+            {/* Messages */}
+            <CardContent className="flex-1 p-0 overflow-hidden min-h-0">
+              <ScrollArea className="h-full" ref={messageListRef}>
                 <div className="p-4 space-y-4">
                   {isLoadingMessages ? (
                     <div className="flex justify-center items-center py-10">
@@ -391,7 +358,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                     messages?.map((message) => (
                       <div
                         key={message.id}
-                        // --- ADD group for hover effect ---
                         className={cn(
                           "flex items-end gap-2 group",
                           message.sender.id === user.id
@@ -399,7 +365,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                             : "justify-start"
                         )}
                       >
-                        {/* --- Receiver Avatar (unchanged) --- */}
                         {message.sender.id !== user.id && (
                           <Avatar className="w-8 h-8 flex-shrink-0">
                             <AvatarFallback>
@@ -412,7 +377,6 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                           </Avatar>
                         )}
 
-                        {/* --- ADD Delete Button (visible on hover for sender) --- */}
                         {message.sender.id === user.id && (
                           <Button
                             variant="ghost"
@@ -424,10 +388,9 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                           </Button>
                         )}
 
-                        {/* Message Bubble (unchanged) */}
                         <div
                           className={cn(
-                            "max-w-[70%] p-3 rounded-lg shadow-sm",
+                            "max-w-[70%] p-3 rounded-lg shadow-sm break-words whitespace-pre-wrap", // Added whitespace-pre-wrap for newlines
                             message.sender.id === user.id
                               ? "bg-primary text-primary-foreground rounded-l-xl rounded-tr-xl"
                               : "bg-muted text-foreground rounded-r-xl rounded-tl-xl"
@@ -452,8 +415,8 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
               </ScrollArea>
             </CardContent>
 
-            {/* Message Input (unchanged) */}
-            <div className="border-t p-3 bg-card">
+            {/* Message Input */}
+            <div className="border-t p-3 bg-card flex-shrink-0">
               <div className="flex gap-2 items-center">
                 <div className="flex-1 relative flex items-center border rounded-lg">
                   <Textarea
@@ -505,7 +468,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
             </div>
           </>
         ) : (
-          // Placeholder (Unchanged)
+          // Placeholder
           <CardContent className="flex items-center justify-center h-full">
             <div className="text-center text-muted-foreground">
               <MessageSquare className="w-16 h-16 mx-auto mb-4" />
@@ -520,7 +483,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
         )}
       </Card>
 
-      {/* --- ADD THIS: Delete Confirmation Dialog --- */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={!!messageToDelete}
         onOpenChange={(open) => !open && cancelDelete()}
