@@ -398,3 +398,57 @@ export interface AdditionsGameStats {
   total_plays: number;
   history: AdditionsGameHistoryItem[];
 }
+
+
+
+// =================================================================
+// --- DASHBOARD AGGREGATE GAME STATS ---
+// =================================================================
+
+export interface GameSpecificSummary {
+    total_plays: number;
+    // Best score is an abstract term, we'll use specific metrics for modeled games
+    best_metric: number | null; // e.g., Best Time, Max Length, Highest Correct
+    last_played_at: string | null; // ISO date string
+}
+
+export interface GameDashboardStats {
+    total_games_played: number; // Sum of all game plays
+    average_success_rate: number; // e.g., an average of best scores (0-100)
+    total_time_spent_h: number; // Total time played in hours (for the main stat card)
+
+    // Detailed summary for each game
+    summary: {
+        reaction_time: {
+            best_time_ms: number | null; // Lower is better
+            total_plays: number;
+        };
+        memory_game: {
+            max_sequence_length: number | null; // Higher is better
+            total_plays: number;
+        };
+        stroop_game: {
+            best_correct_percentage: number | null; // Higher is better
+            avg_interference_ms: number | null; // Lower is better
+            total_plays: number;
+        };
+        longest_number: {
+            max_number_length: number | null; // Higher is better
+            total_plays: number;
+        };
+        numpuz_game: {
+            best_time_s: number | null; // Lower is better
+            min_moves: number | null; // Lower is better
+            total_plays: number;
+        };
+        additions_game: {
+            highest_correct: number | null; // Higher is better
+            total_plays: number;
+        };
+        // Placeholders for unmodeled games (to maintain frontend stability)
+        emotion_recognition: GameSpecificSummary;
+        visual_attention_tracker: GameSpecificSummary;
+        pattern_recognition: GameSpecificSummary;
+        mood_reflection_game: GameSpecificSummary;
+    }
+}

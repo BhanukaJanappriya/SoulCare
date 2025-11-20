@@ -30,7 +30,8 @@ import {
   NumpuzHistoryItem,
   NumpuzPayload,
   AdditionsGamePayload,
-  AdditionsGameStats
+  AdditionsGameStats,
+  GameDashboardStats
 
 } from '@/types';
 
@@ -618,3 +619,29 @@ export const fetchNumpuzStats = async (): Promise<NumpuzGameStats> => {
 };
 
 
+export const fetchDashboardGameStats = async (): Promise<GameDashboardStats> => {
+  try {
+    const response = await api.get<GameDashboardStats>('/games/dashboard-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching dashboard game stats:', error);
+    // Return a structured default object on failure to prevent app crash
+    return {
+        total_games_played: 0,
+        average_success_rate: 0,
+        total_time_spent_h: 0,
+        summary: {
+            reaction_time: { best_time_ms: null, total_plays: 0 },
+            memory_game: { max_sequence_length: null, total_plays: 0 },
+            stroop_game: { best_correct_percentage: null, avg_interference_ms: null, total_plays: 0 },
+            longest_number: { max_number_length: null, total_plays: 0 },
+            numpuz_game: { best_time_s: null, min_moves: null, total_plays: 0 },
+            additions_game: { highest_correct: null, total_plays: 0 },
+            emotion_recognition: { total_plays: 0, best_metric: null, last_played_at: null },
+            visual_attention_tracker: { total_plays: 0, best_metric: null, last_played_at: null },
+            pattern_recognition: { total_plays: 0, best_metric: null, last_played_at: null },
+            mood_reflection_game: { total_plays: 0, best_metric: null, last_played_at: null },
+        }
+    };
+  }
+};

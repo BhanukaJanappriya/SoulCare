@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from "react";
+// soulcare_frontend/src/pages/Patient/PatientGames.tsx
+
+import React, { useState, useCallback, useMemo } from "react";
 import {
   Brain,
   Play,
@@ -14,17 +16,25 @@ import {
   Timer,
   Award,
   TrendingUp,
+  RotateCw,
 } from "lucide-react";
 
-// --- Custom Component Imports (Assume these are available locally or correctly imported) ---
-// Note: These must be imported from their respective file locations.
+// --- Custom Component Imports ---
 import ReactionTimeGame from "../../components/games/ReactionTimeGame";
 import MemoryGame from "../../components/games/MemoryGame";
 import StroopGame from "../../components/games/StroopGame";
 import LongestNumberGame from "../../components/games/LongestNumberGame";
 import NumpuzGame from "../../components/games/NumpuzGame";
 import AdditionsGame from "@/components/games/AdditionsGame";
-// --- Local UI Component Definitions (Kept from your original file for rendering accuracy) ---
+
+// --- Import Custom Hook and Types ---
+import { useGameDashboardStats } from "@/hooks/useGameDashboardStats";
+import { GameDashboardStats } from "@/types";
+
+// FIX: Assuming this path is correct now
+import { Skeleton } from "../../components/ui/skeleton";
+
+// --- Local UI Component Definitions (Preserved) ---
 
 const ProgressBar = ({ value, className = "" }) => (
   <div
@@ -109,9 +119,53 @@ const CardContent = ({ children, className = "" }) => (
   <div className={`p-6 pt-0 ${className}`}>{children}</div>
 );
 
+// New Component: Skeleton Card for Loading State (Sleek and Professional)
+const SkeletonCard = ({ count = 4 }: { count?: number }) => (
+  <>
+    {[...Array(count)].map((_, index) => (
+      <Card key={index} className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-4 w-3/4 mb-2" />
+            <Skeleton className="h-8 w-1/2" />
+          </div>
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+      </Card>
+    ))}
+  </>
+);
+
+// New Component: Individual Game Card Skeleton
+const GameCardSkeleton = () => (
+  <Card className="p-6 h-full">
+    <div className="flex items-start justify-between mb-4">
+      <Skeleton className="h-8 w-8 rounded-lg" />
+      <Skeleton className="h-5 w-16 rounded-full" />
+    </div>
+    <Skeleton className="h-5 w-2/3 mb-2" />
+    <Skeleton className="h-3 w-full mb-4" />
+
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+      </div>
+      <div>
+        <Skeleton className="h-3 w-1/3 mb-2" />
+        <div className="flex gap-1">
+          <Skeleton className="h-5 w-1/4" />
+          <Skeleton className="h-5 w-1/4" />
+        </div>
+      </div>
+      <Skeleton className="h-2 w-full" />
+      <Skeleton className="h-10 w-full" />
+    </div>
+  </Card>
+);
+
 // --- MAIN COMPONENT ---
 
-// Define possible games based on the ID we used in the URL paths
 type GameName =
   | "reaction_time"
   | "color_pattern_memory"
@@ -127,188 +181,291 @@ type GameName =
 
 const PatientGames: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [currentGame, setCurrentGame] = useState<GameName>(null); // State to control which game is visible
+  const [currentGame, setCurrentGame] = useState<GameName>(null);
 
-  // Mock data for games (Updated with correct IDs and the new Stroop Game)
-  const games = [
-    {
-      id: "color_pattern_memory" as const, // <-- Updated ID for Memory Game
-      title: "Color Pattern Memory",
-      description:
-        "Test your working memory and attention span with colorful sequences",
-      category: "memory",
-      difficulty: "Easy",
-      duration: "5 min",
-      completions: 12,
-      bestScore: 85,
-      icon: Brain,
-      gradient: "from-blue-500 to-purple-600",
-      bgGradient:
-        "from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20",
-      detectionFocus: ["Working Memory", "Attention Span", "Processing Speed"],
-    },
+  // --- REAL-TIME DATA FETCHING ---
+  const { stats, isLoading, error, refetch } = useGameDashboardStats();
 
-    {
-      id: "longest_number" as const, // The new ID
-      title: "Longest Number Recall",
-      description:
-        "Test your digital memory span by recalling increasingly long numbers.",
-      category: "memory", // Matches the Longest Number Game focus
-      difficulty: "Medium",
-      duration: "5 min",
-      completions: 0,
-      bestScore: 0,
-      icon: Brain, // Same icon as Memory game or another suitable one
-      gradient: "from-teal-500 to-cyan-600",
-      bgGradient:
-        "from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20",
-      detectionFocus: ["Working Memory", "Digital Span", "Short-Term Recall"],
-    },
+  // Define a type for the dynamic keys in GameDashboardStats.summary
+  type SummaryKey = keyof GameDashboardStats["summary"];
 
-    {
-      id: "numpuz_game" as const, // <-- ID MUST MATCH
-      title: "Numpuz Sliding Puzzle",
-      description:
-        "A classic 15-puzzle to test problem-solving and spatial reasoning.",
-      category: "logic",
-      difficulty: "Medium",
-      duration: "10 min",
-      completions: 5,
-      bestScore: 120,
-      icon: Target,
-      gradient: "from-red-500 to-pink-600",
-      bgGradient:
-        "from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20",
-      detectionFocus: ["Problem Solving", "Cognitive Flexibility", "Planning"],
-    },
+  // Mock data for games (Now only providing metadata, scores will be dynamically injected)
+  const initialGames = useMemo(
+    () => [
+      {
+        id: "color_pattern_memory" as const,
+        title: "Color Pattern Memory",
+        description:
+          "Test your working memory and attention span with colorful sequences",
+        category: "memory",
+        difficulty: "Medium",
+        duration: "5 min",
+        icon: Brain,
+        gradient: "from-blue-500 to-purple-600",
+        bgGradient:
+          "from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20",
+        detectionFocus: [
+          "Working Memory",
+          "Attention Span",
+          "Processing Speed",
+        ],
+        scoreUnit: " Levels",
+      },
 
-    {
-      id: "additions_game" as const,
-      title: "Quick Addition Challenge",
-      description:
-        "Fast-paced mental math to improve concentration and processing speed.",
-      category: "speed",
-      difficulty: "Easy",
-      duration: "3 min",
-      completions: 15,
-      bestScore: 95, // Example: highest score is % correct
-      icon: Target, // Or a Plus icon if you have one imported
-      gradient: "from-orange-500 to-red-600",
-      bgGradient:
-        "from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20",
-      detectionFocus: [
-        "Processing Speed",
-        "Working Memory",
-        "Numerical Fluency",
-      ],
-    },
+      {
+        id: "longest_number" as const,
+        title: "Longest Number Recall",
+        description:
+          "Test your digital memory span by recalling increasingly long numbers.",
+        category: "memory",
+        difficulty: "Medium",
+        duration: "5 min",
+        icon: Brain,
+        gradient: "from-teal-500 to-cyan-600",
+        bgGradient:
+          "from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20",
+        detectionFocus: ["Working Memory", "Digital Span", "Short-Term Recall"],
+        scoreUnit: " Digits",
+      },
 
-    {
-      id: "emotion_recognition" as const,
-      title: "Emotion Recognition",
-      description:
-        "Identify emotions from facial expressions to assess social cognition",
-      category: "emotion",
-      difficulty: "Medium",
-      duration: "8 min",
-      completions: 8,
-      bestScore: 78,
-      icon: Heart,
-      gradient: "from-rose-500 to-pink-600",
-      bgGradient:
-        "from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20",
-      detectionFocus: ["Social Cognition", "Emotional Processing", "Empathy"],
-    },
-    {
-      id: "reaction_time" as const, // <-- Updated ID for Reaction Time Game
-      title: "Reaction Time Challenge",
-      description: "Quick response game to measure cognitive processing speed",
-      category: "speed",
-      difficulty: "Easy",
-      duration: "3 min",
-      completions: 15,
-      bestScore: 92,
-      icon: Zap,
-      gradient: "from-yellow-500 to-orange-600",
-      bgGradient:
-        "from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20",
-      detectionFocus: ["Reaction Time", "Motor Speed", "Alertness"],
-    },
-    {
-      id: "stroop_effect" as const, // <-- NEW Stroop Effect Test
-      title: "Stroop Effect Test",
-      description: "Measures selective attention and cognitive interference.",
-      category: "attention",
-      difficulty: "Medium",
-      duration: "5 min",
-      completions: 1,
-      bestScore: 75,
-      icon: Eye,
-      gradient: "from-fuchsia-500 to-pink-600",
-      bgGradient:
-        "from-fuchsia-50 to-pink-50 dark:from-fuchsia-950/20 dark:to-pink-950/20",
-      detectionFocus: [
-        "Selective Attention",
-        "Cognitive Interference",
-        "Processing Speed",
-      ],
-    },
-    {
-      id: "visual_attention_tracker" as const,
-      title: "Visual Attention Tracker",
-      description: "Track moving objects to assess visual attention and focus",
-      category: "attention",
-      difficulty: "Hard",
-      duration: "10 min",
-      completions: 6,
-      bestScore: 71,
-      icon: Eye,
-      gradient: "from-green-500 to-teal-600",
-      bgGradient:
-        "from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20",
-      detectionFocus: ["Visual Attention", "Sustained Focus", "Concentration"],
-    },
-    {
-      id: "pattern_recognition" as const,
-      title: "Pattern Recognition",
-      description:
-        "Identify complex patterns to evaluate cognitive flexibility",
-      category: "logic",
-      difficulty: "Medium",
-      duration: "7 min",
-      completions: 10,
-      bestScore: 89,
-      icon: Target,
-      gradient: "from-indigo-500 to-blue-600",
-      bgGradient:
-        "from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20",
-      detectionFocus: [
-        "Pattern Recognition",
-        "Cognitive Flexibility",
-        "Problem Solving",
-      ],
-    },
-    {
-      id: "mood_reflection_game" as const,
-      title: "Mood Reflection Game",
-      description:
-        "Interactive scenarios to assess emotional regulation skills",
-      category: "emotion",
-      difficulty: "Medium",
-      duration: "12 min",
-      completions: 7,
-      bestScore: 76,
-      icon: Gamepad2,
-      gradient: "from-purple-500 to-violet-600",
-      bgGradient:
-        "from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20",
-      detectionFocus: [
-        "Emotional Regulation",
-        "Self-Awareness",
-        "Coping Skills",
-      ],
-    },
-  ];
+      {
+        id: "numpuz_game" as const,
+        title: "Numpuz Sliding Puzzle",
+        description:
+          "A classic 15-puzzle to test problem-solving and spatial reasoning.",
+        category: "logic",
+        difficulty: "Medium",
+        duration: "10 min",
+        icon: Target,
+        gradient: "from-red-500 to-pink-600",
+        bgGradient:
+          "from-red-50 to-pink-50 dark:from-red-950/20 dark:to-pink-950/20",
+        detectionFocus: [
+          "Problem Solving",
+          "Cognitive Flexibility",
+          "Planning",
+        ],
+        scoreUnit: "s", // Best score is best time
+      },
+
+      {
+        id: "additions_game" as const,
+        title: "Quick Addition Challenge",
+        description:
+          "Fast-paced mental math to improve concentration and processing speed.",
+        category: "speed",
+        difficulty: "Easy",
+        duration: "3 min",
+        icon: Target,
+        gradient: "from-orange-500 to-red-600",
+        bgGradient:
+          "from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20",
+        detectionFocus: [
+          "Processing Speed",
+          "Working Memory",
+          "Numerical Fluency",
+        ],
+        scoreUnit: " Correct",
+      },
+
+      // ... (rest of your games, kept for consistency)
+      {
+        id: "emotion_recognition" as const,
+        title: "Emotion Recognition",
+        description:
+          "Identify emotions from facial expressions to assess social cognition",
+        category: "emotion",
+        difficulty: "Medium",
+        duration: "8 min",
+        icon: Heart,
+        gradient: "from-rose-500 to-pink-600",
+        bgGradient:
+          "from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-rose-950/20",
+        detectionFocus: ["Social Cognition", "Emotional Processing", "Empathy"],
+        scoreUnit: "%",
+      },
+      {
+        id: "reaction_time" as const,
+        title: "Reaction Time Challenge",
+        description:
+          "Quick response game to measure cognitive processing speed",
+        category: "speed",
+        difficulty: "Easy",
+        duration: "3 min",
+        icon: Zap,
+        gradient: "from-yellow-500 to-orange-600",
+        bgGradient:
+          "from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20",
+        detectionFocus: ["Reaction Time", "Motor Speed", "Alertness"],
+        scoreUnit: "ms", // Reaction time is in milliseconds
+      },
+      {
+        id: "stroop_effect" as const,
+        title: "Stroop Effect Test",
+        description: "Measures selective attention and cognitive interference.",
+        category: "attention",
+        difficulty: "Medium",
+        duration: "5 min",
+        icon: Eye,
+        gradient: "from-fuchsia-500 to-pink-600",
+        bgGradient:
+          "from-fuchsia-50 to-pink-50 dark:from-fuchsia-950/20 dark:to-pink-950/20",
+        detectionFocus: [
+          "Selective Attention",
+          "Cognitive Interference",
+          "Processing Speed",
+        ],
+        scoreUnit: "%",
+      },
+      {
+        id: "visual_attention_tracker" as const,
+        title: "Visual Attention Tracker",
+        description:
+          "Track moving objects to assess visual attention and focus",
+        category: "attention",
+        difficulty: "Hard",
+        duration: "10 min",
+        icon: Eye,
+        gradient: "from-green-500 to-teal-600",
+        bgGradient:
+          "from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20",
+        detectionFocus: [
+          "Visual Attention",
+          "Sustained Focus",
+          "Concentration",
+        ],
+        scoreUnit: "%",
+      },
+      {
+        id: "pattern_recognition" as const,
+        title: "Pattern Recognition",
+        description:
+          "Identify complex patterns to evaluate cognitive flexibility",
+        category: "logic",
+        difficulty: "Medium",
+        duration: "7 min",
+        icon: Target,
+        gradient: "from-indigo-500 to-blue-600",
+        bgGradient:
+          "from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-indigo-950/20",
+        detectionFocus: [
+          "Pattern Recognition",
+          "Cognitive Flexibility",
+          "Problem Solving",
+        ],
+        scoreUnit: "%",
+      },
+      {
+        id: "mood_reflection_game" as const,
+        title: "Mood Reflection Game",
+        description:
+          "Interactive scenarios to assess emotional regulation skills",
+        category: "emotion",
+        difficulty: "Medium",
+        duration: "12 min",
+        icon: Gamepad2,
+        gradient: "from-purple-500 to-violet-600",
+        bgGradient:
+          "from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20",
+        detectionFocus: [
+          "Emotional Regulation",
+          "Self-Awareness",
+          "Coping Skills",
+        ],
+        scoreUnit: "%",
+      },
+    ],
+    []
+  );
+
+  // Inject real data into the static game list
+  // FIX: Moved getGameStats logic here to resolve 'react-hooks/exhaustive-deps' warning
+  const gamesWithData = useMemo(() => {
+    // Map frontend IDs to backend summary keys
+    const summaryKeyMap: { [key in GameName & string]: SummaryKey } = {
+      reaction_time: "reaction_time",
+      color_pattern_memory: "memory_game",
+      stroop_effect: "stroop_game",
+      longest_number: "longest_number",
+      numpuz_game: "numpuz_game",
+      additions_game: "additions_game",
+      emotion_recognition: "emotion_recognition",
+      visual_attention_tracker: "visual_attention_tracker",
+      pattern_recognition: "pattern_recognition",
+      mood_reflection_game: "mood_reflection_game",
+    };
+
+    return initialGames.map((game) => {
+      // Safely retrieve the summary object from the API response based on the game ID
+      const summary = stats.summary[summaryKeyMap[game.id]];
+
+      let completions = 0;
+      let bestScore = 0;
+
+      if (summary) {
+        // FIX: Changed 'let completions' to 'const completions' (ESLint prefer-const)
+        completions = summary.total_plays || 0;
+
+        if (
+          game.id === "reaction_time" &&
+          (summary as GameDashboardStats["summary"]["reaction_time"])
+            .best_time_ms
+        ) {
+          bestScore = (
+            summary as GameDashboardStats["summary"]["reaction_time"]
+          ).best_time_ms as number;
+        } else if (
+          game.id === "color_pattern_memory" &&
+          (summary as GameDashboardStats["summary"]["memory_game"])
+            .max_sequence_length
+        ) {
+          bestScore = (summary as GameDashboardStats["summary"]["memory_game"])
+            .max_sequence_length as number;
+        } else if (
+          game.id === "stroop_effect" &&
+          (summary as GameDashboardStats["summary"]["stroop_game"])
+            .best_correct_percentage
+        ) {
+          bestScore = Math.round(
+            (summary as GameDashboardStats["summary"]["stroop_game"])
+              .best_correct_percentage as number
+          );
+        } else if (
+          game.id === "longest_number" &&
+          (summary as GameDashboardStats["summary"]["longest_number"])
+            .max_number_length
+        ) {
+          bestScore = (
+            summary as GameDashboardStats["summary"]["longest_number"]
+          ).max_number_length as number;
+        } else if (
+          game.id === "numpuz_game" &&
+          (summary as GameDashboardStats["summary"]["numpuz_game"]).best_time_s
+        ) {
+          bestScore = Math.round(
+            (summary as GameDashboardStats["summary"]["numpuz_game"])
+              .best_time_s as number
+          );
+        } else if (
+          game.id === "additions_game" &&
+          (summary as GameDashboardStats["summary"]["additions_game"])
+            .highest_correct
+        ) {
+          bestScore = (
+            summary as GameDashboardStats["summary"]["additions_game"]
+          ).highest_correct as number;
+        }
+      }
+
+      // If completions is 0, bestScore should be 0 (handled by initialization)
+
+      return {
+        ...game,
+        completions: completions,
+        bestScore: bestScore,
+      };
+    });
+  }, [initialGames, stats]);
 
   const categories = [
     { id: "all", name: "All Games", icon: Gamepad2 },
@@ -321,8 +478,8 @@ const PatientGames: React.FC = () => {
 
   const filteredGames =
     selectedCategory === "all"
-      ? games
-      : games.filter((game) => game.category === selectedCategory);
+      ? gamesWithData
+      : gamesWithData.filter((game) => game.category === selectedCategory);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
@@ -337,29 +494,27 @@ const PatientGames: React.FC = () => {
     }
   };
 
-  // --- Conditional Game Rendering Logic ---
+  // --- Conditional Game Rendering Logic (Kept as is) ---
 
   const handleGameEnd = useCallback(() => {
     setCurrentGame(null); // Return to the dashboard view
-  }, []);
+    refetch(); // Refetch stats to update dashboard immediately after a game
+  }, [refetch]);
 
-  // 1. Reaction Time Game
   if (currentGame === "reaction_time") {
     return <ReactionTimeGame onGameEnd={handleGameEnd} />;
   }
 
-  // 2. Color Pattern Memory Game
   if (currentGame === "color_pattern_memory") {
     return <MemoryGame onGameEnd={handleGameEnd} />;
   }
 
-  // 3. Stroop Effect Test
   if (currentGame === "stroop_effect") {
     return <StroopGame onGameEnd={handleGameEnd} />;
   }
 
   if (currentGame === "longest_number") {
-    return <LongestNumberGame onGameEnd={handleGameEnd} />; // The component we will create next
+    return <LongestNumberGame onGameEnd={handleGameEnd} />;
   }
 
   if (currentGame === "numpuz_game") {
@@ -367,81 +522,114 @@ const PatientGames: React.FC = () => {
   }
 
   if (currentGame === "additions_game") {
-    // This component must be imported at the top
     return <AdditionsGame onGameEnd={handleGameEnd} />;
   }
+
   // --- Dashboard Rendering (Default) ---
   return (
     <div className="p-6 min-h-screen bg-background">
-      {/* Header Section */}
+      {/* Header Section with Loading/Error Info */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          Mental Health Detection Games 🧠
-        </h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Mental Health Detection Games 🧠
+          </h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refetch}
+            disabled={isLoading}
+            className="flex items-center gap-1"
+          >
+            <RotateCw
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+            />
+            {isLoading ? "Loading..." : "Refresh Data"}
+          </Button>
+        </div>
         <p className="text-muted-foreground">
           Play engaging games designed to assess and monitor your cognitive and
           emotional well-being
         </p>
+        {error && (
+          <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 rounded-md text-red-700 dark:text-red-300">
+            <p className="text-sm font-medium">{error}</p>
+          </div>
+        )}
       </div>
 
-      {/* Stats Overview (Uses your original stat cards) */}
+      {/* Stats Overview - NOW USING REAL DATA */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {/* ... (Your original Stat Cards JSX) ... */}
-        <Card className="transform hover:scale-105 transition-transform duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Games Played
-                </p>
-                <p className="text-2xl font-bold text-foreground">58</p>
-              </div>
-              <Gamepad2 className="w-8 h-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="transform hover:scale-105 transition-transform duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Average Score
-                </p>
-                <p className="text-2xl font-bold text-foreground">82%</p>
-              </div>
-              <Trophy className="w-8 h-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="transform hover:scale-105 transition-transform duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Time Played
-                </p>
-                <p className="text-2xl font-bold text-foreground">4.2h</p>
-              </div>
-              <Clock className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="transform hover:scale-105 transition-transform duration-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Achievements
-                </p>
-                <p className="text-2xl font-bold text-foreground">12</p>
-              </div>
-              <Award className="w-8 h-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          <SkeletonCard count={4} />
+        ) : (
+          <>
+            <Card className="transform hover:scale-105 transition-transform duration-200 border-l-4 border-primary">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total Games Played
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {stats.total_games_played}
+                    </p>
+                  </div>
+                  <Gamepad2 className="w-8 h-8 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="transform hover:scale-105 transition-transform duration-200 border-l-4 border-yellow-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Avg. Success Rate
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {stats.average_success_rate.toFixed(1)}%
+                    </p>
+                  </div>
+                  <Trophy className="w-8 h-8 text-yellow-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="transform hover:scale-105 transition-transform duration-200 border-l-4 border-blue-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Time Played
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {stats.total_time_spent_h.toFixed(1)}h
+                    </p>
+                  </div>
+                  <Clock className="w-8 h-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="transform hover:scale-105 transition-transform duration-200 border-l-4 border-purple-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Achievements Unlocked
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {/* Placeholder for achievements until implemented */}
+                      {12}
+                    </p>
+                  </div>
+                  <Award className="w-8 h-8 text-purple-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
-      {/* Category Filter */}
+      {/* Category Filter (Kept as is) */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle>Game Categories</CardTitle>
@@ -472,112 +660,137 @@ const PatientGames: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Games Grid */}
+      {/* Games Grid - DYNAMICALLY RENDERED */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {filteredGames.map((game) => {
-          const Icon = game.icon;
-          return (
-            <Card
-              key={game.id}
-              className={`transform hover:scale-105 transition-transform duration-200 bg-gradient-to-br ${game.bgGradient} border-primary/20 relative overflow-hidden group`}
-            >
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
-                <Icon className="w-full h-full text-primary" />
-              </div>
+        {isLoading ? (
+          // Display game card skeletons while loading
+          <>
+            <GameCardSkeleton />
+            <GameCardSkeleton />
+            <GameCardSkeleton />
+            <GameCardSkeleton />
+            <GameCardSkeleton />
+            <GameCardSkeleton />
+          </>
+        ) : filteredGames.length === 0 ? (
+          // Display if no games match the filter
+          <Card className="md:col-span-3 p-10 text-center">
+            <CardTitle>No Games Found</CardTitle>
+            <CardDescription>
+              Try selecting a different category or check back later!
+            </CardDescription>
+          </Card>
+        ) : (
+          filteredGames.map((game) => {
+            const Icon = game.icon;
+            // Determine completion percentage for progress bar
+            const maxPlaysForProgressBar = 15; // Set an arbitrary max for the progress bar
+            const progressValue = Math.min(
+              100,
+              (game.completions / maxPlaysForProgressBar) * 100
+            );
 
-              <CardHeader className="relative">
-                <div className="flex items-start justify-between mb-2">
-                  <div
-                    className={`p-2 rounded-lg bg-gradient-to-r ${game.gradient} text-white`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <Badge className={getDifficultyColor(game.difficulty)}>
-                    {game.difficulty}
-                  </Badge>
+            return (
+              <Card
+                key={game.id}
+                className={`transform hover:scale-105 transition-transform duration-200 bg-gradient-to-br ${game.bgGradient} border-primary/20 relative overflow-hidden group`}
+              >
+                {/* Background decoration */}
+                <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+                  <Icon className="w-full h-full text-primary" />
                 </div>
-                <CardTitle className="text-lg">{game.title}</CardTitle>
-                <CardDescription className="text-sm">
-                  {game.description}
-                </CardDescription>
-              </CardHeader>
 
-              <CardContent className="relative">
-                <div className="space-y-4">
-                  {/* Game Stats */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Timer className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        {game.duration}
-                      </span>
+                <CardHeader className="relative">
+                  <div className="flex items-start justify-between mb-2">
+                    <div
+                      className={`p-2 rounded-lg bg-gradient-to-r ${game.gradient} text-white`}
+                    >
+                      <Icon className="w-5 h-5" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        {game.bestScore}%
-                      </span>
-                    </div>
+                    <Badge className={getDifficultyColor(game.difficulty)}>
+                      {game.difficulty}
+                    </Badge>
                   </div>
+                  <CardTitle className="text-lg">{game.title}</CardTitle>
+                  <CardDescription className="text-sm">
+                    {game.description}
+                  </CardDescription>
+                </CardHeader>
 
-                  {/* Detection Focus */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                      Detection Focus:
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {game.detectionFocus.slice(0, 2).map((focus, index) => (
-                        <Badge
-                          key={index}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {focus}
-                        </Badge>
-                      ))}
-                      {game.detectionFocus.length > 2 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{game.detectionFocus.length - 2}
-                        </Badge>
-                      )}
+                <CardContent className="relative">
+                  <div className="space-y-4">
+                    {/* Game Stats - NOW DYNAMIC */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2">
+                        <Timer className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {game.duration}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-base font-semibold text-foreground">
+                          {/* Best score from real data, with its unit */}
+                          {game.bestScore === 0 ? "--" : game.bestScore}
+                          {game.scoreUnit}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Progress */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-muted-foreground">
-                        Played {game.completions} times
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {Math.min(100, (game.completions / 15) * 100)}%
-                      </span>
+                    {/* Detection Focus (Kept as is) */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">
+                        Detection Focus:
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {game.detectionFocus.slice(0, 2).map((focus, index) => (
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            {focus}
+                          </Badge>
+                        ))}
+                        {game.detectionFocus.length > 2 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{game.detectionFocus.length - 2}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <ProgressBar
-                      value={Math.min(100, (game.completions / 15) * 100)}
-                      className="h-2"
-                    />
-                  </div>
 
-                  {/* Play Button - Use setCurrentGame to launch the game component */}
-                  <Button
-                    className="w-full group-hover:scale-105 transition-transform"
-                    // Cast 'id' to GameName to resolve potential TS type issues
-                    onClick={() => setCurrentGame(game.id as GameName)}
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Play Game
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                    {/* Progress - NOW DYNAMIC */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground">
+                          Played {game.completions} times
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {progressValue.toFixed(0)}%
+                        </span>
+                      </div>
+                      <ProgressBar value={progressValue} className="h-2" />
+                    </div>
+
+                    {/* Play Button - Use setCurrentGame to launch the game component */}
+                    <Button
+                      className="w-full group-hover:scale-105 transition-transform"
+                      onClick={() => setCurrentGame(game.id as GameName)}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Play Game
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
-      {/* Weekly Challenge */}
+      {/* Weekly Challenge (Kept as is) */}
       <Card className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 border-primary/20">
         <CardHeader>
           <div className="flex items-center gap-2">

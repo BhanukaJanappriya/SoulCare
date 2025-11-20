@@ -292,3 +292,170 @@ def additions_stats_view(request):
     }
 
     return Response(stats)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_stats_view(request):
+    """
+    Fetches aggregate statistics for the patient's games dashboard.
+    This view performs all necessary aggregations across all game models.
+    """
+    user = request.user
+
+    # 1. Initialize result structure matching the GameDashboardStats interface
+    stats_data = {
+        'total_games_played': 0,
+        'average_success_rate': 0.0,
+        'total_time_spent_h': 0.0,
+        'summary': {
+            'reaction_time': {'best_time_ms': None, 'total_plays': 0},
+            'memory_game': {'max_sequence_length': None, 'total_plays': 0},
+            'stroop_game': {'best_correct_percentage': None, 'avg_interference_ms': None, 'total_plays': 0},
+            'longest_number': {'max_number_length': None, 'total_plays': 0},
+            'numpuz_game': {'best_time_s': None, 'min_moves': None, 'total_plays': 0},
+            'additions_game': {'highest_correct': None, 'total_plays': 0},
+            # Placeholder for unmodeled games (total_plays will remain 0)
+            'emotion_recognition': {'total_plays': 0, 'best_metric': None, 'last_played_at': None},
+            'visual_attention_tracker': {'total_plays': 0, 'best_metric': None, 'last_played_at': None},
+            'pattern_recognition': {'total_plays': 0, 'best_metric': None, 'last_played_at': None},
+            'mood_reflection_game': {'total_plays': 0, 'best_metric': None, 'last_played_at': None},
+        }
+    }
+
+    total_time_ms_sum = 0
+    total_games_played = 0
+
+    # List to store individual game scores (as percentages or equivalent) for overall average calculation
+    average_scores = []
+
+    # --- 2. Reaction Time Stats ---
+    rt_results = ReactionTimeResult.objects.filter(user=user)
+    rt_agg = rt_results.aggregate(
+        best_time=Min('reaction_time_ms'),
+        count=Count('id'),
+        time_sum=Sum('reaction_time_ms')
+    )
+    if rt_agg['count'] > 0:
+        best_time = rt_agg['best_time']
+        stats_data['summary']['reaction_time']['best_time_ms'] = best_time
+        stats_data['summary']['reaction_time']['total_plays'] = rt_agg['count']
+        total_games_played += rt_agg['count']
+        total_time_ms_sum += rt_agg['time_sum'] if rt_agg['time_sum'] else 0
+
+        # Reaction Time: Lower is better. A simple score conversion (higher is better) for overall average is difficult.
+        # Let's use a normalized score (e.g., 100 - min_ms / 10). For now, we omit it from overall average.
+
+    # --- 3. Memory Game Stats ---
+    mem_results = MemoryGameResult.objects.filter(user=user)
+    mem_agg = mem_results.aggregate(
+        max_length=Max('max_sequence_length'),
+        count=Count('id')
+    )
+    if mem_agg['count'] > 0:
+        max_length = mem_agg['max_length']
+        stats_data['summary']['memory_game']['max_sequence_length'] = max_length
+        stats_data['summary']['memory_game']['total_plays'] = mem_agg['count']
+        total_games_played += mem_agg['count']
+        # Assuming a max possible score of 10 levels, we can normalize for avg success rate
+        # Let's say max possible length is 10.
+        if max_length is not None:
+             average_scores.append(min(100, (max_length / 10) * 100))
+
+
+    # --- 4. Stroop Game Stats ---
+    stroop_results = StroopGameResult.objects.filter(user=user)
+    stroop_agg = stroop_results.aggregate(
+        best_total_correct=Max('total_correct'),
+        avg_interference=Avg('interference_score_ms'),
+        count=Count('id'),
+        total_time_s_sum=Sum('total_time_s')
+    )
+    if stroop_agg['count'] > 0:
+        total_plays = stroop_agg['count']
+        best_correct = stroop_agg['best_total_correct']
+        avg_interference = stroop_agg['avg_interference']
+        total_games_played += total_plays
+        total_time_ms_sum += int((stroop_agg['total_time_s_sum'] or 0) * 1000)
+
+        # Assuming 20 trials total in Stroop game (example max)
+        max_trials = 20
+        best_correct_percentage = (best_correct / max_trials) * 100 if best_correct is not None else None
+
+        stats_data['summary']['stroop_game']['best_correct_percentage'] = best_correct_percentage
+        stats_data['summary']['stroop_game']['avg_interference_ms'] = round(avg_interference, 2) if avg_interference is not None else None
+        stats_data['summary']['stroop_game']['total_plays'] = total_plays
+
+        if best_correct_percentage is not None:
+            average_scores.append(best_correct_percentage)
+
+
+    # --- 5. Longest Number Stats ---
+    ln_results = LongestNumberGameResult.objects.filter(user=user)
+    ln_agg = ln_results.aggregate(
+        max_length=Max('max_number_length'),
+        count=Count('id'),
+        time_sum=Sum('total_reaction_time_ms')
+    )
+    if ln_agg['count'] > 0:
+        max_length = ln_agg['max_length']
+        stats_data['summary']['longest_number']['max_number_length'] = max_length
+        stats_data['summary']['longest_number']['total_plays'] = ln_agg['count']
+        total_games_played += ln_agg['count']
+        total_time_ms_sum += ln_agg['time_sum'] if ln_agg['time_sum'] else 0
+
+        # Assuming max possible length is 12 (example)
+        if max_length is not None:
+            average_scores.append(min(100, (max_length / 12) * 100))
+
+
+    # --- 6. Numpuz Game Stats ---
+    npz_results = NumpuzGameResult.objects.filter(user=user)
+    npz_agg = npz_results.aggregate(
+        best_time=Min('time_taken_s'),
+        min_moves=Min('moves_made'),
+        count=Count('id'),
+        time_sum=Sum('time_taken_s')
+    )
+    if npz_agg['count'] > 0:
+        stats_data['summary']['numpuz_game']['best_time_s'] = round(npz_agg['best_time'], 2) if npz_agg['best_time'] is not None else None
+        stats_data['summary']['numpuz_game']['min_moves'] = npz_agg['min_moves']
+        stats_data['summary']['numpuz_game']['total_plays'] = npz_agg['count']
+        total_games_played += npz_agg['count']
+        total_time_ms_sum += int((npz_agg['time_sum'] or 0) * 1000)
+
+        # Numpuz: Best score is low time/moves. Omit from simple average success rate.
+
+
+    # --- 7. Additions Game Stats ---
+    add_results = AdditionsGameResult.objects.filter(user=user)
+    add_agg = add_results.aggregate(
+        highest_correct=Max('total_correct'),
+        avg_correct=Avg('total_correct'),
+        count=Count('id'),
+        time_sum=Sum('time_taken_s')
+    )
+    if add_agg['count'] > 0:
+        highest_correct = add_agg['highest_correct']
+        stats_data['summary']['additions_game']['highest_correct'] = highest_correct
+        stats_data['summary']['additions_game']['total_plays'] = add_agg['count']
+        total_games_played += add_agg['count']
+        total_time_ms_sum += int((add_agg['time_sum'] or 0) * 1000)
+
+        # Assuming max possible correct is 100 (example)
+        if highest_correct is not None:
+             average_scores.append(min(100, (highest_correct / 100) * 100)) # Simple percentage
+
+    # --- 8. Final Aggregate Calculations for Main Stat Cards ---
+
+    # Total Games Played
+    stats_data['total_games_played'] = total_games_played
+
+    # Average Success Rate (using games where a score-to-percentage conversion is possible)
+    if average_scores:
+        stats_data['average_success_rate'] = round(sum(average_scores) / len(average_scores), 1)
+
+    # Total Time Spent (convert total_time_ms_sum to hours)
+    stats_data['total_time_spent_h'] = round((total_time_ms_sum / 1000) / 3600, 1)
+
+    return Response(stats_data)
