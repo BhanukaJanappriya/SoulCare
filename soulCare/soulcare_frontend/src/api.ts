@@ -687,8 +687,9 @@ export const toggleHabitCompletionAPI = async (
     );
     return response.data;
 };*/
-// --- Rating System APIS ---
 // =================================================================
+
+// --- Rating System APIS ---
 
 export const createReviewAPI = async (data: ReviewInput): Promise<Review> => {
     try {

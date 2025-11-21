@@ -14,6 +14,8 @@ from datetime import date,datetime,timedelta
 from appointments.models import Appointment
 from chat.models import Conversation, Message
 from .utils import send_account_pending_email, send_account_verified_email,send_patient_welcome_email
+from content.models import ContentItem
+from prescriptions.models import Prescription
 
 
 
@@ -403,6 +405,70 @@ class ProviderDashboardStatsView(APIView):
                 average_rating = user.counselorprofile.rating
         except (DoctorProfile.DoesNotExist, CounselorProfile.DoesNotExist):
             pass # Keep the default 5.0 if profile somehow doesn't exist
+        
+        
+        activity_feed = []
+        
+        # 1. Appointment Cancellations (Critical)
+        # We look for appointments that are 'cancelled'
+        cancelled_apps = Appointment.objects.filter(provider=user, status='cancelled').order_by('-created_at')[:5]
+        # Note: You might need to add 'updated_at' to your Appointment model if it doesn't exist, 
+        # or use 'created_at' if that's all you have. Assuming 'created_at' for now or using 'date'
+        for app in cancelled_apps:
+            patient_name = app.patient.profile.full_name if hasattr(app.patient, 'profile') else app.patient.username
+            activity_feed.append({
+                "id": f"cancel_{app.id}",
+                "type": "cancellation",
+                "text": f"{patient_name} cancelled their appointment for {app.date}.",
+                "date": app.created_at # Ideally use updated_at if available
+            })
+            
+        
+        # 2. New Patient Registrations / First Bookings (Informational)
+        # We can treat every NEW appointment request as a potential new patient interaction
+        new_apps = Appointment.objects.filter(provider=user, status='pending').order_by('-created_at')[:5]
+        
+        for app in new_apps:
+            patient_name = app.patient.profile.full_name if hasattr(app.patient, 'profile') else app.patient.username
+            activity_feed.append({
+                "id": f"new_app_{app.id}",
+                "type": "new_patient",
+                "text": f"New appointment request from: {patient_name}.",
+                "date": app.created_at
+            })  
+        
+        
+        # 3. Prescriptions Created (Confirmation)
+        if user.role == 'doctor':
+            recent_rx = Prescription.objects.filter(doctor=user).order_by('-date_issued')[:5]
+            for rx in recent_rx:
+                patient_name = rx.patient.profile.full_name if hasattr(rx.patient, 'profile') else rx.patient.username
+                activity_feed.append({
+                    "id": f"rx_{rx.id}",
+                    "type": "prescription",
+                    "text": f"Prescription #{rx.id} issued for {patient_name}.",
+                    "date": rx.date_issued
+                })
+                
+        
+        # 4. Content Shared
+        # Find content items owned by this user that have been shared
+        shared_content = ContentItem.objects.filter(owner=user).order_by('-updated_at')[:5]
+        
+        for item in shared_content:
+            count = item.shared_with.count()
+            if count > 0:
+                activity_feed.append({
+                    "id": f"content_{item.id}",
+                    "type": "content_shared",
+                    "text": f"\"{item.title}\" shared with {count} patient(s).",
+                    "date": item.updated_at
+                })
+                
+        
+        # Sort by date (newest first), assuming date strings are ISO format
+        activity_feed.sort(key=lambda x: str(x['date']), reverse=True)
+        recent_activity = activity_feed[:5] # Show top 10 mixed activities
 
         # --- Compile Stats ---
         stats_data = {
@@ -410,6 +476,7 @@ class ProviderDashboardStatsView(APIView):
             'appointments_today': appointments_today,
             'pending_messages': pending_messages,
             'average_rating': average_rating,
+            'recent_activity': recent_activity,
         }
 
         return Response(stats_data, status=status.HTTP_200_OK)

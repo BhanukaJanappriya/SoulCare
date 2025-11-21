@@ -309,11 +309,21 @@ export type MissedHabitItem = {
     frequency: 'daily' | 'weekly' | 'monthly';
     missed_period_end_date: string; // The last date of the missed period
 };
+
+//Recent Activity Interfaces
+export interface ActivityItem {
+  id: string;
+  // Updated types to match your requirements
+  type: 'cancellation' | 'new_patient' | 'prescription' | 'content_shared'; 
+  text: string;
+  date: string; // ISO string
+}
 export interface ProviderStatsData {
   total_patients: number;
   appointments_today: number;
   pending_messages: number;
   average_rating: number;
+  recent_activity: ActivityItem[];
 }
 
 export interface ReactionTimePayload {
