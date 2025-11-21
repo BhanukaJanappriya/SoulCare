@@ -28,11 +28,9 @@ urlpatterns = [
     path('api/mood/', include('moodtracker.urls')),
     path('api/journal/', include('journal.urls')),
     path('api/chat/', include('chat.urls')),
-    path('api/', include('habits.urls')),
     path('api/chatbot/', include('chatbot.urls')),
     path('api/games/', include('mentalGames.urls')),
-    path('api/', include('habits.urls')),
-    path('api/content/', include('content.urls')),
+    path('api/', include('habits.urls')),    path('api/content/', include('content.urls')),
 
 
 

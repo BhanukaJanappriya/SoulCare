@@ -258,43 +258,56 @@ export interface Conversation {
 // --- HABITS TYPES ---
 // =================================================================
 
-export interface Habit {
-  id: string | number; // Django uses number, but frontend sometimes uses string for temporary IDs
-  name: string;
-  description: string;
-  frequency: "daily" | "weekly" | "monthly";
-  target: number;
-  current: number;
-  streak: number;
-  category: string;
-  color: string;
-  completedToday: boolean; // Mapped from completed_today
-  createdAt: string; // Keep as string (ISO date string) for transport
-  lastCompleted?: string | null; // Keep as string (ISO date string) or null for transport
-}
+export type HabitTask = {
+    habit: Habit;
+    id: number;
+    name: string;
+    isCompleted: boolean; // Dynamic status for the current period
+};
 
-// Data structure for creating a new habit (what React sends to POST /habits/)
-export interface HabitInput {
+export type HabitTaskInput = {
+    name: string;
+};
+
+export type Habit = {
+    id: number;
+    name: string;
+    description: string | null;
+    frequency: 'daily' | 'weekly' | 'monthly';
+    target: number;
+    current: number;
+    streak: number;
+    category: string;
+    color: string;
+    createdAt: string;
+    completedToday: boolean;
+    tasks: HabitTask[];
+};
+
+export type HabitToggleResponse = {
+    status: string;
+    habit: Habit;
+    // If you had 'any' here, that's the fix.
+    // The Habit type itself should also not contain 'any'
+};
+
+export type HabitInput = {
     name: string;
     description: string;
     frequency: 'daily' | 'weekly' | 'monthly';
-    target: number;
+    target: number; // Typically 1 for a new habit, can be updated later by adding tasks
     category: string;
     color: string;
-}
+};
 
-// Data structure for the POST /habits/{id}/toggle_completion/ body
-export interface HabitToggleInput {
-    completed: boolean;
-}
-
-// Data structure for the POST /habits/{id}/toggle_completion/ response
-export interface HabitToggleResponse {
-    status: string; // e.g., "Habit marked as completed"
-    habit: Habit; // The updated habit object from the server
-}
-
-
+export type MissedHabitItem = {
+    habit_id: number;
+    habit_name: string;
+    task_id: number;
+    task_name: string;
+    frequency: 'daily' | 'weekly' | 'monthly';
+    missed_period_end_date: string; // The last date of the missed period
+};
 export interface ProviderStatsData {
   total_patients: number;
   appointments_today: number;

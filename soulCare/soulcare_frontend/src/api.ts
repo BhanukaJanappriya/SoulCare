@@ -16,8 +16,9 @@ import {
   ChatMessage,
   Habit,
   HabitInput,
-  HabitToggleInput,
-  HabitToggleResponse,
+  HabitTask,
+  HabitTaskInput,
+  MissedHabitItem,
   ProviderStatsData,
   ContentItem,
   ContentFormData,
@@ -273,38 +274,6 @@ export const getMessageHistory = async (conversationId: number): Promise<ChatMes
   }
 };
 
-// =================================================================
-// --- HABITS API FUNCTIONS ---
-// =================================================================
-
-export const getHabitsAPI = async (): Promise<Habit[]> => {
-    // Fetches the user's habits list
-    const response = await api.get<Habit[]>('habits/');
-    return response.data;
-};
-
-export const createHabitAPI = async (habitData: HabitInput): Promise<Habit> => {
-    // Creates a new habit
-    const response = await api.post<Habit>('habits/', habitData);
-    return response.data;
-};
-
-export const deleteHabitAPI = async (habitId: string | number): Promise<void> => {
-    // Deletes a habit by ID
-    await api.delete(`habits/${habitId}/`);
-};
-
-export const toggleHabitCompletionAPI = async (
-    habitId: string | number,
-    completed: boolean
-): Promise<HabitToggleResponse> => {
-    // Toggles the completion status and updates streak/current
-    const response = await api.post<HabitToggleResponse>(
-        `habits/${habitId}/toggle_completion/`,
-        { completed } as HabitToggleInput
-    );
-    return response.data;
-};
 export const deleteMessageAPI = async (messageId: number): Promise<void> => {
   try {
     // Uses 'api' instance to call DELETE /api/chat/messages/<id>/
@@ -645,3 +614,74 @@ export const fetchDashboardGameStats = async (): Promise<GameDashboardStats> => 
     };
   }
 };
+
+
+// =================================================================
+// --- HABITS API FUNCTIONS (MODIFIED FOR TASK STRUCTURE) ---
+// =================================================================
+
+export const getHabitsAPI = async (): Promise<Habit[]> => {
+    // Fetches the user's habits list, now includes nested tasks
+    const response = await api.get<Habit[]>('habits/');
+    return response.data;
+};
+
+export const createHabitAPI = async (habitData: HabitInput): Promise<Habit> => {
+    // Creates a new habit
+    const response = await api.post<Habit>('habits/', habitData);
+    return response.data;
+};
+
+export const deleteHabitAPI = async (habitId: string | number): Promise<void> => {
+    // Deletes a habit by ID
+    await api.delete(`habits/${habitId}/`);
+};
+
+// --- NEW TASK-BASED API FUNCTIONS ---
+
+export const createHabitTaskAPI = async (
+    habitId: string | number,
+    taskData: HabitTaskInput
+): Promise<HabitTask> => {
+    // Creates a new sub-task for a specific habit
+    const response = await api.post<HabitTask>(
+        `habits/${habitId}/tasks/`,
+        taskData
+    );
+    return response.data;
+};
+
+export const getMissedHabitsAPI = async (): Promise<MissedHabitItem[]> => {
+    // Fetches incomplete tasks from the previous period (Daily/Weekly/Monthly)
+    // FIX: Changed hyphen to underscore to match views.py url_path
+    const response = await api.get<MissedHabitItem[]>('habits/missed_habits/');
+    return response.data;
+};
+
+
+export const toggleHabitTaskCompletionAPI = async (
+    taskId: string | number,
+    completed: boolean // True to complete, False to uncomplete
+): Promise<{ status: string, habit: Habit }> => {
+    // FIX: Ensure trailing slash is included for custom actions
+    const response = await api.post<{ status: string, habit: Habit }>(
+        `habits/tasks/${taskId}/toggle/`, // <-- The regex in views.py requires a specific format
+        { completed }
+    );
+    return response.data;
+};
+
+
+// Deprecated: The old single-habit completion toggle is no longer used
+/*
+export const toggleHabitCompletionAPI = async (
+    habitId: string | number,
+    completed: boolean
+): Promise<HabitToggleResponse> => {
+    // Toggles the completion status and updates streak/current
+    const response = await api.post<HabitToggleResponse>(
+        `habits/${habitId}/toggle_completion/`,
+        { completed } as HabitToggleInput
+    );
+    return response.data;
+};*/
