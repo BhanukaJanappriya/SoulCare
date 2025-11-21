@@ -15,6 +15,7 @@ export interface Appointment {
   provider: Provider;
   date: string;
   time: string;
+  start_time: string;
   status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
   notes: string;
   created_at: string;
@@ -256,8 +257,43 @@ export interface Conversation {
 
 
 // =================================================================
-// --- HABITS TYPES ---
+// --- MOOD TRACKER TYPES (NEW) ---
 // =================================================================
+
+export interface Activity {
+  id: number;
+  name: string;
+}
+
+export interface MoodEntry {
+  id: number;
+  patient: number; // Just the ID is fine for the fetched object
+  mood: number;
+  energy: number;
+  anxiety: number;
+  notes: string | null;
+  activities: Activity[]; // List of activity objects
+  tags: Tag[]; // List of tag objects
+  date: string; // ISO date string (YYYY-MM-DD)
+  created_at: string; // ISO datetime string
+}
+
+// Type for sending data to the backend
+export interface MoodEntryInput {
+  mood: number;
+  energy: number;
+  anxiety: number;
+  notes: string | null;
+  activity_ids: number[]; // Array of Activity IDs
+  tag_ids: number[]; // Array of Tag IDs
+  date: string; // The date of the entry
+}
+
+
+// =================================================================
+// --- HABITS TYPES ---
+// ... (Your existing HABITS TYPES go here)
+// ...
 
 export type HabitTask = {
     habit: Habit;
@@ -265,6 +301,10 @@ export type HabitTask = {
     name: string;
     isCompleted: boolean; // Dynamic status for the current period
 };
+// ... (rest of Habit types)
+
+
+// ... (The rest of your existing types, starting from HabitTaskInput)
 
 export type HabitTaskInput = {
     name: string;
@@ -325,6 +365,8 @@ export interface ProviderStatsData {
   average_rating: number;
   recent_activity: ActivityItem[];
 }
+// ... (The rest of your existing types from ReactionTimePayload down to WeeklyMoodDataPoint)
+
 
 export interface ReactionTimePayload {
   reaction_time_ms: number;
@@ -491,4 +533,21 @@ export interface ReviewInput {
     appointment_id: number;
     rating: number;
     comment: string;
+}
+export interface PatientDashboardStats {
+  current_streak: number;
+  today_mood_score: number;
+  total_meditation_minutes: number;
+  // FIX: Added meditation_sessions for the timer card footer
+  meditation_sessions: number;
+  // We use Appointment | null because the date might not exist
+  next_appointment: Appointment | null;
+  daily_progress_percentage: number;
+}
+
+export interface WeeklyMoodDataPoint {
+  day: string; // e.g., "Mon", "Tue"
+  mood: number;
+  energy: number;
+  anxiety: number;
 }

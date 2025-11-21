@@ -211,12 +211,9 @@ const App = () => (
               <Route path="mood" element={<MoodTracker />} />
               <Route path="messages" element={<PatientMessages />} />
               <Route path="content" element={<PatientContent />} />
-
             </Route>
 
-
-            
-               {/* --- Admin Routes --- */}
+            {/* --- Admin Routes --- */}
 
             <Route
               path="/admin"
@@ -236,7 +233,6 @@ const App = () => (
               <Route path="manage-patients" element={<ManagePatientsPage />} />
               <Route path="manage-blogs" element={<ManageBlogsPage />} />
               <Route path="manage-content" element={<ManageContentPage />} />
-              
             </Route>
 
             {/* --- Not Found Route --- */}

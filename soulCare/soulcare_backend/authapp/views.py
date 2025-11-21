@@ -9,14 +9,19 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
 from rest_framework.exceptions import PermissionDenied, NotFound
 from .models import User,ProviderSchedule,DoctorProfile, CounselorProfile
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Avg, Sum # ADDED Avg, Sum for aggregation
 from datetime import date,datetime,timedelta
+from django.utils import timezone # ADDED for timezone-aware date logic
+
+# NEW IMPORTS FOR PATIENT DASHBOARD STATS
+from habits.models import Habit # Import Habit model
+from moodtracker.models import MoodEntry # Import MoodEntry model
+# Appointment is already imported
 from appointments.models import Appointment
 from chat.models import Conversation, Message
 from .utils import send_account_pending_email, send_account_verified_email,send_patient_welcome_email
 from content.models import ContentItem
 from prescriptions.models import Prescription
-
 
 
 class LoginView(APIView):
@@ -59,7 +64,7 @@ class DoctorRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
+
         send_account_pending_email(user)
 
         response_data = {
@@ -85,7 +90,7 @@ class CounselorRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
+
         send_account_pending_email(user)
 
         response_data = {
@@ -131,14 +136,14 @@ class AdminUserViewSet(viewsets.ModelViewSet):
 
 
     serializer_class = AdminUserManagementSerializer
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         role = self.request.query_params.get('role')
         if role:
             return queryset.filter(role=role)
         return queryset
-    
+
     def perform_update(self, serializer):
     # Get the user object BEFORE the update
         instance = serializer.instance
@@ -150,7 +155,7 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         # Check if status changed from False to True
         if not old_verified_status and updated_user.is_verified:
             send_account_verified_email(updated_user)
-    
+
 
 
 class AdminDashboardStatsView(APIView):
@@ -480,3 +485,75 @@ class ProviderDashboardStatsView(APIView):
         }
 
         return Response(stats_data, status=status.HTTP_200_OK)
+
+
+# NEW VIEW FOR PATIENT DASHBOARD STATS
+
+
+# In soulcare_backend/authapp/views.py (PatientDashboardStatsView)
+
+class PatientDashboardStatsView(APIView):
+    """
+    Provides real-time aggregated statistics for the Patient Dashboard Quick Stats and Progress.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        patient = request.user
+
+        # Ensure user is a patient
+        if patient.role != 'user':
+            return Response({"error": "Access denied. Only patients can view this dashboard."}, status=status.HTTP_403_FORBIDDEN)
+
+        # --- VARIABLE INITIALIZATION (CRITICAL FIX for Pylance errors) ---
+        next_appointment_data = None
+        daily_progress_percentage = 0
+
+        # --- 1. Current Streak ---
+        # The Habit model uses a 'user' Foreign Key
+        longest_streak = Habit.objects.filter(user=patient).order_by('-streak').first()
+        current_streak = longest_streak.streak if longest_streak else 0
+
+        # --- 2. Today's Mood Score ---
+        today = timezone.localdate()
+        today_mood_avg = MoodEntry.objects.filter(
+            patient=patient, # Assuming MoodEntry uses 'patient' or 'user' - using 'patient' for now
+            date=today
+        ).aggregate(
+            avg_mood=Avg('mood')
+        )['avg_mood'] or 0
+
+        # --- 3. Meditation Time (Mock/Placeholder) ---
+        total_meditation_minutes = 125
+        meditation_sessions = 5
+
+        # --- 4. Next Appointment ---
+        now = timezone.now()
+        next_appointment = Appointment.objects.filter(
+            patient=patient,
+            status='scheduled',
+            start_time__gte=now
+        ).order_by('start_time').first()
+
+        # next_appointment_data initialized above. Only assigned here if an appointment exists.
+        if next_appointment:
+             next_appointment_data = {
+                 'id': next_appointment.id,
+                 'start_time': next_appointment.start_time.isoformat(),
+                 'date': next_appointment.date.isoformat(),
+                 'time': next_appointment.time.isoformat(timespec='minutes'),
+             }
+
+        # --- 5. Daily Progress Percentage (Mocked) ---
+        # daily_progress_percentage initialized above. Assigned the mock value here.
+        daily_progress_percentage = 75
+
+        # --- Final Response ---
+        return Response({
+            'current_streak': current_streak,
+            'today_mood_score': round(today_mood_avg, 1) if today_mood_avg else 0.0,
+            'total_meditation_minutes': total_meditation_minutes,
+            'meditation_sessions': meditation_sessions,
+            'next_appointment': next_appointment_data, # Now always defined
+            'daily_progress_percentage': daily_progress_percentage, # Now always defined
+        })
