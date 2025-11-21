@@ -285,7 +285,7 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                           </span>
                         </div>
                         <div className="flex justify-between items-center mt-1">
-                          <p className="text-xs text-muted-foreground truncate break-words whitespace-pre-wrap flex-1 min-w-0 pr-2">
+                          <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap flex-1 min-w-0 pr-2">
                             {convo.last_message?.content || "No messages yet."}
                           </p>
                           {convo.unread_count > 0 && (

@@ -9,10 +9,16 @@ class AppointmentReadSerializer(serializers.ModelSerializer):
     """
     patient = ProviderListSerializer(read_only=True)
     provider = ProviderListSerializer(read_only=True)
+    
+    has_review = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
-        fields = ['id', 'patient', 'provider', 'date', 'time', 'status', 'notes', 'created_at']
+        fields = ['id', 'patient', 'provider', 'date', 'time', 'status', 'notes', 'created_at','has_review']
+        
+    def get_has_review(self, obj):
+        # Check if the appointment has a related review
+        return hasattr(obj, 'review')
 
 
 class AppointmentWriteSerializer(serializers.ModelSerializer):

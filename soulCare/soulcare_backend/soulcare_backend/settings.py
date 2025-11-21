@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'chatbot',
     'mentalGames',
     'content',
+    'reviews',
 
 
 

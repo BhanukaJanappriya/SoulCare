@@ -13,7 +13,7 @@ from django.db.models import Count, Q
 from datetime import date,datetime,timedelta
 from appointments.models import Appointment
 from chat.models import Conversation, Message
-from .utils import send_account_pending_email, send_account_verified_email
+from .utils import send_account_pending_email, send_account_verified_email,send_patient_welcome_email
 
 
 
@@ -31,6 +31,8 @@ class PatientRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        
+        send_patient_welcome_email(user)
 
         response_data = {
             "id": user.id,

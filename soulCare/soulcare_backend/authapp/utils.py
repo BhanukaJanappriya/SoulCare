@@ -195,3 +195,35 @@ def send_blog_status_email(blog_post, status):
     
     if subject and message:
         send_notification_email(subject, message, [author.email])    
+        
+        
+def send_patient_welcome_email(user):
+    """
+    Sends a welcome email to a newly registered patient.
+    """
+    subject = "Welcome to SoulCare! Your Journey Starts Here."
+    
+    # You can customize this message further with specific instructions
+    message = f"""
+    Hello {user.username},
+
+    Welcome to the SoulCare family! We are honored to be part of your mental wellness journey.
+
+    Your account has been successfully created. You can now log in to:
+    - Browse our verified doctors and counselors.
+    - Book appointments.
+    - Use our mood tracker and journaling tools.
+    - Play Stress Reducing Games 
+    - Massage With Professionals
+    - Access personalized resources.
+
+    Login here: http://localhost:5173/auth/login
+
+    If you have any questions, our support team is here to help.
+
+    Warm regards,
+    The SoulCare Team
+    """
+    
+    # Send to the user's email address
+    send_notification_email(subject, message, [user.email])
