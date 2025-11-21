@@ -34,7 +34,12 @@ import {
   AdditionsGameStats,
   GameDashboardStats,
   Review,
-  ReviewInput
+  ReviewInput,
+  PatientDashboardStats,
+  WeeklyMoodDataPoint,
+  MoodEntry,
+  MoodEntryInput,
+  Activity
 
 } from '@/types';
 
@@ -106,6 +111,75 @@ axiosInstance.interceptors.response.use((response) => response, handleResponseEr
 export default api;
 
 
+// =================================================================
+// --- PATIENT DASHBOARD DATA API FUNCTIONS (NEW) ---
+// =================================================================
+
+/**
+ * Fetches aggregated statistics for the quick stat cards.
+ * @returns PatientDashboardStats object.
+ * We will define an endpoint like /api/auth/patient-dashboard-stats/ on the backend.
+ */
+export const fetchPatientDashboardStats = async (): Promise<PatientDashboardStats> => {
+  // Uses axiosInstance because this is likely an Auth-related endpoint: /api/auth/
+  const response = await axiosInstance.get<PatientDashboardStats>('patient/dashboard-stats/');
+  return response.data;
+};
+
+/**
+ * Fetches the last 7 days of mood, energy, and anxiety for the line chart.
+ * @returns Array of WeeklyMoodDataPoint.
+ * We will define an endpoint like /api/moodtracker/weekly-stats/ on the backend.
+ */
+export const fetchWeeklyMoodData = async (): Promise<WeeklyMoodDataPoint[]> => {
+  const response = await api.get<WeeklyMoodDataPoint[]>('moodtracker/weekly-stats/');
+  return response.data;
+};
+
+
+// =================================================================
+// --- MOOD TRACKER API FUNCTIONS (NEW/COMPLETED) ---
+// =================================================================
+
+/**
+ * Fetches all mood entries for the patient.
+ * The endpoint is GET /api/moodtracker/entries/
+ */
+export const getMoodEntriesAPI = async (): Promise<MoodEntry[]> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/entries/'
+  const response = await api.get<MoodEntry[]>('moodtracker/entries/');
+  return response.data;
+};
+
+/**
+ * Creates a new mood entry.
+ * The endpoint is POST /api/moodtracker/entries/
+ */
+export const createMoodEntryAPI = async (data: MoodEntryInput): Promise<MoodEntry> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/entries/'
+  const response = await api.post<MoodEntry>('moodtracker/entries/', data);
+  return response.data;
+};
+
+/**
+ * Fetches the list of all available activities.
+ * The endpoint is GET /api/moodtracker/activities/
+ */
+export const getMoodActivitiesAPI = async (): Promise<Activity[]> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/activities/'
+  const response = await api.get<Activity[]>('moodtracker/activities/');
+  return response.data;
+};
+
+/**
+ * Fetches the list of all available tags.
+ * The endpoint is GET /api/moodtracker/tags/
+ */
+export const getMoodTagsAPI = async (): Promise<Tag[]> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/tags/'
+  const response = await api.get<Tag[]>('moodtracker/tags/');
+  return response.data;
+};
 // =================================================================
 // --- DOCTOR / PATIENT API FUNCTIONS ---
 // (No changes needed here)
@@ -699,3 +773,4 @@ export const createReviewAPI = async (data: ReviewInput): Promise<Review> => {
         throw error;
     }
 };
+

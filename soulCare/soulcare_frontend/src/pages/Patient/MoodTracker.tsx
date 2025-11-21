@@ -99,9 +99,9 @@ const MoodTracker: React.FC = () => {
     try {
       const [entriesResponse, activitiesResponse, tagsResponse] =
         await Promise.all([
-          api.get("/mood/entries/"),
-          api.get("/mood/activities/"),
-          api.get("/mood/tags/"), // NEW: Fetch tags from the new endpoint
+          api.get("/moodtracker/entries/"),
+          api.get("/moodtracker/activities/"),
+          api.get("/moodtracker/tags/"), // NEW: Fetch tags from the new endpoint
         ]);
       setMoodHistory(
         entriesResponse.data.results || entriesResponse.data || []
