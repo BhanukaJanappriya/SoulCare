@@ -159,4 +159,71 @@ def send_content_shared_email(content_item, patient):
     """
     send_notification_email(subject, message, [patient.email])
     
+
+def send_blog_status_email(blog_post, status):
+    """
+    Sends an email to the blog author when their post is approved or rejected.
+    """
+    author = blog_post.author
+    subject = ""
+    message = ""
+
+    if status == 'published':
+        subject = "SoulCare - Your Blog Post is Live!"
+        message = f"""
+        Hello {author.username},
+
+        Congratulations! Your blog post "{blog_post.title}" has been APPROVED and is now live on the SoulCare platform.
+
+        Thank you for your contribution.
+
+        Best regards,
+        The SoulCare Team
+        """
+    elif status == 'rejected':
+        subject = "SoulCare - Update on Your Blog Post"
+        message = f"""
+        Hello {author.username},
+
+        We reviewed your blog post "{blog_post.title}". Unfortunately, it has been declined at this time.
+
+        Please review our content guidelines and feel free to submit a new draft.
+
+        Best regards,
+        The SoulCare Team
+        """
     
+    if subject and message:
+        send_notification_email(subject, message, [author.email])    
+        
+        
+def send_patient_welcome_email(user):
+    """
+    Sends a welcome email to a newly registered patient.
+    """
+    subject = "Welcome to SoulCare! Your Journey Starts Here."
+    
+    # You can customize this message further with specific instructions
+    message = f"""
+    Hello {user.username},
+
+    Welcome to the SoulCare family! We are honored to be part of your mental wellness journey.
+
+    Your account has been successfully created. You can now log in to:
+    - Browse our verified doctors and counselors.
+    - Book appointments.
+    - Use our mood tracker and journaling tools.
+    - Play Stress Reducing Games 
+    - Massage With Professionals
+    - Access personalized resources.
+
+    Login here: http://localhost:5173/auth/login
+
+    If you have any questions, our support team is here to help.
+
+    Warm regards,
+    The SoulCare Team
+    """
+    
+    # Send to the user's email address
+    send_notification_email(subject, message, [user.email])

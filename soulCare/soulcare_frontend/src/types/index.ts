@@ -18,6 +18,7 @@ export interface Appointment {
   status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
   notes: string;
   created_at: string;
+  has_review?: boolean;
 }
 
 
@@ -464,4 +465,20 @@ export interface GameDashboardStats {
         pattern_recognition: GameSpecificSummary;
         mood_reflection_game: GameSpecificSummary;
     }
+}
+
+
+//Rating System Interfaces
+export interface Review {
+    id: number;
+    appointment_id: number;
+    rating: number;
+    comment: string;
+    created_at: string;
+}
+
+export interface ReviewInput {
+    appointment_id: number;
+    rating: number;
+    comment: string;
 }

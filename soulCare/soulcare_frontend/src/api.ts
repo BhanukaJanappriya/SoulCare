@@ -32,7 +32,9 @@ import {
   NumpuzPayload,
   AdditionsGamePayload,
   AdditionsGameStats,
-  GameDashboardStats
+  GameDashboardStats,
+  Review,
+  ReviewInput
 
 } from '@/types';
 
@@ -685,3 +687,15 @@ export const toggleHabitCompletionAPI = async (
     );
     return response.data;
 };*/
+// --- Rating System APIS ---
+// =================================================================
+
+export const createReviewAPI = async (data: ReviewInput): Promise<Review> => {
+    try {
+        const response = await api.post<Review>('reviews/', data);
+        return response.data;
+    } catch (error) {
+        console.error("Error creating review:", error);
+        throw error;
+    }
+};
