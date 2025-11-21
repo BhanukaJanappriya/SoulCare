@@ -319,7 +319,7 @@ class DoctorPatientsView(APIView):
 
 
 
-class PatientDetailView(generics.RetrieveAPIView):
+class PatientDetailView(generics.RetrieveUpdateAPIView):
     """
     API view to retrieve details for a specific patient.
     Ensures the requesting doctor/counselor is associated with the patient via an appointment.

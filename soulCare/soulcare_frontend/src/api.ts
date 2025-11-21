@@ -775,3 +775,12 @@ export const createReviewAPI = async (data: ReviewInput): Promise<Review> => {
     }
 };
 
+
+
+//Updating the Patient Datails API
+
+export const updatePatientDetailsAPI = async (patientId: string | number, data: any): Promise<PatientDetailData> => {
+  // Using PATCH to update only changed fields
+  const response = await axiosInstance.patch<PatientDetailData>(`patients/${patientId}/`, data);
+  return response.data;
+};

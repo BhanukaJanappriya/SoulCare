@@ -199,7 +199,7 @@ class CounselorProfileSerializer(serializers.ModelSerializer):
 class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
-        fields = ['full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues','profile_picture']
+        fields = ['full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues','profile_picture','risk_level']
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -394,10 +394,11 @@ class UserInfoSerializer(serializers.ModelSerializer):
     nic = serializers.SerializerMethodField()
     email = serializers.EmailField(read_only=True) # Get email from User model
     contact_number = serializers.SerializerMethodField()
+    risk_level = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'full_name', 'nic', 'contact_number','role'] # Updated fields
+        fields = ['id', 'username', 'email', 'full_name', 'nic', 'contact_number','role','is_active','risk_level'] # Updated fields
 
     def get_full_name(self, obj):
         # Safely access profile attributes
@@ -431,12 +432,18 @@ class UserInfoSerializer(serializers.ModelSerializer):
         elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
             profile = obj.counselorprofile
         return getattr(profile, 'contact_number', None) # Return None if not found
+    
+    def get_risk_level(self, obj):
+        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return obj.patientprofile.risk_level
+        return 'low' # Default for non-patients or missing profiles
+
 
 
 # --- NEW: PatientDetailSerializer (For Patient Detail Page) ---
 class PatientDetailSerializer(serializers.ModelSerializer):
     # Nest the profile directly
-    patientprofile = PatientProfileSerializer(read_only=True)
+    patientprofile = PatientProfileSerializer()
 
     # Optional: Add related data (limit results for performance)
     # Customize AppointmentSerializer/PrescriptionSerializer if needed for this view
@@ -452,3 +459,19 @@ class PatientDetailSerializer(serializers.ModelSerializer):
              #'recent_prescriptions',
         ]
         read_only_fields = fields # Make all fields read-only for this detail view
+        
+    
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('patientprofile', None)
+        
+        # Update User fields (if any, though we made them read_only above)
+        instance = super().update(instance, validated_data)
+
+        # Update Nested Profile fields
+        if profile_data:
+            profile = instance.patientprofile
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+            
+        return instance

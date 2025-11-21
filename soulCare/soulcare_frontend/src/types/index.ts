@@ -55,6 +55,7 @@ export interface PatientProfile {
   dob: string; // Dates come as strings from JSON
   health_issues: string | null;
   profile_picture?: string | null;
+  risk_level?: 'low' | 'medium' | 'high';
 }
 
 
@@ -102,8 +103,8 @@ export interface PatientOption {
   age?: number;
   lastVisit?: string | null;
   condition?: string | null;
-  status?: 'active' | 'inactive' | string;
-  riskLevel?: 'low' | 'medium' | 'high' | string;
+  is_active?: boolean;
+  risk_level?: 'low' | 'medium' | 'high';
 }
 
 export interface PatientDetailData {

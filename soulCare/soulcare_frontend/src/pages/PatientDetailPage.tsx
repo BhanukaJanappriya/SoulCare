@@ -1,22 +1,23 @@
 // src/pages/PatientDetailPage.tsx
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Added useMutation, useQueryClient
 // --- ADD NEW API FUNCTIONS ---
 import { 
     getPatientDetailsAPI, 
     getPatientAppointments, 
-    getPatientPrescriptions 
+    getPatientPrescriptions,
+    updatePatientDetailsAPI, // <-- Imported update function
 } from '@/api';
 // --- ADD Appointment and PrescriptionData TYPES ---
 import { 
     PatientDetailData, 
     Appointment, 
-    PrescriptionData 
+    PrescriptionData,
 } from '@/types';
 import { 
     Loader2, AlertTriangle, ArrowLeft, Mail, Phone, Calendar as CalendarIcon, 
-    MapPin, Stethoscope, FileText, User, ClipboardX, Clock 
+    MapPin, Stethoscope, FileText, User, ClipboardX, Clock, Activity 
 } from 'lucide-react'; // Added more icons
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,6 +29,14 @@ import { useToast } from "@/hooks/use-toast";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"; // Import Table components
+// --- NEW IMPORTS FOR RISK SELECTION ---
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // --- (Helper components for the lists, you can move these to a separate file if you prefer) ---
 
@@ -124,6 +133,7 @@ const PatientDetailPage: React.FC = () => {
     const { patientId } = useParams<{ patientId: string }>();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const queryClient = useQueryClient(); // Need queryClient to invalidate cache after update
 
     // Fetch main patient details
     const { data: patient, isLoading, error: fetchError, isError } = useQuery<PatientDetailData>({
@@ -132,6 +142,33 @@ const PatientDetailPage: React.FC = () => {
         enabled: !!patientId,
         staleTime: 5 * 60 * 1000,
     });
+
+    // --- NEW: Mutation for Updating Risk Level ---
+    const riskMutation = useMutation({
+        mutationFn: (newRisk: string) => updatePatientDetailsAPI(patientId!, {
+            patientprofile: { risk_level: newRisk }
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['patientDetails', patientId] });
+            toast({ title: "Risk Level Updated", description: "Patient risk status has been changed successfully." });
+        },
+        onError: () => {
+            toast({ variant: "destructive", title: "Update Failed", description: "Could not update risk level." });
+        }
+    });
+
+    const handleRiskChange = (val: string) => {
+        riskMutation.mutate(val);
+    };
+
+    const getRiskColor = (level: string = 'low') => {
+        switch(level) {
+            case 'high': return 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100';
+            case 'medium': return 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100';
+            default: return 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100';
+        }
+    };
+    // ---------------------------------------------
 
     const goBack = () => navigate(-1);
 
@@ -182,20 +219,55 @@ const PatientDetailPage: React.FC = () => {
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                        <CardTitle className="text-2xl font-bold truncate">{profile?.full_name || patient.username}</CardTitle>
-                        <CardDescription className="text-sm text-muted-foreground mt-1">
-                            @{patient.username} | Age: {age} | Joined: {format(parseISO(patient.date_joined), 'PPP')}
-                        </CardDescription>
-                         <div className="mt-2 flex items-center space-x-2">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-2xl font-bold truncate">{profile?.full_name || patient.username}</CardTitle>
+                                <CardDescription className="text-sm text-muted-foreground mt-1">
+                                    @{patient.username} | Age: {age} | Joined: {format(parseISO(patient.date_joined), 'PPP')}
+                                </CardDescription>
+                            </div>
+                            
+                            {/* --- NEW: Stylish Risk Level Selector --- */}
+                            <div className="flex flex-col items-end gap-1.5">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider flex items-center gap-1">
+                                    <Activity className="w-3 h-3" /> Risk Status
+                                </span>
+                                <Select 
+                                    defaultValue={profile?.risk_level || 'low'} 
+                                    onValueChange={handleRiskChange}
+                                    disabled={riskMutation.isPending}
+                                >
+                                    <SelectTrigger className={`w-[130px] h-8 text-xs font-bold border shadow-sm transition-all ${getRiskColor(profile?.risk_level)} focus:ring-offset-0 focus:ring-1`}>
+                                        <SelectValue placeholder="Select Risk" />
+                                    </SelectTrigger>
+                                    <SelectContent align="end">
+                                        <SelectItem value="low" className="text-green-700 focus:text-green-800 focus:bg-green-50 font-medium">
+                                            Low Risk
+                                        </SelectItem>
+                                        <SelectItem value="medium" className="text-yellow-700 focus:text-yellow-800 focus:bg-yellow-50 font-medium">
+                                            Medium Risk
+                                        </SelectItem>
+                                        <SelectItem value="high" className="text-red-700 focus:text-red-800 focus:bg-red-50 font-medium">
+                                            High Risk
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {/* ---------------------------------------- */}
+                        </div>
+
+                         <div className="mt-3 flex items-center space-x-2">
                              <Badge variant={patient.is_active ? "default" : "secondary"} className={`text-xs ${patient.is_active ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                                 {patient.is_active ? 'Active' : 'Inactive'}
                              </Badge>
                          </div>
                     </div>
-                     <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-                        <Button size="sm" onClick={() => navigate('/messages')}> <Mail className="mr-2 h-4 w-4" /> Message (TBD)</Button>
-                     </div>
                 </CardHeader>
+                
+                {/* Action Bar embedded in card */}
+                <div className="px-6 py-3 bg-muted/30 border-t flex justify-end">
+                    <Button size="sm" onClick={() => navigate('/messages')}> <Mail className="mr-2 h-4 w-4" /> Message Patient</Button>
+                </div>
             </Card>
 
             {/* Detailed Info Grid */}
