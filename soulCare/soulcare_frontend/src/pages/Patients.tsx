@@ -23,6 +23,8 @@ import {
   Mail,
   AlertTriangle,
   Loader2,
+  BookOpen,
+  Hospital,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
@@ -261,7 +263,10 @@ const Patients: React.FC = () => {
         {/* --- HEADER / FILTER CARD --- */}
         <Card className="mb-8 shadow-sm bg-card">
           <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                    <Hospital className="h-8 w-8 text-primary" />
+              </div>
               <div>
                 <CardTitle className="text-2xl font-bold">
                   Patient Management

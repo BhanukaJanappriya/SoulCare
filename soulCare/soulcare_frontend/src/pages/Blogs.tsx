@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { RightSidebar } from "@/components/layout/RightSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,7 @@ import {
   Heart,
   Lightbulb,
   TrendingUp,
+  BookOpen,
 } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
@@ -261,155 +262,110 @@ export default function Blogs() {
     <>
       <div className="min-h-screen bg-page-bg flex">
         <div className="flex-1">
-          <div className="container mx-auto px-6 py-8">
+          <div className="container mx-auto px-6 py-8 mr-16 md:mr-24">
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-text-dark mb-2">
-                  Blog Management
-                </h1>
-                <p className="text-text-muted">
-                  Create and manage your professional blog posts
-                </p>
+            <Card className="mb-8 shadow-sm bg-card">
+            <CardHeader>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Icon Box */}
+                <div className="p-2 bg-primary/10 rounded-lg">
+                    <BookOpen className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold">Blog Management</CardTitle>
+                  <CardDescription className="mt-1">
+                    Create and manage your professional blog posts.
+                  </CardDescription>
+                </div>
               </div>
 
-              {/* Create Button */}
+              {/* Create/Edit Dialog Trigger */}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  {/* Allow all authenticated roles to see the button */}
-                  {user && (
-                    <Button onClick={openCreateDialog}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Blog Post
-                    </Button>
-                  )}
+                    {/* Allow all authenticated roles to see the button */}
+                    {user && (
+                        <Button onClick={openCreateDialog}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Blog Post
+                        </Button>
+                    )}
                 </DialogTrigger>
 
-                {/* Create/Edit Dialog Content (Max-width/Max-height/Scroll added) */}
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {isEditing ? "Edit Blog Post" : "Create New Blog Post"}
-                    </DialogTitle>
-                  </DialogHeader>
+                    <DialogHeader>
+                        <DialogTitle>{isEditing ? "Edit Blog Post" : "Create New Blog Post"}</DialogTitle>
+                    </DialogHeader>
 
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleSavePost();
-                    }}
-                    className="space-y-6"
-                  >
-                    {/* Div was here but empty in original, removing for cleanliness */}
+                    <form
+                        onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSavePost();
+                        }}
+                        className="space-y-6"
+                    >
+                        <div className="grid grid-cols-2 gap-4">
+                        {/* ... (Title/Tags Inputs) ... */}
+                        </div>
 
-                    <div>
-                      <Label htmlFor="title">Title</Label>
-                      <Input
-                        id="title"
-                        value={currentPost.title}
-                        onChange={(e) =>
-                          setCurrentPost({
-                            ...currentPost,
-                            title: e.target.value,
-                          })
-                        }
-                        placeholder="Enter blog post title..."
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="excerpt">Excerpt</Label>
-                      <Textarea
-                        id="excerpt"
-                        value={currentPost.excerpt}
-                        onChange={(e) =>
-                          setCurrentPost({
-                            ...currentPost,
-                            excerpt: e.target.value,
-                          })
-                        }
-                        placeholder="Brief description of your blog post..."
-                        rows={2}
-                      />
-                    </div>
+                        <div><Label htmlFor="title">Title</Label>
+                        <Input id="title" value={currentPost.title} onChange={(e) => setCurrentPost({ ...currentPost, title: e.target.value })} placeholder="Enter blog post title..." required />
+                        </div>
+                        <div><Label htmlFor="excerpt">Excerpt</Label>
+                        <Textarea id="excerpt" value={currentPost.excerpt} onChange={(e) => setCurrentPost({ ...currentPost, excerpt: e.target.value })} placeholder="Brief description of your blog post..." rows={2} />
+                        </div>
 
-                    {/* Rich Text Editor Component */}
-                    <div>
-                      <Label>Content</Label>
-                      <RichTextEditor
-                        value={currentPost.content}
-                        onChange={(content) =>
-                          setCurrentPost({ ...currentPost, content })
-                        }
-                        placeholder="Start writing your blog post content..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="tags">Tags (comma separated)</Label>
-                        <Input
-                          id="tags"
-                          value={currentPost.tags_input}
-                          onChange={(e) =>
-                            setCurrentPost({
-                              ...currentPost,
-                              tags_input: e.target.value,
-                            })
-                          }
-                          placeholder="anxiety, mindfulness, therapy..."
+                        {/* Rich Text Editor Component */}
+                        <div>
+                        <Label>Content</Label>
+                        <RichTextEditor
+                            value={currentPost.content}
+                            onChange={(content) => setCurrentPost({ ...currentPost, content })}
+                            placeholder="Start writing your blog post content..."
                         />
-                      </div>
-                      <div>
-                        <Label htmlFor="status">Status</Label>
-                        <Select
-                          value={currentPost.status}
-                          onValueChange={(value: BlogPost["status"]) =>
-                            setCurrentPost({ ...currentPost, status: value })
-                          }
-                          // Disable status selection for Patient users when creating
-                          disabled={user?.role === "user" && !isEditing}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem
-                              value="pending"
-                              disabled={user?.role === "user" && !isEditing}
-                            >
-                              {user?.role === "user"
-                                ? "Awaiting Review"
-                                : "Submit for Review"}
-                            </SelectItem>
-                            <SelectItem
-                              value="published"
-                              disabled={user?.role === "user" && !isEditing}
-                            >
-                              Publish Now
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                        </div>
 
-                    <div className="flex justify-end gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsDialogOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit">
-                        {isEditing ? "Save Changes" : "Create Post"}
-                      </Button>
-                    </div>
-                  </form>
+                        <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="tags">Tags (comma separated)</Label>
+                            <Input id="tags" value={currentPost.tags_input} onChange={(e) => setCurrentPost({ ...currentPost, tags_input: e.target.value })} placeholder="anxiety, mindfulness, therapy..." />
+                        </div>
+                        <div>
+                            <Label htmlFor="status">Status</Label>
+                            <Select
+                            value={currentPost.status}
+                            onValueChange={(value: BlogPost["status"]) =>
+                                setCurrentPost({ ...currentPost, status: value })
+                            }
+                            // FIX: Disable the status selection for Patient users when creating
+                            disabled={user?.role === 'user' && !isEditing}
+                            >
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="draft">Draft</SelectItem>
+                                {/* If a patient is submitting, the backend auto-sets to pending, but we show this for clarity */}
+                                <SelectItem value="pending" disabled={user?.role === 'user' && !isEditing}>
+                                {user?.role === 'user' ? 'Awaiting Review' : 'Submit for Review'}
+                                </SelectItem>
+                                {/* Only Doctors/Counselors/Admins can publish directly */}
+                                <SelectItem value="published" disabled={user?.role === 'user' && !isEditing}>Publish Now</SelectItem>
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                        <Button type="submit">{isEditing ? "Save Changes" : "Create Post"}</Button>
+                        </div>
+                    </form>
                 </DialogContent>
               </Dialog>
             </div>
+          </CardHeader>
+          </Card>
             {/* Tabs, Sorting, and Content */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               {" "}

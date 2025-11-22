@@ -173,7 +173,7 @@ class BlogPostViewSet(viewsets.ModelViewSet):
 
         # --- 2. Sorting Logic (NEW) ---
 
-        sort_by = self.request.query_params.get('sort_by', '-createdAt') # Default to newest
+        sort_by = self.request.query_params.get('sort_by', 'newest') # Default to newest
 
         # Mapping frontend sort param to Django model field/aggregation
         sort_mapping = {

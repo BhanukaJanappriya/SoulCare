@@ -153,20 +153,7 @@ export interface PrescriptionFormData {
     medications: Omit<MedicationData, 'id'>[];
 }
 
-export interface BlogPost {
-  id: string;
-  authorId: string;
-  title: string;
-  content: string;
-  excerpt: string;
-  author_name?: string;
-  author_role?: string;
-  tags: string[];
-  status: 'draft' | 'pending' | 'published' | 'rejected';
-  publishedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
+
 
 export interface ContentItem {
   id: number;
@@ -626,6 +613,7 @@ export interface BlogPost {
     insightful: number;
   };
 }
+
 
 export type BlogReactionType = 'like' | 'love' | 'insightful';
 export type BlogSortBy = 'newest' | 'oldest' | 'top_rated';

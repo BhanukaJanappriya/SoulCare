@@ -456,30 +456,18 @@ class ProviderDashboardStatsView(APIView):
                 })
             
         
-        # 2. New Patient Registrations / First Bookings (Informational)
-        # We can treat every NEW appointment request as a potential new patient interaction
-        new_apps = Appointment.objects.filter(provider=user, status='pending').order_by('-created_at')[:5]
+         
         
-        for app in new_apps:
-            patient_name = app.patient.profile.full_name if hasattr(app.patient, 'profile') else app.patient.username
-            activity_feed.append({
-                "id": f"new_app_{app.id}",
-                "type": "new_patient",
-                "text": f"New appointment request from: {patient_name}.",
-                "date": app.created_at
-            })  
-        
-        
-        # 3. Prescriptions Created (Confirmation)
+        # 2. Prescriptions Created (Confirmation)
         if user.role == 'doctor':
-            recent_rx = Prescription.objects.filter(doctor=user).order_by('-date_issued')[:5]
+            recent_rx = Prescription.objects.filter(doctor=user).order_by('-created_at')[:5]
             for rx in recent_rx:
                 patient_name = rx.patient.profile.full_name if hasattr(rx.patient, 'profile') else rx.patient.username
                 activity_feed.append({
                     "id": f"rx_{rx.id}",
                     "type": "prescription",
                     "text": f"Prescription is issued for {patient_name}.",
-                    "date": rx.date_issued
+                    "date": rx.created_at.isoformat()
                 })
                 
         
