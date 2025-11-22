@@ -14,6 +14,7 @@ import {
   Trophy,
   Dices,
   ListOrdered,
+  Star,
 } from "lucide-react";
 import {
   Card,
@@ -48,6 +49,7 @@ import {
 } from "../../components/ui/dialog";
 import { format } from "date-fns";
 import { ScrollArea } from "../../components/ui/scroll-area";
+import { Slider } from "../../components/ui/slider"; // <--- SLIDER IMPORT
 
 // --- CONFIG ---
 const INITIAL_LENGTH = 1;
@@ -90,7 +92,9 @@ const generateRandomNumber = (length: number): string => {
     for (let i = 1; i < length; i++) {
       number += Math.floor(Math.random() * 10).toString();
     }
-  } else {
+  }
+  // Handles length 1 where 0 is allowed
+  else {
     number = Math.floor(Math.random() * 10).toString();
   }
   return number;
@@ -156,7 +160,9 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
     (levelIndex: number) => {
       const levelConfig = GAME_LEVELS[levelIndex];
       if (!levelConfig) {
+        // Max length reached and successfully recalled.
         setGameState("finished");
+        lastSuccessfulLengthRef.current = maxPossibleLength; // Set score to max
         return;
       }
 
@@ -178,7 +184,7 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
         });
       }, levelConfig.length * MEMORIZE_TIME_MS);
     },
-    [toast]
+    [toast, maxPossibleLength]
   );
 
   const startGame = useCallback(() => {
@@ -198,7 +204,7 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
     if (userNumber === currentNumber) {
       // Successful attempt!
       totalReactionTimeRef.current += reactionTime; // Add to total
-      lastSuccessfulLengthRef.current = currentLength; // Update the score to the CURRENT length
+      lastSuccessfulLengthRef.current = currentLength; // Update the score to the CURRENT successful length
 
       const nextLevelIndex = currentLevelIndex + 1;
 
@@ -218,8 +224,10 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
       } else {
         // Game Complete (Max Length Reached)
         setGameState("finished");
+        // lastSuccessfulLengthRef.current is already set to maxPossibleLength by startLevel, but let's confirm:
+        const finalScore = maxPossibleLength;
 
-        if (currentLength > stats.highest_score) {
+        if (finalScore > stats.highest_score) {
           setIsHighestScore(true);
         }
 
@@ -233,17 +241,17 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
       // Incorrect answer -> GAME OVER (Single mistake rule)
       setGameState("finished");
 
-      // Final score to save is the length of the number that was being attempted
-      const finalScore = currentLength;
+      // Final score to save is the length of the LAST SUCCESSFULLY COMPLETED number
+      const finalScore = lastSuccessfulLengthRef.current;
 
       // Check for highest score against the stored highest completion
-      if (lastSuccessfulLengthRef.current > stats.highest_score) {
+      if (finalScore > stats.highest_score) {
         setIsHighestScore(true);
       }
 
       toast({
         title: "Game Over!",
-        description: `Incorrect. Final length being attempted: ${finalScore} digits.`,
+        description: `Incorrect. Final successful length: ${finalScore} digits.`,
         variant: "destructive",
       });
     }
@@ -266,18 +274,16 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
     };
   }, []);
 
-  // The score that will be saved to the database: The length of the number being attempted
+  // --- SCORE CALCULATION (BUG FIX INTEGRATED) ---
   const scoreToSave = useMemo(() => {
     if (gameState !== "finished") return 0;
 
-    // If MAX level was completed, score is MAX_LENGTH
-    if (currentLevelIndex === GAME_LEVELS.length) {
-      return maxPossibleLength;
-    }
+    // Use the last successfully completed length (0 if no levels were completed)
+    const finalScore = lastSuccessfulLengthRef.current;
 
-    // If a failure, score is the length of the number that was being attempted
-    return currentLength;
-  }, [gameState, currentLevelIndex, currentLength, maxPossibleLength]);
+    // Ensure a minimum score of 1 if the game finished but somehow the score is 0
+    return finalScore || 1;
+  }, [gameState]);
 
   // The time to save (Fixed: use the ref directly when needed)
   const timeToSave = totalReactionTimeRef.current;
@@ -288,13 +294,18 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
 
     // Final Payload containing both game results and matrix data
     const payload: LongestNumberPayload = {
-      max_number_length: scoreToSave,
-      total_attempts: totalAttempts,
-      total_reaction_time_ms: timeToSave,
+      // Ensure all values are rounded to integers as expected by the Django model/serializer
+      max_number_length: Math.round(scoreToSave),
+      total_attempts: Math.round(totalAttempts),
+      total_reaction_time_ms: Math.round(timeToSave),
       ...matrixData, // Includes post_game_mood, perceived_effort, stress_reduction_rating
     };
 
-    // Log the payload being sent for debugging confirmation
+    // Log the payload being sent for debugging confirmation (IMPORTANT FOR YOU!)
+    console.log(
+      "Saving Final Score (max_number_length):",
+      payload.max_number_length
+    );
     console.log("Sending Payload:", payload);
 
     try {
@@ -317,7 +328,7 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
       console.error("Save Failed:", err);
       toast({
         title: "Save Failed",
-        description: "Failed to save result. Check console for details.",
+        description: `Failed to save result. Check console for details. Server error was likely: ${err.message}`,
         variant: "destructive",
       });
     } finally {
@@ -326,36 +337,19 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
   };
 
   // --- UI Render Helpers ---
-  const getGameMessage = () => {
-    switch (gameState) {
-      case "initial":
-        return "Start at 1 Digit. Go for 25!";
-      case "memorize":
-        return currentNumber;
-      case "input":
-        return "Enter the number below";
-      case "success":
-        return "Correct! Next Level Loading...";
-      case "finished":
-        return `Game Over. Final Attempted Length: ${scoreToSave} Digits.`;
-      default:
-        return "";
-    }
-  };
-
   const getGameClasses = () => {
     switch (gameState) {
       case "memorize":
-        return "bg-indigo-600 text-white text-6xl font-extrabold shadow-2xl animate-pulse font-mono tracking-widest";
+        return "bg-indigo-600 text-white border-indigo-700 shadow-2xl animate-pulse font-mono tracking-widest";
       case "input":
-        return "bg-gray-100 text-gray-700 text-2xl font-mono";
+        return "bg-gray-100 text-gray-700 border-primary/50 shadow-inner";
       case "success":
-        return "bg-green-200 text-green-800 text-3xl animate-bounce";
+        return "bg-green-100 text-green-800 border-green-500 shadow-lg animate-bounce";
       case "finished":
-        return "bg-red-100 text-red-800 text-2xl";
+        return "bg-red-100 text-red-800 border-red-500 shadow-xl";
       case "initial":
       default:
-        return "bg-gray-100 text-gray-700 text-2xl";
+        return "bg-gray-100 text-gray-700 border-gray-300";
     }
   };
 
@@ -373,7 +367,8 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
       .map((item, index) => ({
         rank: index + 1,
         score: item.score,
-        time: item.time,
+        // Convert time to seconds and format
+        time: (item.time / 1000).toFixed(2),
         date: format(new Date(item.created_at), "MMM dd, yyyy HH:mm"),
       }));
   }, [stats.history]);
@@ -391,10 +386,18 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
     return "";
   };
 
+  // Dynamic font size calculation (NEW/MODIFIED LOGIC)
+  const numberFontSizeClass =
+    currentLength <= 10
+      ? "text-7xl sm:text-8xl"
+      : currentLength <= 15
+      ? "text-6xl sm:text-7xl"
+      : "text-4xl sm:text-5xl";
+
   // --- Main Render ---
   return (
     <Card className="w-full max-w-4xl mx-auto mt-10 shadow-2xl">
-      {/* CONGRATULATIONS POP-UP DIALOG (Not changed) */}
+      {/* CONGRATULATIONS POP-UP DIALOG */}
       <Dialog
         open={gameState === "finished" && isHighestScore}
         onOpenChange={(open) => !open && setIsHighestScore(false)}
@@ -409,7 +412,7 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
           <p className="text-lg">
             Congratulations! You set a new personal record:
             <span className="font-extrabold text-2xl text-green-600 ml-2">
-              {stats.highest_score} Digits
+              {scoreToSave} Digits
             </span>
           </p>
           <div className="flex justify-center mt-4">
@@ -451,14 +454,13 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
                 second per digit).
               </li>
               <li>Once the number disappears, quickly enter the number.</li>
-              <li>**A single mistake ends the game (Game Over).**</li>
+              <li>
+                **A single mistake ends the game.** Your score is the length of
+                the **last successfully recalled** number.
+              </li>
               <li>
                 If correct, you immediately advance to the next level with **one
                 additional digit**.
-              </li>
-              <li>
-                Your final score recorded is the **length of the number you
-                failed on.**
               </li>
             </ol>
           </DialogContent>
@@ -466,11 +468,9 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
       </CardHeader>
 
       <CardContent>
-        {/* Game Stats Card (Not changed) */}
+        {/* Game Stats Card (Sleek) */}
         <Card className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50">
           <div className="grid grid-cols-4 text-center divide-x divide-gray-300">
-            {" "}
-            {/* Added divide-x */}
             <div>
               <Trophy className="w-5 h-5 mx-auto text-yellow-500" />
               <p className="text-xs font-semibold mt-1">Highest Score</p>
@@ -496,22 +496,76 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            {/* Game Area (Not changed) */}
+            {/* Game Area - UPGRADED FOCUS CARD (With Number Display Fix) */}
             <div
               className={`
-								h-40 w-full rounded-lg flex flex-col items-center justify-center transition-all duration-500 select-none
+								h-60 w-full rounded-2xl flex flex-col items-center justify-center transition-all duration-500 ease-in-out select-none p-8
+								border-4
 								${getGameClasses()}
 							`}
             >
-              <p className="tracking-widest">{getGameMessage()}</p>
-              {(gameState === "memorize" || gameState === "success") && (
-                <p className="text-sm mt-2 opacity-80">
-                  Current Length: {currentLength} digits
-                </p>
+              {gameState === "memorize" ? (
+                <>
+                  <div className="text-center w-full overflow-hidden">
+                    <p className="text-2xl mb-2 font-light tracking-wider opacity-80">
+                      Memorize This Sequence:
+                    </p>
+                    {/* CRITICAL FIX APPLIED HERE: Dynamic font size and reduced tracking */}
+                    <p
+                      className={`${numberFontSizeClass} font-black tracking-normal whitespace-nowrap overflow-x-auto mx-auto max-w-full px-4`}
+                      style={{
+                        letterSpacing:
+                          currentLength > 15 ? "-0.05em" : "normal",
+                      }}
+                    >
+                      {currentNumber}
+                    </p>
+                    <p className="text-sm mt-4 opacity-80 font-semibold">
+                      Length: {currentLength} digits
+                    </p>
+                  </div>
+                </>
+              ) : gameState === "input" ? (
+                <>
+                  <Clock className="w-10 h-10 text-gray-500 mb-4 animate-pulse" />
+                  <p className="text-4xl font-bold text-gray-800">
+                    ENTER THE NUMBER!
+                  </p>
+                  <p className="text-base text-gray-600 mt-2">
+                    (Length: {currentLength} digits)
+                  </p>
+                </>
+              ) : gameState === "success" ? (
+                <>
+                  <Star className="w-12 h-12 text-green-600 mb-4 animate-ping" />
+                  <p className="text-4xl font-bold">CORRECT!</p>
+                  <p className="text-xl mt-2">Next Level Loading...</p>
+                </>
+              ) : gameState === "finished" ? (
+                <>
+                  <X className="w-12 h-12 text-red-600 mb-4" />
+                  <p className="text-4xl font-bold">GAME OVER</p>
+                  <p className="text-xl mt-2">
+                    Final Successful Length:{" "}
+                    <span className="text-primary font-extrabold">
+                      {lastSuccessfulLengthRef.current} Digits
+                    </span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Brain className="w-10 h-10 text-primary mb-4" />
+                  <p className="text-3xl font-bold text-gray-800">
+                    Longest Number Recall
+                  </p>
+                  <p className="text-base text-gray-600 mt-2">
+                    Press START to begin your challenge!
+                  </p>
+                </>
               )}
             </div>
 
-            {/* Progress (Not changed) */}
+            {/* Progress */}
             {gameState !== "initial" &&
               gameState !== "finished" &&
               currentLevel && (
@@ -529,33 +583,43 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
                 </div>
               )}
 
-            {/* Input/Control Area (Not changed) */}
+            {/* Input/Control Area - REFINED */}
             <div className="mt-6">
               {gameState === "input" && (
                 <div className="flex gap-2">
                   <Input
-                    type="number"
+                    type="text"
+                    pattern="[0-9]*"
+                    inputMode="numeric"
                     placeholder={`Enter the ${currentLength}-digit number`}
                     value={userNumber}
-                    onChange={(e) =>
-                      setUserNumber(e.target.value.substring(0, currentLength))
-                    }
-                    className="text-lg text-center font-mono"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, "");
+                      setUserNumber(value.substring(0, currentLength));
+                    }}
+                    className="text-2xl text-center font-mono py-6 border-2 border-primary ring-offset-2 ring-primary focus-visible:ring-2"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") checkAnswer();
                     }}
+                    maxLength={currentLength}
                   />
-                  <Button onClick={checkAnswer}>Submit</Button>
+                  <Button
+                    onClick={checkAnswer}
+                    size="lg"
+                    className="px-8 font-semibold"
+                  >
+                    Submit
+                  </Button>
                 </div>
               )}
 
-              {/* Start/Play Again buttons (Not changed) */}
-              <div className="flex flex-col gap-2 mt-4">
+              {/* Start/Play Again buttons - REFINED */}
+              <div className="flex flex-col gap-3 mt-4">
                 {(gameState === "initial" || gameState === "finished") && (
                   <Button
                     onClick={startGame}
-                    className="w-full text-lg py-6 bg-green-500 hover:bg-green-600"
+                    className="w-full text-lg py-6 bg-green-600 hover:bg-green-700 shadow-lg"
                   >
                     {gameState === "finished" ? "Play Again" : "Start Game"}
                   </Button>
@@ -563,7 +627,7 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
                 <Button
                   onClick={onGameEnd}
                   variant="outline"
-                  className="w-full"
+                  className="w-full text-base"
                 >
                   <X className="w-4 h-4 mr-2" />
                   Back to Games List
@@ -572,7 +636,7 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
             </div>
           </div>
 
-          {/* Leaderboard/History Card (Not changed) */}
+          {/* Leaderboard/History Card */}
           <Card className="lg:col-span-1 p-0">
             <CardHeader className="p-4 border-b">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -608,10 +672,7 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
                           <td className="p-3 text-lg font-bold text-green-600">
                             {item.score}
                           </td>
-                          <td className="p-3 text-sm font-mono">
-                            {(item.time / 1000).toFixed(2)}
-                          </td>{" "}
-                          {/* Display time in seconds */}
+                          <td className="p-3 text-sm font-mono">{item.time}</td>{" "}
                           <td className="p-3 text-xs text-muted-foreground">
                             {item.date}
                           </td>
@@ -625,114 +686,127 @@ const LongestNumberGame: React.FC<LongestNumberGameProps> = ({ onGameEnd }) => {
           </Card>
         </div>
 
-        {/* --- Post-Game Matrix Submission (UPDATED SECTION) --- */}
+        {/* --- Post-Game Matrix Submission (UPDATED SLEEK SECTION) --- */}
         {gameState === "finished" && (
-          <div className="mt-8 pt-4 border-t border-gray-200">
-            <h3 className="text-xl font-semibold mb-4 text-center">
-              Final Result: {scoreToSave} Digits Attempted
-            </h3>
+          <Card className="mt-8 border-t-4 border-t-primary/50 shadow-inner">
+            <CardHeader className="p-4 border-b">
+              <h3 className="text-xl font-bold text-center text-primary-dark">
+                Game Completed!
+              </h3>
+              <p className="text-center text-3xl font-extrabold text-green-600">
+                Score: {scoreToSave} Digits
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
+                Total Input Time: {(timeToSave / 1000).toFixed(2)}s
+              </p>
+            </CardHeader>
 
-            <h4 className="text-lg font-medium mb-3 text-center text-primary-dark">
-              Submit Mood Matrix (Total Input Time:{" "}
-              {(timeToSave / 1000).toFixed(2)}s)
-            </h4>
+            <CardContent className="p-6">
+              <h4 className="text-lg font-medium mb-4 text-center">
+                Submit Post-Game Assessment
+              </h4>
 
-            {/* --- MATRIX INPUT FIELDS START HERE --- */}
-            <div className="space-y-4 max-w-lg mx-auto p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-              {/* 1. Post Game Mood (Self-Reported Stress) */}
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  1. Post-Game Mood{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (1=Stressed, 5=Calm)
-                  </span>
-                </label>
-                <Select
-                  value={matrixData.post_game_mood.toString()}
-                  onValueChange={(value) =>
-                    setMatrixData((prev) => ({
-                      ...prev,
-                      post_game_mood: parseInt(value),
-                    }))
-                  }
+              {/* --- MATRIX INPUT FIELDS START HERE --- */}
+              <div className="space-y-6 max-w-xl mx-auto">
+                {/* 1. Post Game Mood */}
+                <div className="flex flex-col space-y-2">
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    1. Post-Game Mood{" "}
+                    <span className="text-xs text-primary font-normal">
+                      (1=Stressed, 5=Calm)
+                    </span>
+                  </label>
+                  <Select
+                    value={matrixData.post_game_mood.toString()}
+                    onValueChange={(value) =>
+                      setMatrixData((prev) => ({
+                        ...prev,
+                        post_game_mood: parseInt(value),
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Mood" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="1">1 - Very Stressed 😩</SelectItem>
+                        <SelectItem value="2">2 - Stressed 😟</SelectItem>
+                        <SelectItem value="3">3 - Neutral 😐</SelectItem>
+                        <SelectItem value="4">4 - Calm 🙂</SelectItem>
+                        <SelectItem value="5">5 - Very Calm 😊</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 2. Perceived Effort (1-10 Scale) - Using Slider */}
+                <div className="flex flex-col space-y-4">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      2. Perceived Effort:{" "}
+                      <span className="font-bold text-lg text-primary">
+                        {matrixData.perceived_effort}
+                      </span>
+                    </label>
+                    <span className="text-xs text-primary font-normal">
+                      (1=Low, 10=High)
+                    </span>
+                  </div>
+                  <Slider
+                    defaultValue={[matrixData.perceived_effort]}
+                    min={1}
+                    max={10}
+                    step={1}
+                    onValueChange={(value) =>
+                      setMatrixData((prev) => ({
+                        ...prev,
+                        perceived_effort: value[0],
+                      }))
+                    }
+                    className="w-full"
+                  />
+                </div>
+
+                {/* 3. Stress Reduction Rating (1-10 Scale) - Using Slider */}
+                <div className="flex flex-col space-y-4">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      3. Stress Reduction Rating:{" "}
+                      <span className="font-bold text-lg text-primary">
+                        {matrixData.stress_reduction_rating}
+                      </span>
+                    </label>
+                    <span className="text-xs text-primary font-normal">
+                      (1=No, 10=Yes)
+                    </span>
+                  </div>
+                  <Slider
+                    defaultValue={[matrixData.stress_reduction_rating]}
+                    min={1}
+                    max={10}
+                    step={1}
+                    onValueChange={(value) =>
+                      setMatrixData((prev) => ({
+                        ...prev,
+                        stress_reduction_rating: value[0],
+                      }))
+                    }
+                    className="w-full"
+                  />
+                </div>
+
+                <Button
+                  onClick={saveResult}
+                  disabled={isSaving}
+                  className="w-full mt-6 text-lg py-6 bg-blue-600 hover:bg-blue-700 shadow-xl"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Mood" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="1">1 - Very Stressed 😩</SelectItem>
-                      <SelectItem value="2">2 - Stressed 😟</SelectItem>
-                      <SelectItem value="3">3 - Neutral 😐</SelectItem>
-                      <SelectItem value="4">4 - Calm 🙂</SelectItem>
-                      <SelectItem value="5">5 - Very Calm 😊</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  {isSaving ? "Saving..." : "Save Result and Assessment"}
+                </Button>
               </div>
-
-              {/* 2. Perceived Effort (1-10 Scale) */}
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  2. Perceived Effort{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (1=Low, 10=High)
-                  </span>
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={matrixData.perceived_effort}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setMatrixData((prev) => ({
-                      ...prev,
-                      perceived_effort: isNaN(val)
-                        ? 0
-                        : Math.min(10, Math.max(1, val)),
-                    }));
-                  }}
-                  className="text-center"
-                />
-              </div>
-
-              {/* 3. Stress Reduction Rating (1-10 Scale) */}
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  3. Stress Reduction Rating{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (1=No, 10=Yes)
-                  </span>
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={matrixData.stress_reduction_rating}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setMatrixData((prev) => ({
-                      ...prev,
-                      stress_reduction_rating: isNaN(val)
-                        ? 0
-                        : Math.min(10, Math.max(1, val)),
-                    }));
-                  }}
-                  className="text-center"
-                />
-              </div>
-
-              <Button
-                onClick={saveResult}
-                disabled={isSaving}
-                className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-              >
-                {isSaving ? "Saving..." : "Save Result and Matrix Data"}
-              </Button>
-            </div>
-            {/* --- MATRIX INPUT FIELDS END HERE --- */}
-          </div>
+              {/* --- MATRIX INPUT FIELDS END HERE --- */}
+            </CardContent>
+          </Card>
         )}
         {/* --- END Post-Game Matrix Submission --- */}
       </CardContent>
