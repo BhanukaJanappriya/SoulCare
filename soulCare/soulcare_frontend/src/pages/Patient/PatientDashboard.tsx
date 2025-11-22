@@ -171,17 +171,7 @@ const PatientDashboard: React.FC = () => {
   );
 
   return (
-    <div className="p-6">
-      {/* Welcome Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          Welcome back, {user?.profile?.full_name || "Patient"}! 👋
-        </h1>
-        <p className="text-muted-foreground">
-          Let's continue your journey to better mental well-being
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Quick Stats */}
       {isLoading ? (
         <LoadingSkeleton />
