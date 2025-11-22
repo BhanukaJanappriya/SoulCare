@@ -1,7 +1,7 @@
-import React, { useCallback } from "react"; // ADDED useCallback
+import React, { useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePatientDashboardData } from "@/hooks/usePatientDashboardData";
-import MeditationTimerCard from "@/components/common/MeditationTimerCard"; // NEW IMPORT
+import MeditationTimerCard from "@/components/common/MeditationTimerCard";
 import {
   Card,
   CardContent,
@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast"; // Assuming this is the correct toast hook
-// Importing the HabitTask type to fix the 'any' error
-import type { HabitTask, Appointment } from "@/types"; // Import types for better safety
+import { useToast } from "@/components/ui/use-toast";
+import type { HabitTask, Appointment, Habit } from "@/types"; // Added Habit type
+import { useNavigate } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -42,13 +42,11 @@ import {
   Loader2,
 } from "lucide-react";
 
-// NEW: Helper function to calculate habit progress
-// Using HabitTask type to resolve the 'any' error
+// NEW HELPER FUNCTION: Calculates progress based on TASKS (for the Habit Card)
 const calculateHabitProgress = (habits: { tasks: HabitTask[] }[]) => {
   const totalTasks = habits.reduce((sum, h) => sum + h.tasks.length, 0);
-  // NOTE: Assuming your backend field is 'is_completed', if not, this needs correction in types/backend
   const completedTasks = habits.reduce(
-    (sum, h) => sum + h.tasks.filter((t: HabitTask) => t.isCompleted).length, // Using is_completed for now
+    (sum, h) => sum + h.tasks.filter((t: HabitTask) => t.isCompleted).length,
     0
   );
   if (totalTasks === 0) return { percent: 0, completed: 0, total: 0 };
@@ -59,11 +57,20 @@ const calculateHabitProgress = (habits: { tasks: HabitTask[] }[]) => {
   };
 };
 
+// NEW HELPER FUNCTION: Calculates progress based on HABITS (for the Pie Chart)
+const calculateDailyHabitCompletion = (habits: Habit[]) => {
+  const totalHabits = habits.length;
+  if (totalHabits === 0) return 0;
+
+  const completedHabits = habits.filter((h) => h.completedToday).length;
+
+  return Math.round((completedHabits / totalHabits) * 100);
+};
+
 // NEW: Mock function to simulate saving the meditation session
 const saveMeditationSession = async (durationMinutes: number) => {
   // TODO: IMPLEMENT API CALL TO DJANGO BACKEND HERE
-  // Example: await api.post('/meditation/sessions/', { duration_minutes: durationMinutes });
-  await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
   console.log(`Simulated saving ${durationMinutes} minutes of meditation.`);
   return true;
 };
@@ -72,6 +79,7 @@ const PatientDashboard: React.FC = () => {
   const { user } = useAuth();
   const { data, isLoading, error, refetch } = usePatientDashboardData();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleMeditationComplete = useCallback(
     async (durationMinutes: number) => {
@@ -82,7 +90,7 @@ const PatientDashboard: React.FC = () => {
           description: `You successfully meditated for ${durationMinutes} minutes. Data saved.`,
           variant: "default",
         });
-        refetch(); // Refetch dashboard data to update total minutes
+        refetch();
       } catch (e) {
         toast({
           title: "Error",
@@ -94,6 +102,12 @@ const PatientDashboard: React.FC = () => {
     [refetch, toast]
   );
 
+  // --- NAVIGATION HANDLERS ---
+  const navigateToAppointments = () => navigate("/patient/book-appointment");
+  const navigateToJournal = () => navigate("/patient/journal");
+  const navigateToGames = () => navigate("/patient/games");
+  // ---------------------------
+
   if (error) {
     return (
       <div className="p-6 text-center text-destructive">
@@ -103,21 +117,26 @@ const PatientDashboard: React.FC = () => {
     );
   }
 
-  // Calculate dynamic habit progress
-  const habitProgress = data
+  // Calculate Habit Card Progress (based on tasks)
+  const habitTaskProgress = data
     ? calculateHabitProgress(data.habits)
     : { percent: 0, completed: 0, total: 0 };
 
-  // Helper for Pie Chart data
+  // CRITICAL FIX: Calculate Daily Progress Percentage (based on habits)
+  const dailyHabitPercentage = data
+    ? calculateDailyHabitCompletion(data.habits)
+    : 0;
+
+  // Helper for Pie Chart data (MODIFIED to use dailyHabitPercentage)
   const pieData = [
     {
       name: "Completed",
-      value: data?.stats.daily_progress_percentage || 0,
+      value: dailyHabitPercentage || 0, // CRITICAL FIX
       fill: "hsl(var(--primary))",
     },
     {
       name: "Remaining",
-      value: 100 - (data?.stats.daily_progress_percentage || 0),
+      value: 100 - (dailyHabitPercentage || 0), // CRITICAL FIX
       fill: "hsl(var(--muted))",
     },
   ];
@@ -127,7 +146,6 @@ const PatientDashboard: React.FC = () => {
     ? new Date(
         (data.stats.next_appointment as Appointment).start_time
       ).toLocaleTimeString([], {
-        // Cast to Appointment for type safety
         hour: "2-digit",
         minute: "2-digit",
       })
@@ -310,7 +328,7 @@ const PatientDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Activity Tracking */}
+          {/* Activity Tracking (Habit Card) */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -323,7 +341,7 @@ const PatientDashboard: React.FC = () => {
               {isLoading && <Skeleton className="h-24 w-full" />}
               {data?.habits.map((habit, index) => {
                 const completedTasks = habit.tasks.filter(
-                  (t) => t.isCompleted // Using is_completed for now
+                  (t) => t.isCompleted
                 ).length;
                 const totalTasks = habit.tasks.length;
                 const progress =
@@ -341,7 +359,10 @@ const PatientDashboard: React.FC = () => {
                           {habit.name}
                         </span>
                         <Badge variant="outline">
-                          {completedTasks}/{totalTasks} tasks
+                          {/* Display habit completion status */}
+                          {habit.completedToday
+                            ? "Completed"
+                            : `${completedTasks}/${totalTasks} tasks`}
                         </Badge>
                       </div>
                       <Progress value={progress} className="h-2" />
@@ -360,11 +381,12 @@ const PatientDashboard: React.FC = () => {
 
         {/* Right Column */}
         <div className="space-y-6">
-          {/* Daily Progress */}
+          {/* Daily Progress (Pie Chart) */}
           <Card>
             <CardHeader>
-              <CardTitle>Daily Progress</CardTitle>
-              <CardDescription>Tasks completed today</CardDescription>
+              <CardTitle className="text-primary">Daily Progress</CardTitle>
+              <CardDescription>Habits completed today</CardDescription>{" "}
+              {/* Updated description */}
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -395,11 +417,11 @@ const PatientDashboard: React.FC = () => {
                     </ResponsiveContainer>
                   </div>
                   <div className="text-center mt-4">
-                    <p className="text-4xl font-extrabold text-foreground">
-                      {data?.stats.daily_progress_percentage}%
+                    <p className="text-4xl font-extrabold text-primary">
+                      {dailyHabitPercentage}%
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Total Daily Goal
+                      Habits Completed
                     </p>
                   </div>
                 </>
@@ -408,7 +430,6 @@ const PatientDashboard: React.FC = () => {
           </Card>
 
           {/* Meditation Timer Card (REPLACEMENT) */}
-          {/* Pass the total minutes and the completion handler */}
           <MeditationTimerCard
             totalSessionsLogged={data?.stats.total_meditation_minutes || 0}
             onSessionComplete={handleMeditationComplete}
@@ -420,15 +441,27 @@ const PatientDashboard: React.FC = () => {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={navigateToAppointments}
+              >
                 <Users className="w-4 h-4 mr-2" />
                 Book Appointment
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={navigateToJournal}
+              >
                 <BookOpen className="w-4 h-4 mr-2" />
                 Write Journal Entry
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={navigateToGames}
+              >
                 <Zap className="w-4 h-4 mr-2" />
                 Play Mind Games
               </Button>

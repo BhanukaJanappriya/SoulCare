@@ -38,7 +38,7 @@ class PatientRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
+
         send_patient_welcome_email(user)
 
         response_data = {
@@ -516,9 +516,13 @@ class PatientDashboardStatsView(APIView):
 
         # --- 2. Today's Mood Score ---
         today = timezone.localdate()
+        
+
+
         today_mood_avg = MoodEntry.objects.filter(
             patient=patient, # Assuming MoodEntry uses 'patient' or 'user' - using 'patient' for now
             date=today
+
         ).aggregate(
             avg_mood=Avg('mood')
         )['avg_mood'] or 0

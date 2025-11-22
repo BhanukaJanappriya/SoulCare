@@ -10,16 +10,13 @@ import {
   Habit,
   Appointment,
   WeeklyMoodDataPoint,
-} from '@/types'; // Assuming these types exist or will be created
+  PatientDashboardStats, // CRITICAL: Import the main type
+} from '@/types';
 
-// New Types (You should ideally move these to '@/types/index.ts')
-export interface PatientDashboardStats {
-  current_streak: number;
-  today_mood_score: number;
-  total_meditation_minutes: number;
-  next_appointment: Appointment | null;
-  daily_progress_percentage: number;
-}
+// --- REMOVED THE DUPLICATE/CONFLICTING INTERFACE DEFINITIONS HERE ---
+// export interface PatientDashboardStats { ... }
+// -------------------------------------------------------------------
+
 
 export interface DashboardData {
   stats: PatientDashboardStats;
@@ -34,10 +31,12 @@ export interface UseDashboardData {
   refetch: () => void;
 }
 
+// Initial stats must align with the full type, including the missing field
 const initialStats: PatientDashboardStats = {
   current_streak: 0,
   today_mood_score: 0,
   total_meditation_minutes: 0,
+  meditation_sessions: 0, // CRITICAL: Added the missing field
   next_appointment: null,
   daily_progress_percentage: 0,
 };
@@ -61,7 +60,7 @@ export const usePatientDashboardData = (): UseDashboardData => {
       const [statsResponse, moodResponse, habitsResponse] = await Promise.all([
         fetchPatientDashboardStats(),
         fetchWeeklyMoodData(),
-        getHabitsAPI(), // Assuming this fetches habits with completion status
+        getHabitsAPI(),
       ]);
 
       setData({
