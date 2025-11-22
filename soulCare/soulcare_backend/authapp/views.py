@@ -414,19 +414,46 @@ class ProviderDashboardStatsView(APIView):
         
         activity_feed = []
         
-        # 1. Appointment Cancellations (Critical)
-        # We look for appointments that are 'cancelled'
-        cancelled_apps = Appointment.objects.filter(provider=user, status='cancelled').order_by('-created_at')[:5]
-        # Note: You might need to add 'updated_at' to your Appointment model if it doesn't exist, 
-        # or use 'created_at' if that's all you have. Assuming 'created_at' for now or using 'date'
-        for app in cancelled_apps:
-            patient_name = app.patient.profile.full_name if hasattr(app.patient, 'profile') else app.patient.username
-            activity_feed.append({
-                "id": f"cancel_{app.id}",
-                "type": "cancellation",
-                "text": f"{patient_name} cancelled their appointment for {app.date}.",
-                "date": app.created_at # Ideally use updated_at if available
-            })
+        # 1. Recent Appointments Logic (Updated)
+        recent_apps = Appointment.objects.filter(provider=user).order_by('-created_at')[:5]
+        for app in recent_apps:
+            # Get patient name safely
+            patient_name = app.patient.username
+            try:
+                 if hasattr(app.patient, 'patientprofile'):
+                    patient_name = app.patient.patientprofile.full_name
+            except: pass
+            
+            activity_type = 'appointment' # Default
+            activity_text = ""
+
+            if app.status == 'pending':
+                activity_type = 'new_patient'
+                activity_text = f"New appointment request from: {patient_name}."
+            
+            elif app.status == 'cancelled':
+                activity_type = 'cancellation'
+                # --- FIX LOGIC HERE ---
+                if app.cancelled_by == 'provider':
+                    activity_text = f"You cancelled the appointment with {patient_name} on {app.date}."
+                else:
+                    # Default to patient if 'cancelled_by' is missing (legacy data) or explicitly 'patient'
+                    activity_text = f"{patient_name} cancelled their appointment for {app.date}."
+            
+            elif app.status == 'scheduled':
+                 activity_text = f"Appointment confirmed with {patient_name} on {app.date}."
+
+            elif app.status == 'completed':
+                 activity_text = f"Appointment completed with {patient_name}."
+
+            # Only add if we generated text (filters out edge cases)
+            if activity_text:
+                activity_feed.append({
+                    "id": f"app_{app.id}",
+                    "type": activity_type,
+                    "text": activity_text,
+                    "date": app.created_at.isoformat()
+                })
             
         
         # 2. New Patient Registrations / First Bookings (Informational)
@@ -451,7 +478,7 @@ class ProviderDashboardStatsView(APIView):
                 activity_feed.append({
                     "id": f"rx_{rx.id}",
                     "type": "prescription",
-                    "text": f"Prescription #{rx.id} issued for {patient_name}.",
+                    "text": f"Prescription is issued for {patient_name}.",
                     "date": rx.date_issued
                 })
                 
@@ -466,7 +493,7 @@ class ProviderDashboardStatsView(APIView):
                 activity_feed.append({
                     "id": f"content_{item.id}",
                     "type": "content_shared",
-                    "text": f"\"{item.title}\" shared with {count} patient(s).",
+                    "text": f"\"{item.title}\" shared with {count} patients.",
                     "date": item.updated_at
                 })
                 

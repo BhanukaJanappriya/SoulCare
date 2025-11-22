@@ -227,3 +227,45 @@ def send_patient_welcome_email(user):
     
     # Send to the user's email address
     send_notification_email(subject, message, [user.email])
+    
+    
+
+# --- SCENARIO 8: Prescription Shared ---
+def send_prescription_shared_email(prescription):
+    patient = prescription.patient
+    doctor = prescription.doctor
+    
+    # Safely get doctor name
+    doctor_name = doctor.username
+    try:
+        if hasattr(doctor, 'doctorprofile'):
+            doctor_name = doctor.doctorprofile.full_name
+    except Exception:
+        pass
+    
+    # Safely get patient name
+    patient_name = patient.username
+    try:
+        if hasattr(patient, 'patientprofile'):
+            patient_name = patient.patientprofile.full_name
+    except Exception:
+        pass
+
+    subject = "SoulCare - New Prescription Received"
+    message = f"""
+    Hello {patient_name},
+
+    Dr. {doctor_name} has issued a new prescription for you.
+
+    Date Issued: {prescription.date_issued}
+    Diagnosis: {prescription.diagnosis}
+
+    Please log in to your Account to view the full details and medication list.
+
+    Best regards,
+    The SoulCare Team
+    """
+    send_notification_email(subject, message, [patient.email])
+    
+    
+    

@@ -103,6 +103,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         old_status = appointment.status
         appointment.status = new_status
+        
+        if new_status == 'cancelled':
+            appointment.cancelled_by = 'provider'
+        
         appointment.save()
         
         if old_status == 'pending' and new_status == 'scheduled':
@@ -134,6 +138,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return Response({'error': 'This appointment can no longer be cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
         
         appointment.status = 'cancelled'
+        
+        appointment.cancelled_by = 'patient'
+        
         appointment.save()
         
         send_appointment_cancelled_email(appointment, cancelled_by_role='patient')
