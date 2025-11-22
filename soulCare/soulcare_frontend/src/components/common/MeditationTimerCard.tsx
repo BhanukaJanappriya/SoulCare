@@ -18,7 +18,6 @@ const DURATION_OPTIONS = [
 ];
 
 interface MeditationTimerCardProps {
-  // Pass the total sessions as a prop for the professional look
   totalSessionsLogged: number;
   onSessionComplete: (durationMinutes: number) => void;
 }
@@ -36,7 +35,6 @@ const useTimer = (
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
-    // FIX 1: Use window.setInterval and declare interval as number
     let interval: number | undefined;
 
     if (isRunning && secondsLeft > 0) {
@@ -46,10 +44,8 @@ const useTimer = (
     } else if (secondsLeft === 0 && isRunning) {
       setIsRunning(false);
       setIsCompleted(true);
-      // Call the success callback
       onSessionComplete(duration / 60);
 
-      // Add an alert or a simple sound for the end of the session
       if ("vibrate" in navigator) {
         navigator.vibrate([200, 100, 200]);
       }
@@ -123,67 +119,71 @@ const MeditationTimerCard: React.FC<MeditationTimerCardProps> = ({
     duration,
   } = useTimer(DURATION_OPTIONS[2].value, onSessionComplete);
 
-  // Calculate the percentage for the radial progress display
   const progressPercent = useMemo(() => {
     if (duration === 0) return 0;
     return 100 - (secondsLeft / duration) * 100;
   }, [secondsLeft, duration]);
 
-  // Determine the primary display message
-  const timerMessage = useMemo(() => {
-    if (isCompleted) return "Session Complete!";
-    if (isRunning) return "Find your focus...";
-    if (secondsLeft < duration && secondsLeft > 0) return "Ready to resume?";
-    return "Choose a duration.";
+  // Dynamic class for the progress ring color
+  const ringColorClass = useMemo(() => {
+    if (isCompleted) return "text-green-500";
+    if (isRunning) return "text-blue-500 shadow-blue-500/50"; // Glow when running
+    if (secondsLeft < duration) return "text-yellow-500"; // Paused
+    return "text-primary";
   }, [isRunning, isCompleted, secondsLeft, duration]);
 
+  // Determine the primary display message
+  const timerMessage = useMemo(() => {
+    if (isCompleted) return "Session Complete! Take a deep breath.";
+    if (isRunning) return "Focus on your breath and let go...";
+    if (secondsLeft < duration && secondsLeft > 0) return "Ready to resume?";
+    return "Select a duration and begin.";
+  }, [isRunning, isCompleted, secondsLeft, duration]);
+
+  // Styles for the enhanced time display
+  const timeDisplayClass = `text-5xl text-primary font-bold transition-colors duration-500 ${
+    isCompleted ? "text-green-600" : "text-foreground"
+  } ${isRunning ? "drop-shadow-lg" : ""}`; // Added drop-shadow
+
   return (
-    <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-primary/20 shadow-xl">
-      <CardHeader>
+    <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-primary/20 shadow-2xl">
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-primary">
           <Brain className="w-5 h-5" />
           Meditation Timer
         </CardTitle>
         <CardDescription>{timerMessage}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col items-center space-y-6">
+      <CardContent className="flex flex-col items-center space-y-6 ">
         {/* Sleek Timer Display (Radial Progress Look) */}
-        <div className="relative flex items-center justify-center w-48 h-48">
-          {/* SVG Ring for Progress Bar */}
+        <div className="relative flex items-center justify-center w-56 h-56">
+          {/* SVG Ring for Progress Bar (Increased size to 56x56 / radius 85) */}
           <svg className="w-full h-full transform -rotate-90 absolute">
             <circle
               className="text-muted-foreground/20"
-              strokeWidth="10"
+              strokeWidth="12" // Slightly thicker ring
               stroke="currentColor"
               fill="transparent"
-              r="70"
-              cx="96"
-              cy="96"
+              r="105"
+              cx="112" // Center X for 56x56
+              cy="112" // Center Y for 56x56
             />
             <circle
-              className={`text-primary transition-all duration-1000 ${
-                isCompleted ? "text-green-500" : "text-primary"
-              }`}
-              strokeWidth="10"
-              strokeDasharray={2 * Math.PI * 70}
-              strokeDashoffset={2 * Math.PI * 70 * (1 - progressPercent / 100)}
+              className={`${ringColorClass} transition-all duration-1000`}
+              strokeWidth="14"
+              strokeDasharray={2 * Math.PI * 85}
+              strokeDashoffset={2 * Math.PI * 85 * (1 - progressPercent / 100)}
               strokeLinecap="round"
               stroke="currentColor"
               fill="transparent"
-              r="70"
-              cx="96"
-              cy="96"
+              r="85"
+              cx="112"
+              cy="112"
             />
           </svg>
 
           {/* Time Display */}
-          <span
-            className={`text-5xl font-extrabold transition-colors duration-500 ${
-              isCompleted ? "text-green-600" : "text-foreground"
-            }`}
-          >
-            {formatTime(secondsLeft)}
-          </span>
+          <span className={timeDisplayClass}>{formatTime(secondsLeft)}</span>
         </div>
 
         {/* Duration Selection Buttons */}
@@ -194,19 +194,29 @@ const MeditationTimerCard: React.FC<MeditationTimerCardProps> = ({
               variant={duration === opt.value ? "default" : "outline"}
               size="sm"
               onClick={() => setTime(opt.value)}
-              disabled={isRunning}
+              disabled={isRunning} // FIXED: Removed '|| isLoading'
             >
               {opt.label}
             </Button>
           ))}
         </div>
 
-        {/* Control Buttons */}
-        <div className="flex space-x-4 w-full justify-center">
-          {/* Start/Pause Button */}
+        {/* Control Buttons - Simplified layout */}
+        <div className="flex space-x-2 w-full max-w-sm justify-center">
+          {/* Reset Button (Moved to the end) */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={reset}
+            disabled={isRunning}
+          >
+            <RotateCcw />
+          </Button>
+
+          {/* Start/Pause Button (Main Action) */}
           <Button
             size="lg"
-            className="flex-1 max-w-[200px]"
+            className="flex-1"
             onClick={isRunning ? pause : start}
             disabled={secondsLeft === 0 && !isCompleted}
           >
@@ -214,22 +224,19 @@ const MeditationTimerCard: React.FC<MeditationTimerCardProps> = ({
             {isRunning ? "Pause" : isCompleted ? "Restart" : "Start"}
           </Button>
 
-          {/* Reset Button */}
-          <Button variant="outline" size="icon" onClick={reset}>
-            <RotateCcw />
-          </Button>
-
           {/* Sound Button (Placeholder) */}
           <Button
             variant="outline"
             size="icon"
             onClick={() => alert("Toggle Calming Sound...")}
+            disabled={isRunning}
           >
             <Volume2 />
           </Button>
         </div>
+
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          Total minutes logged: {totalSessionsLogged}
+          Total meditation minutes logged: {totalSessionsLogged}
         </p>
       </CardContent>
     </Card>
