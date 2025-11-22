@@ -42,6 +42,7 @@ import {
   Activity,
   ProgressNote,
   ProgressNoteInput,
+  PatientUpdateInput,
 
 } from '@/types';
 
@@ -781,7 +782,7 @@ export const createReviewAPI = async (data: ReviewInput): Promise<Review> => {
 
 //Updating the Patient Datails(risk_status) API
 
-export const updatePatientDetailsAPI = async (patientId: string | number, data: any): Promise<PatientDetailData> => {
+export const updatePatientDetailsAPI = async (patientId: string | number, data: PatientUpdateInput): Promise<PatientDetailData> => {
   // Using PATCH to update only changed fields
   const response = await axiosInstance.patch<PatientDetailData>(`patients/${patientId}/`, data);
   return response.data;

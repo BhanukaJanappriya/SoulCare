@@ -357,7 +357,7 @@ export type MissedHabitItem = {
 export interface ActivityItem {
   id: string;
   // Updated types to match your requirements
-  type: 'cancellation' | 'new_patient' | 'prescription' | 'content_shared'; 
+  type: 'cancellation' | 'new_patient' | 'prescription' | 'content_shared';
   text: string;
   date: string; // ISO string
 }
@@ -553,4 +553,16 @@ export interface WeeklyMoodDataPoint {
   mood: number;
   energy: number;
   anxiety: number;
+}
+
+
+export interface PatientUpdateInput {
+    // Define specific fields you expect to update
+    risk_status?: 'low' | 'medium' | 'high' | string;
+    full_name?: string;
+    contact_number?: string;
+    // ... add any other top-level fields you might patch
+
+    // If you are patching the nested profile data, you would use:
+    patientprofile?: Partial<PatientProfile>;
 }
