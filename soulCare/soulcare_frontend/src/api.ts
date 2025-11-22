@@ -22,7 +22,6 @@ import {
   ProviderStatsData,
   ContentItem,
   ContentFormData,
-  BlogPost,
   ReactionTimePayload,
   MemoryGamePayload,
   StroopGamePayload,
@@ -43,6 +42,11 @@ import {
   ProgressNote,
   ProgressNoteInput,
   PatientUpdateInput,
+  BlogPost,
+  BlogComment,
+  BlogReactionType,
+  BlogSortBy,
+  BlogInputData
 
 } from '@/types';
 
@@ -488,16 +492,6 @@ export const getAdminBlogsAPI = async (statusFilter: string = 'all'): Promise<Bl
   return response.data;
 };
 
-// Update status (Approve/Reject)
-export const updateBlogStatusAPI = async (id: string, status: 'published' | 'rejected'): Promise<BlogPost> => {
-  const response = await api.patch<BlogPost>(`blogs/${id}/`, { status });
-  return response.data;
-};
-
-// Delete Blog
-export const deleteBlogAPI = async (id: string): Promise<void> => {
-  await api.delete(`blogs/${id}/`);
-};
 
 
 // =================================================================
@@ -808,4 +802,105 @@ export const createProgressNoteAPI = async (data: ProgressNoteInput): Promise<Pr
 
 export const deleteProgressNoteAPI = async (noteId: number): Promise<void> => {
     await api.delete(`appointments/notes/${noteId}/`);
+};
+
+
+// =================================================================
+// --- BLOG ADMIN & PUBLIC API FUNCTIONS (MODIFIED/NEW) ---
+// =================================================================
+
+// Function to fetch all blogs (public and private, with sorting)
+export const getBlogPostsAPI = async (
+    statusFilter: string = 'all',
+    sortBy: BlogSortBy = 'newest'
+): Promise<BlogPost[]> => {
+    // Uses the main 'api' instance
+    const response = await api.get<BlogPost[]>('blogs/', {
+        params: {
+            status: statusFilter,
+            sort_by: sortBy // Pass the sorting parameter
+        }
+    });
+    // NOTE: Frontend must ensure BlogPosts are correctly typed with aggregated fields now
+    return response.data;
+};
+
+// Update status (Approve/Reject)
+export const updateBlogStatusAPI = async (id: string, status: 'published' | 'rejected'): Promise<BlogPost> => {
+  const response = await api.patch<BlogPost>(`blogs/${id}/`, { status });
+  return response.data;
+};
+
+// Create Blog
+export const createBlogPostAPI = async (data: BlogInputData): Promise<BlogPost> => {
+  // Use 'any' here as the input structure might change slightly, and the output is BlogPost
+  const response = await api.post<BlogPost>('blogs/', data);
+  return response.data;
+};
+
+// Update Blog
+export const updateBlogPostAPI = async (id: string, data: Partial<BlogInputData>): Promise<BlogPost> => {
+  const response = await api.put<BlogPost>(`blogs/${id}/`, data); // Note: Should be PUT or PATCH depending on your backend view
+  return response.data;
+};
+
+// Delete Blog
+export const deleteBlogAPI = async (id: string): Promise<void> => {
+  await api.delete(`blogs/${id}/`);
+};
+
+
+// =================================================================
+// --- BLOG COMMENTS & ENGAGEMENT API FUNCTIONS (NEW) ---
+// =================================================================
+
+/**
+ * Fetches all comments for a specific blog post.
+ * GET /api/blogs/{blog_pk}/comments/
+ */
+export const getBlogCommentsAPI = async (blogId: string | number): Promise<BlogComment[]> => {
+    const response = await api.get<BlogComment[]>(`blogs/${blogId}/comments/`);
+    return response.data;
+};
+
+/**
+ * Submits a new comment to a blog post.
+ * POST /api/blogs/{blog_pk}/comments/
+ */
+export const createBlogCommentAPI = async (blogId: string | number, content: string): Promise<BlogComment> => {
+    const response = await api.post<BlogComment>(`blogs/${blogId}/comments/`, { content });
+    return response.data;
+};
+
+/**
+ * Submits or updates a rating (1-5) for a blog post.
+ * POST /api/blogs/{blog_pk}/ratings/rate/
+ */
+export const rateBlogPostAPI = async (blogId: string | number, rating: number): Promise<{ detail: string }> => {
+    const response = await api.post<{ detail: string }>(`blogs/${blogId}/ratings/rate/`, { rating });
+    return response.data;
+};
+
+/**
+ * Submits or updates a reaction (like/love/insightful) for a blog post.
+ * POST /api/blogs/{blog_pk}/reactions/react/
+ */
+export const reactToBlogPostAPI = async (blogId: string | number, type: BlogReactionType): Promise<{ detail: string }> => {
+    const response = await api.post<{ detail: string }>(`blogs/${blogId}/reactions/react/`, { type });
+    return response.data;
+};
+
+/**
+ * Removes the user's reaction from a blog post.
+ * DELETE /api/blogs/{blog_pk}/reactions/unreact/
+ */
+export const unreactToBlogPostAPI = async (blogId: string | number): Promise<void> => {
+    await api.delete(`blogs/${blogId}/reactions/unreact/`);
+};
+
+// NOTE: Also add unrateBlogPostAPI if you need a specific button to remove a rating.
+// It is not strictly necessary as a new rating overwrites the old one, but for completeness:
+// DELETE /api/blogs/{blog_pk}/ratings/unrate/
+export const unrateBlogPostAPI = async (blogId: string | number): Promise<void> => {
+    await api.delete(`blogs/${blogId}/ratings/unrate/`);
 };

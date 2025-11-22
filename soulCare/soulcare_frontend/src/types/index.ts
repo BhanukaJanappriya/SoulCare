@@ -566,3 +566,79 @@ export interface PatientUpdateInput {
     // If you are patching the nested profile data, you would use:
     patientprofile?: Partial<PatientProfile>;
 }
+
+
+// --- BLOG ENGAGEMENT TYPES ---
+
+// Matches BlogCommentSerializer.get_author
+export interface CommentAuthor {
+  id: number;
+  username: string;
+  email: string;
+  role: UserRole;
+  full_name: string;
+  guestName?: string | null;
+  guestEmail?: string | null;
+}
+
+// Matches BlogCommentSerializer
+export interface BlogComment {
+  id: number;
+  post: number;
+  author: CommentAuthor | null; 
+  content: string;
+  createdAt: string;
+}
+
+// Matches BlogPostSerializer aggregated fields
+export interface BlogAggregates {
+  average_rating: number; // 0.0 to 5.0
+  rating_count: number;
+  comment_count: number;
+  reaction_counts: {
+    like: number;
+    love: number;
+    insightful: number;
+  };
+}
+
+// Update the main BlogPost interface to include the new aggregated fields
+export interface BlogPost {
+  id: string;
+  authorId: string;
+  title: string;
+  content: string;
+  excerpt: string;
+  author_name?: string;
+  author_role?: string;
+  tags: string[];
+  status: 'draft' | 'pending' | 'published' | 'rejected';
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  // New Aggregated fields
+  average_rating: number;
+  rating_count: number;
+  comment_count: number;
+  reaction_counts: {
+    like: number;
+    love: number;
+    insightful: number;
+  };
+}
+
+export type BlogReactionType = 'like' | 'love' | 'insightful';
+export type BlogSortBy = 'newest' | 'oldest' | 'top_rated';
+
+
+export interface BlogInputData {
+    title: string;
+    content: string;
+    excerpt?: string;
+    tags_input?: string; // Comma-separated tags string
+    status: 'draft' | 'pending' | 'published' | 'rejected';
+}
+
+
+
+
