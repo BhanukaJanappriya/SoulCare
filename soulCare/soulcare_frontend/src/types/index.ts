@@ -199,16 +199,18 @@ export interface Notification {
   createdAt: Date;
 }
 
+//Progress note Interfaces
 export interface ProgressNote {
-  id: string;
-  patientId: string;
-  providerId: string;
-  appointmentId?: string;
-  type: 'therapy' | 'medical' | 'general';
-  content: string;
-  goals: string[];
-  nextSteps: string[];
-  createdAt: Date;
+    id: number;
+    patient_id: number;
+    content: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ProgressNoteInput {
+    patient_id: number;
+    content: string;
 }
 
 

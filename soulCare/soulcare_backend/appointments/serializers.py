@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Appointment
+from .models import Appointment,ProgressNote
 from authapp.models import User
 from authapp.serializers import ProviderListSerializer # Keep this for the read view
 
@@ -34,3 +34,18 @@ class AppointmentWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ['id', 'provider', 'date', 'time', 'notes']
+        
+        
+
+class ProgressNoteSerializer(serializers.ModelSerializer):
+    # We only need to send the patient ID when creating
+    patient_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role='user'),
+        source='patient',
+        write_only=True
+    )
+    
+    class Meta:
+        model = ProgressNote
+        fields = ['id', 'patient_id', 'content', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

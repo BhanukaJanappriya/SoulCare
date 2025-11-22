@@ -2,8 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Appointment
-from .serializers import AppointmentReadSerializer, AppointmentWriteSerializer
+from .models import Appointment,ProgressNote
+from .serializers import AppointmentReadSerializer, AppointmentWriteSerializer,ProgressNoteSerializer
 from authapp.models import User
 from datetime import date
 from authapp.utils import send_appointment_approved_email,send_appointment_cancelled_email
@@ -163,3 +163,29 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         # Return a success response with no content, which is standard for DELETE
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    
+class ProgressNoteViewSet(viewsets.ModelViewSet):
+    serializer_class = ProgressNoteSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        - Providers see ONLY notes they wrote for the specific patient.
+        """
+        user = self.request.user
+        if user.role not in ['doctor', 'counselor']:
+            return ProgressNote.objects.none()
+
+        queryset = ProgressNote.objects.filter(provider=user)
+        
+        # Filter by patient_id (Required)
+        patient_id = self.request.query_params.get('patient_id')
+        if patient_id:
+            queryset = queryset.filter(patient_id=patient_id)
+            
+        return queryset
+
+    def perform_create(self, serializer):
+        # Auto-assign the logged-in provider
+        serializer.save(provider=self.request.user)

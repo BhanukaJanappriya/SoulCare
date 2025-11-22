@@ -39,7 +39,9 @@ import {
   WeeklyMoodDataPoint,
   MoodEntry,
   MoodEntryInput,
-  Activity
+  Activity,
+  ProgressNote,
+  ProgressNoteInput,
 
 } from '@/types';
 
@@ -777,10 +779,32 @@ export const createReviewAPI = async (data: ReviewInput): Promise<Review> => {
 
 
 
-//Updating the Patient Datails API
+//Updating the Patient Datails(risk_status) API
 
 export const updatePatientDetailsAPI = async (patientId: string | number, data: any): Promise<PatientDetailData> => {
   // Using PATCH to update only changed fields
   const response = await axiosInstance.patch<PatientDetailData>(`patients/${patientId}/`, data);
   return response.data;
+};
+
+
+// =================================================================
+// --- PROGRESS NOTES API ---
+// =================================================================
+
+export const getProgressNotesAPI = async (patientId: string | number): Promise<ProgressNote[]> => {
+    // Note: The endpoint is nested under appointments app, so /api/appointments/notes/
+    const response = await api.get<ProgressNote[]>('appointments/notes/', {
+        params: { patient_id: patientId }
+    });
+    return response.data;
+};
+
+export const createProgressNoteAPI = async (data: ProgressNoteInput): Promise<ProgressNote> => {
+    const response = await api.post<ProgressNote>('appointments/notes/', data);
+    return response.data;
+};
+
+export const deleteProgressNoteAPI = async (noteId: number): Promise<void> => {
+    await api.delete(`appointments/notes/${noteId}/`);
 };

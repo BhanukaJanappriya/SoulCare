@@ -36,3 +36,17 @@ class Appointment(models.Model):
             self.start_time = datetime.combine(self.date, time_obj)
 
         super().save(*args, **kwargs)
+        
+        
+class ProgressNote(models.Model):
+    patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='progress_notes')
+    provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='authored_notes')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Note for {self.patient.username} by {self.provider.username}"
