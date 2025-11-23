@@ -62,8 +62,7 @@ const navItems: NavItem[] = [
 export const RightSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const { t } = useTranslation();
+  const { user, logout } = useAuth(); // Assuming useAuth provides the full user object including 'is_verified'
 
   const filteredNavItems = navItems.filter(
     (item) => !item.doctorOnly || user?.role === "doctor"
