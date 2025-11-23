@@ -483,6 +483,11 @@ export const getSharedContentForPatient = async (): Promise<ContentItem[]> => {
 // =================================================================
 // --- BLOG ADMIN API FUNCTIONS ---
 // =================================================================
+interface GuestPayload {
+  session_key?: string;
+  guest_name?: string;
+  guest_email?: string;
+}
 
 // Reuse the existing endpoint but allow passing a specific status
 export const getAdminBlogsAPI = async (statusFilter: string = 'all'): Promise<BlogPost[]> => {
@@ -867,8 +872,9 @@ export const getBlogCommentsAPI = async (blogId: string | number): Promise<BlogC
  * Submits a new comment to a blog post.
  * POST /api/blogs/{blog_pk}/comments/
  */
-export const createBlogCommentAPI = async (blogId: string | number, content: string): Promise<BlogComment> => {
-    const response = await api.post<BlogComment>(`blogs/${blogId}/comments/`, { content });
+export const createBlogCommentAPI = async (blogId: string | number, content: string, guestData?: GuestPayload): Promise<BlogComment> => {
+    const payload = { content, ...guestData };
+    const response = await api.post<BlogComment>(`blogs/${blogId}/comments/`, payload);
     return response.data;
 };
 
@@ -876,17 +882,20 @@ export const createBlogCommentAPI = async (blogId: string | number, content: str
  * Submits or updates a rating (1-5) for a blog post.
  * POST /api/blogs/{blog_pk}/ratings/rate/
  */
-export const rateBlogPostAPI = async (blogId: string | number, rating: number): Promise<{ detail: string }> => {
-    const response = await api.post<{ detail: string }>(`blogs/${blogId}/ratings/rate/`, { rating });
+export const rateBlogPostAPI = async (blogId: string | number, rating: number, guestData?: GuestPayload): Promise<{ detail: string }> => {
+    // Merge rating with optional guest data
+    const payload = { rating, ...guestData };
+    const response = await api.post<{ detail: string }>(`blogs/${blogId}/ratings/rate/`, payload);
     return response.data;
 };
-
 /**
  * Submits or updates a reaction (like/love/insightful) for a blog post.
  * POST /api/blogs/{blog_pk}/reactions/react/
  */
-export const reactToBlogPostAPI = async (blogId: string | number, type: BlogReactionType): Promise<{ detail: string }> => {
-    const response = await api.post<{ detail: string }>(`blogs/${blogId}/reactions/react/`, { type });
+export const reactToBlogPostAPI = async (blogId: string | number, type: BlogReactionType, guestData?: GuestPayload): Promise<{ detail: string }> => {
+    // Merge reaction type with optional guest data
+    const payload = { type, ...guestData };
+    const response = await api.post<{ detail: string }>(`blogs/${blogId}/reactions/react/`, payload);
     return response.data;
 };
 
