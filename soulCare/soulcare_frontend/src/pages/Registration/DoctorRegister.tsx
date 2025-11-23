@@ -105,12 +105,15 @@ const DoctorRegister: React.FC = () => {
     setIsLoading(true);
     try {
       const { confirm_password, ...payload } = formData;
+
+      const submissionData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        submissionData.append(key, value);
+      });
+
       const response = await axios.post(
         "http://localhost:8000/api/auth/register/doctor/",
-        submissionData,
-        {
-            headers: { "Content-Type": "multipart/form-data" } // Important!
-        }
+        submissionData
       );
       setSuccessMsg("Your account is pending admin approval.");
       console.log(response.data);
