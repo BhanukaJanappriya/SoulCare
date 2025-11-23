@@ -185,3 +185,31 @@
   }
 }
 
+/* --- GOOGLE TRANSLATE CUSTOM STYLES --- */
+
+/* Hide the Google Top Banner */
+.goog-te-banner-frame.skiptranslate {
+    display: none !important;
+} 
+body {
+    top: 0px !important; 
+}
+
+/* Hide the "Powered by Google" branding */
+.goog-logo-link {
+    display: none !important;
+}
+.goog-te-gadget {
+    color: transparent !important;
+}
+
+/* Style the Dropdown */
+.goog-te-gadget .goog-te-combo {
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+    outline: none;
+}

@@ -14,3 +14,10 @@ channels==4.0.0
 channels_redis==4.2.0
 daphne==4.1.2
 cryptography==43.0.0
+
+# --- NEW: 2FA Dependencies ---
+pyotp==2.9.0
+qrcode==7.4.2
+
+
+stripe>=5.0.0

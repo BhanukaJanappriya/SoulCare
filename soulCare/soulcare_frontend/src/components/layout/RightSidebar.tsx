@@ -1,5 +1,6 @@
 import React from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Users,
@@ -61,7 +62,8 @@ const navItems: NavItem[] = [
 export const RightSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth(); // Assuming useAuth provides the full user object including 'is_verified'
+  const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   const filteredNavItems = navItems.filter(
     (item) => !item.doctorOnly || user?.role === "doctor"
