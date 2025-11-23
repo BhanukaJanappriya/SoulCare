@@ -165,6 +165,16 @@
     to { transform: translateX(0); }
   }
 
+  @keyframes reaction-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); } /* Slightly stronger pop */
+  100% { transform: scale(1); }
+}
+
+.animate-reaction-pop {
+  animation: reaction-pop 0.3s ease-out;
+}
+
   /* Role card hover effects */
   .role-card {
     @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer;

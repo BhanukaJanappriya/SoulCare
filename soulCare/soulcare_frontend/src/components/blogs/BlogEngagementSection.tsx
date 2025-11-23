@@ -55,7 +55,6 @@ type GuestInfo = {
 const getSessionId = (): string => {
   let sessionId = localStorage.getItem("blogSessionId");
   if (!sessionId) {
-    // Simple unique ID generation (should be sufficient for local dev/demo)
     sessionId =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
@@ -69,7 +68,6 @@ const GuestInfoForm: React.FC<{
   guestInfo: GuestInfo;
   setGuestInfo: React.Dispatch<React.SetStateAction<GuestInfo>>;
 }> = ({ guestInfo, setGuestInfo }) => {
-  // Only render the form if the user is not authenticated AND hasn't provided a name yet.
   if (guestInfo.guestName) return null;
 
   return (
@@ -126,11 +124,12 @@ const StarRating: React.FC<{
   const [isRateDialogOpen, setIsRateDialogOpen] = useState(false);
   const [tempRating, setTempRating] = useState(0);
 
-  // NOTE: For now, we assume the API automatically handles the guest fields (sessionId) if the user is not authenticated.
-  // The FE sends the same payload to simplify the logic.
-
   const rateMutation = useMutation({
-    mutationFn: () => rateBlogPostAPI(postId, tempRating),
+    // FIX: Pass the guestData payload to the API function
+    mutationFn: () => {
+      const guestData = isAuth ? {} : { session_key: guestInfo.sessionId };
+      return rateBlogPostAPI(postId, tempRating, guestData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blogComments", postId] });
       queryClient.invalidateQueries({ queryKey: ["blogList"] });
@@ -169,7 +168,7 @@ const StarRating: React.FC<{
   });
 
   const handleStarClick = (rating: number) => {
-    // Only require name/session for anonymous users (session ID is generated automatically)
+    // Only require session ID which is auto-generated
     if (!isAuth && !guestInfo.sessionId) {
       toast({
         title: "Session Error",
@@ -270,18 +269,30 @@ const ReactionButton: React.FC<{
   count: number;
   isActive: boolean;
   isAuth: boolean;
-  guestInfo: GuestInfo; // NEW PROP
+  guestInfo: GuestInfo;
 }> = ({ postId, type, icon: Icon, count, isActive, isAuth, guestInfo }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Determine reaction data based on auth status
-  const reactionPayload = isAuth
-    ? { type }
-    : { type, sessionId: guestInfo.sessionId };
+  const getActiveClasses = (type: BlogReactionType) => {
+    switch (type) {
+      case "like":
+        return "bg-blue-600 text-white border-blue-700 hover:bg-blue-700 shadow-lg animate-reaction-pop";
+      case "love":
+        return "bg-pink-600 text-white border-pink-700 hover:bg-pink-700 shadow-lg animate-reaction-pop";
+      case "insightful":
+        return "bg-purple-600 text-white border-purple-700 hover:bg-purple-700 shadow-lg animate-reaction-pop";
+      default:
+        return "bg-primary text-white hover:bg-primary/90";
+    }
+  };
 
   const reactMutation = useMutation({
-    mutationFn: () => reactToBlogPostAPI(postId, type),
+    // FIX: Pass the guestData payload to the API function
+    mutationFn: () => {
+      const guestData = isAuth ? {} : { session_key: guestInfo.sessionId };
+      return reactToBlogPostAPI(postId, type, guestData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blogList"] });
       queryClient.invalidateQueries({ queryKey: ["publicBlogs"] });
@@ -337,8 +348,8 @@ const ReactionButton: React.FC<{
       variant={isActive ? "default" : "outline"}
       size="sm"
       onClick={handleClick}
-      className={`flex items-center gap-1 ${
-        isActive ? "bg-primary hover:bg-primary/90" : "hover:bg-muted"
+      className={`flex items-center gap-1 transition-all ${
+        isActive ? getActiveClasses(type) : "hover:bg-muted"
       }`}
     >
       <Icon className="w-4 h-4" />
@@ -390,6 +401,7 @@ export const BlogEngagementSection: React.FC<BlogEngagementProps> = ({
   // --- 2. Post Comment Mutation ---
   const commentMutation = useMutation({
     mutationFn: (content: string) => {
+      // FIX: Build and pass the entire payload for comment submission
       const payload = isAuth
         ? { content }
         : {
@@ -440,7 +452,6 @@ export const BlogEngagementSection: React.FC<BlogEngagementProps> = ({
   };
 
   // --- 3. Determine Current User's Rating/Reaction (Mock/Placeholder) ---
-  // NOTE: This logic is for visual representation only and does not reflect a real anonymous state.
   const currentUserRating = useMemo(() => {
     return Math.round(post.average_rating);
   }, [post.average_rating]);
