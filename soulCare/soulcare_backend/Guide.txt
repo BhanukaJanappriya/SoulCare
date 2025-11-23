@@ -66,3 +66,10 @@ Your backend is now running and ready for chat!
     ```
 
 That's it! Both your backend (Daphne) and frontend (npm) servers should be running, along with your MySQL and Redis services.
+
+
+// Security Key
+
+STRIPE_PUBLIC_KEY = 'STRIPE_PUBLIC_KEY', 'pk_test_dummy_value'
+STRIPE_SECRET_KEY = 'STRIPE_SECRET_KEY', 'sk_test_dummy_value'
+STRIPE_WEBHOOK_SECRET ='STRIPE_WEBHOOK_SECRET', 'whsec_dummy_value'

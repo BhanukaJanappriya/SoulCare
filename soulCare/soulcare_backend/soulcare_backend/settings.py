@@ -62,7 +62,7 @@ INSTALLED_APPS = [
     'content',
     'reviews',
     'user_settings',
-    'reviews',
+    
 
 
 
@@ -122,7 +122,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'yasiru@2001',
+        'PASSWORD': 'GDR@1101',
         'HOST': 'localhost',
         'PORT': '3306',
     }

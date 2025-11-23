@@ -15,9 +15,10 @@ channels_redis==4.2.0
 daphne==4.1.2
 cryptography==43.0.0
 
-# --- NEW: 2FA Dependencies ---
+# --- NEW: 2FA & Environment Dependencies ---
 pyotp==2.9.0
 qrcode==7.4.2
+python-dotenv==1.0.1
 
-
+# --- NEW: Payments ---
 stripe>=5.0.0
