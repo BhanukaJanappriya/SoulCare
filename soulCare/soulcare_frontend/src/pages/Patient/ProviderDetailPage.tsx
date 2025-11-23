@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, axiosInstance } from '@/api';
-import { Provider } from '@/types';
+import { Provider,DoctorProfile,CounselorProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,30 +13,14 @@ import { format, addDays, startOfWeek, endOfWeek, isSameDay, isBefore, startOfTo
 
 type AvailabilityData = Record<string, string[]>;
 
-// ✅ Define proper interfaces for provider profile
-interface BaseProviderProfile {
-  full_name: string;
-  profile_picture_url?: string;
-  rating?: number;
-  bio?: string;
-}
-
-interface DoctorProviderProfile extends BaseProviderProfile {
-  specialization: string;
-}
-
-interface CounselorProviderProfile extends BaseProviderProfile {
-  expertise: string;
-}
-
-type ProviderProfile = DoctorProviderProfile | CounselorProviderProfile;
+type ProviderProfile = DoctorProfile | CounselorProfile;
 
 // ✅ Type guard functions
-const isDoctorProfile = (profile: ProviderProfile): profile is DoctorProviderProfile => {
+const isDoctorProfile = (profile: ProviderProfile): profile is DoctorProfile => {
   return 'specialization' in profile;
 };
 
-const isCounselorProfile = (profile: ProviderProfile): profile is CounselorProviderProfile => {
+const isCounselorProfile = (profile: ProviderProfile): profile is CounselorProfile => {
   return 'expertise' in profile;
 };
 
@@ -86,7 +70,7 @@ const ProviderDetailPage: React.FC = () => {
 
     // ✅ Type-safe profile access
     const profile = provider.profile as ProviderProfile;
-    const profilePictureUrl = profile.profile_picture_url;
+    const profilePictureUrl = profile.profile_picture;
     const providerSpecialization = isDoctorProfile(profile)
         ? profile.specialization
         : isCounselorProfile(profile)

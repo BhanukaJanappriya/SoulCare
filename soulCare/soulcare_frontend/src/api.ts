@@ -16,15 +16,37 @@ import {
   ChatMessage,
   Habit,
   HabitInput,
-  HabitToggleInput,
-  HabitToggleResponse,
+  HabitTask,
+  HabitTaskInput,
+  MissedHabitItem,
   ProviderStatsData,
   ContentItem,
   ContentFormData,
-  BlogPost,
   ReactionTimePayload,
   MemoryGamePayload,
   StroopGamePayload,
+  LongestNumberPayload,
+  NumpuzGameStats,
+  NumpuzHistoryItem,
+  NumpuzPayload,
+  AdditionsGamePayload,
+  AdditionsGameStats,
+  GameDashboardStats,
+  Review,
+  ReviewInput,
+  PatientDashboardStats,
+  WeeklyMoodDataPoint,
+  MoodEntry,
+  MoodEntryInput,
+  Activity,
+  ProgressNote,
+  ProgressNoteInput,
+  PatientUpdateInput,
+  BlogPost,
+  BlogComment,
+  BlogReactionType,
+  BlogSortBy,
+  BlogInputData
 
 } from '@/types';
 
@@ -96,6 +118,75 @@ axiosInstance.interceptors.response.use((response) => response, handleResponseEr
 export default api;
 
 
+// =================================================================
+// --- PATIENT DASHBOARD DATA API FUNCTIONS (NEW) ---
+// =================================================================
+
+/**
+ * Fetches aggregated statistics for the quick stat cards.
+ * @returns PatientDashboardStats object.
+ * We will define an endpoint like /api/auth/patient-dashboard-stats/ on the backend.
+ */
+export const fetchPatientDashboardStats = async (): Promise<PatientDashboardStats> => {
+  // Uses axiosInstance because this is likely an Auth-related endpoint: /api/auth/
+  const response = await axiosInstance.get<PatientDashboardStats>('patient/dashboard-stats/');
+  return response.data;
+};
+
+/**
+ * Fetches the last 7 days of mood, energy, and anxiety for the line chart.
+ * @returns Array of WeeklyMoodDataPoint.
+ * We will define an endpoint like /api/moodtracker/weekly-stats/ on the backend.
+ */
+export const fetchWeeklyMoodData = async (): Promise<WeeklyMoodDataPoint[]> => {
+  const response = await api.get<WeeklyMoodDataPoint[]>('moodtracker/weekly-stats/');
+  return response.data;
+};
+
+
+// =================================================================
+// --- MOOD TRACKER API FUNCTIONS (NEW/COMPLETED) ---
+// =================================================================
+
+/**
+ * Fetches all mood entries for the patient.
+ * The endpoint is GET /api/moodtracker/entries/
+ */
+export const getMoodEntriesAPI = async (): Promise<MoodEntry[]> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/entries/'
+  const response = await api.get<MoodEntry[]>('moodtracker/entries/');
+  return response.data;
+};
+
+/**
+ * Creates a new mood entry.
+ * The endpoint is POST /api/moodtracker/entries/
+ */
+export const createMoodEntryAPI = async (data: MoodEntryInput): Promise<MoodEntry> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/entries/'
+  const response = await api.post<MoodEntry>('moodtracker/entries/', data);
+  return response.data;
+};
+
+/**
+ * Fetches the list of all available activities.
+ * The endpoint is GET /api/moodtracker/activities/
+ */
+export const getMoodActivitiesAPI = async (): Promise<Activity[]> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/activities/'
+  const response = await api.get<Activity[]>('moodtracker/activities/');
+  return response.data;
+};
+
+/**
+ * Fetches the list of all available tags.
+ * The endpoint is GET /api/moodtracker/tags/
+ */
+export const getMoodTagsAPI = async (): Promise<Tag[]> => {
+  // CRITICAL FIX: Ensure the URL prefix is 'moodtracker/tags/'
+  const response = await api.get<Tag[]>('moodtracker/tags/');
+  return response.data;
+};
 // =================================================================
 // --- DOCTOR / PATIENT API FUNCTIONS ---
 // (No changes needed here)
@@ -266,38 +357,6 @@ export const getMessageHistory = async (conversationId: number): Promise<ChatMes
   }
 };
 
-// =================================================================
-// --- HABITS API FUNCTIONS ---
-// =================================================================
-
-export const getHabitsAPI = async (): Promise<Habit[]> => {
-    // Fetches the user's habits list
-    const response = await api.get<Habit[]>('habits/');
-    return response.data;
-};
-
-export const createHabitAPI = async (habitData: HabitInput): Promise<Habit> => {
-    // Creates a new habit
-    const response = await api.post<Habit>('habits/', habitData);
-    return response.data;
-};
-
-export const deleteHabitAPI = async (habitId: string | number): Promise<void> => {
-    // Deletes a habit by ID
-    await api.delete(`habits/${habitId}/`);
-};
-
-export const toggleHabitCompletionAPI = async (
-    habitId: string | number,
-    completed: boolean
-): Promise<HabitToggleResponse> => {
-    // Toggles the completion status and updates streak/current
-    const response = await api.post<HabitToggleResponse>(
-        `habits/${habitId}/toggle_completion/`,
-        { completed } as HabitToggleInput
-    );
-    return response.data;
-};
 export const deleteMessageAPI = async (messageId: number): Promise<void> => {
   try {
     // Uses 'api' instance to call DELETE /api/chat/messages/<id>/
@@ -433,16 +492,6 @@ export const getAdminBlogsAPI = async (statusFilter: string = 'all'): Promise<Bl
   return response.data;
 };
 
-// Update status (Approve/Reject)
-export const updateBlogStatusAPI = async (id: string, status: 'published' | 'rejected'): Promise<BlogPost> => {
-  const response = await api.patch<BlogPost>(`blogs/${id}/`, { status });
-  return response.data;
-};
-
-// Delete Blog
-export const deleteBlogAPI = async (id: string): Promise<void> => {
-  await api.delete(`blogs/${id}/`);
-};
 
 
 // =================================================================
@@ -494,4 +543,364 @@ export const saveStroopGameResult = async (data: StroopGamePayload) => {
     console.error('Error saving Stroop game result:', error);
     throw error;
   }
+};
+
+export const saveLongestNumberResult = async (data: LongestNumberPayload) => {
+  try {
+    // Uses the 'api' instance which has the authentication interceptors
+    const response = await api.post('/games/longest-number/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving longest number result:', error);
+    throw error;
+  }
+};
+
+export interface LongestNumberHistoryItem {
+    score: number;
+    time: number;
+    created_at: string;
+}
+export interface LongestNumberGameStats {
+    highest_score: number;
+    average_score: number;
+    total_plays: number;
+    total_time_ms: number;
+    history: LongestNumberHistoryItem[]; // Use the defined interface here
+}
+
+export const fetchLongestNumberStats = async (): Promise<LongestNumberGameStats> => {
+  try {
+    // We will create this stats endpoint in mentalGames/views.py and mentalGames/urls.py next.
+    const response = await api.get<LongestNumberGameStats>('/games/longest-number-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching longest number stats:', error);
+    // Return a default/mock structure on failure to prevent app crash
+    return {
+        highest_score: 0,
+        average_score: 0,
+        total_plays: 0,
+        total_time_ms: 0,
+        history: []
+    };
+  }
+};
+
+
+export const saveNumpuzResult = async (data: NumpuzPayload) => {
+  try {
+    const response = await api.post('/games/numpuz-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving numpuz game result:', error);
+
+  }
+
+};
+
+export const saveAdditionsResult = async (data: AdditionsGamePayload) => {
+  try {
+    const response = await api.post('/games/additions-game/', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving additions game result:', error);
+    throw error;
+  }
+};
+
+export const fetchAdditionsStats = async (): Promise<AdditionsGameStats> => {
+  try {
+    const response = await api.get<AdditionsGameStats>('/games/additions-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching additions game stats:', error);
+    return {
+        highest_correct: 0,
+        avg_correct: 0,
+        total_plays: 0,
+        history: []
+    };
+  }
+};
+
+// =================================================================
+// --- ADMIN CONTENT API ---
+// =================================================================
+
+// Admins reuse the GET /content/ endpoint.
+// The backend now returns ALL items if the user is an admin.
+export const getAllContentItemsAPI = async (): Promise<ContentItem[]> => {
+  try {
+    const response = await api.get<ContentItem[]>('content/');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching all content items:", error);
+    throw error;
+  }
+};
+
+
+export const deleteContentItemAPI = deleteContentItem;
+
+
+export const fetchNumpuzStats = async (): Promise<NumpuzGameStats> => {
+  try {
+    const response = await api.get<NumpuzGameStats>('/games/numpuz-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching numpuz game stats:', error);
+    // Return a default/mock structure on failure to prevent app crash
+    return {
+        best_time_s: 0,
+        min_moves: 0,
+        total_plays: 0,
+        history: []
+    };
+  }
+};
+
+
+export const fetchDashboardGameStats = async (): Promise<GameDashboardStats> => {
+  try {
+    const response = await api.get<GameDashboardStats>('/games/dashboard-stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching dashboard game stats:', error);
+    // Return a structured default object on failure to prevent app crash
+    return {
+        total_games_played: 0,
+        average_success_rate: 0,
+        total_time_spent_h: 0,
+        summary: {
+            reaction_time: { best_time_ms: null, total_plays: 0 },
+            memory_game: { max_sequence_length: null, total_plays: 0 },
+            stroop_game: { best_correct_percentage: null, avg_interference_ms: null, total_plays: 0 },
+            longest_number: { max_number_length: null, total_plays: 0 },
+            numpuz_game: { best_time_s: null, min_moves: null, total_plays: 0 },
+            additions_game: { highest_correct: null, total_plays: 0 },
+            emotion_recognition: { total_plays: 0, best_metric: null, last_played_at: null },
+            visual_attention_tracker: { total_plays: 0, best_metric: null, last_played_at: null },
+            pattern_recognition: { total_plays: 0, best_metric: null, last_played_at: null },
+            mood_reflection_game: { total_plays: 0, best_metric: null, last_played_at: null },
+        }
+    };
+  }
+};
+
+
+// =================================================================
+// --- HABITS API FUNCTIONS (MODIFIED FOR TASK STRUCTURE) ---
+// =================================================================
+
+export const getHabitsAPI = async (): Promise<Habit[]> => {
+    // Fetches the user's habits list, now includes nested tasks
+    const response = await api.get<Habit[]>('habits/');
+    return response.data;
+};
+
+export const createHabitAPI = async (habitData: HabitInput): Promise<Habit> => {
+    // Creates a new habit
+    const response = await api.post<Habit>('habits/', habitData);
+    return response.data;
+};
+
+export const deleteHabitAPI = async (habitId: string | number): Promise<void> => {
+    // Deletes a habit by ID
+    await api.delete(`habits/${habitId}/`);
+};
+
+// --- NEW TASK-BASED API FUNCTIONS ---
+
+export const createHabitTaskAPI = async (
+    habitId: string | number,
+    taskData: HabitTaskInput
+): Promise<HabitTask> => {
+    // Creates a new sub-task for a specific habit
+    const response = await api.post<HabitTask>(
+        `habits/${habitId}/tasks/`,
+        taskData
+    );
+    return response.data;
+};
+
+export const getMissedHabitsAPI = async (): Promise<MissedHabitItem[]> => {
+    // Fetches incomplete tasks from the previous period (Daily/Weekly/Monthly)
+    // FIX: Changed hyphen to underscore to match views.py url_path
+    const response = await api.get<MissedHabitItem[]>('habits/missed_habits/');
+    return response.data;
+};
+
+
+export const toggleHabitTaskCompletionAPI = async (
+    taskId: string | number,
+    completed: boolean // True to complete, False to uncomplete
+): Promise<{ status: string, habit: Habit }> => {
+    // FIX: Ensure trailing slash is included for custom actions
+    const response = await api.post<{ status: string, habit: Habit }>(
+        `habits/tasks/${taskId}/toggle/`, // <-- The regex in views.py requires a specific format
+        { completed }
+    );
+    return response.data;
+};
+
+
+// Deprecated: The old single-habit completion toggle is no longer used
+/*
+export const toggleHabitCompletionAPI = async (
+    habitId: string | number,
+    completed: boolean
+): Promise<HabitToggleResponse> => {
+    // Toggles the completion status and updates streak/current
+    const response = await api.post<HabitToggleResponse>(
+        `habits/${habitId}/toggle_completion/`,
+        { completed } as HabitToggleInput
+    );
+    return response.data;
+};*/
+// =================================================================
+
+// --- Rating System APIS ---
+
+export const createReviewAPI = async (data: ReviewInput): Promise<Review> => {
+    try {
+        const response = await api.post<Review>('reviews/', data);
+        return response.data;
+    } catch (error) {
+        console.error("Error creating review:", error);
+        throw error;
+    }
+};
+
+
+
+//Updating the Patient Datails(risk_status) API
+
+export const updatePatientDetailsAPI = async (patientId: string | number, data: PatientUpdateInput): Promise<PatientDetailData> => {
+  // Using PATCH to update only changed fields
+  const response = await axiosInstance.patch<PatientDetailData>(`patients/${patientId}/`, data);
+  return response.data;
+};
+
+
+// =================================================================
+// --- PROGRESS NOTES API ---
+// =================================================================
+
+export const getProgressNotesAPI = async (patientId: string | number): Promise<ProgressNote[]> => {
+    // Note: The endpoint is nested under appointments app, so /api/appointments/notes/
+    const response = await api.get<ProgressNote[]>('appointments/notes/', {
+        params: { patient_id: patientId }
+    });
+    return response.data;
+};
+
+export const createProgressNoteAPI = async (data: ProgressNoteInput): Promise<ProgressNote> => {
+    const response = await api.post<ProgressNote>('appointments/notes/', data);
+    return response.data;
+};
+
+export const deleteProgressNoteAPI = async (noteId: number): Promise<void> => {
+    await api.delete(`appointments/notes/${noteId}/`);
+};
+
+
+// =================================================================
+// --- BLOG ADMIN & PUBLIC API FUNCTIONS (MODIFIED/NEW) ---
+// =================================================================
+
+// Function to fetch all blogs (public and private, with sorting)
+export const getBlogPostsAPI = async (
+    statusFilter: string = 'all',
+    sortBy: BlogSortBy = 'newest'
+): Promise<BlogPost[]> => {
+    // Uses the main 'api' instance
+    const response = await api.get<BlogPost[]>('blogs/', {
+        params: {
+            status: statusFilter,
+            sort_by: sortBy // Pass the sorting parameter
+        }
+    });
+    // NOTE: Frontend must ensure BlogPosts are correctly typed with aggregated fields now
+    return response.data;
+};
+
+// Update status (Approve/Reject)
+export const updateBlogStatusAPI = async (id: string, status: 'published' | 'rejected'): Promise<BlogPost> => {
+  const response = await api.patch<BlogPost>(`blogs/${id}/`, { status });
+  return response.data;
+};
+
+// Create Blog
+export const createBlogPostAPI = async (data: BlogInputData): Promise<BlogPost> => {
+  // Use 'any' here as the input structure might change slightly, and the output is BlogPost
+  const response = await api.post<BlogPost>('blogs/', data);
+  return response.data;
+};
+
+// Update Blog
+export const updateBlogPostAPI = async (id: string, data: Partial<BlogInputData>): Promise<BlogPost> => {
+  const response = await api.put<BlogPost>(`blogs/${id}/`, data); // Note: Should be PUT or PATCH depending on your backend view
+  return response.data;
+};
+
+// Delete Blog
+export const deleteBlogAPI = async (id: string): Promise<void> => {
+  await api.delete(`blogs/${id}/`);
+};
+
+
+// =================================================================
+// --- BLOG COMMENTS & ENGAGEMENT API FUNCTIONS (NEW) ---
+// =================================================================
+
+/**
+ * Fetches all comments for a specific blog post.
+ * GET /api/blogs/{blog_pk}/comments/
+ */
+export const getBlogCommentsAPI = async (blogId: string | number): Promise<BlogComment[]> => {
+    const response = await api.get<BlogComment[]>(`blogs/${blogId}/comments/`);
+    return response.data;
+};
+
+/**
+ * Submits a new comment to a blog post.
+ * POST /api/blogs/{blog_pk}/comments/
+ */
+export const createBlogCommentAPI = async (blogId: string | number, content: string): Promise<BlogComment> => {
+    const response = await api.post<BlogComment>(`blogs/${blogId}/comments/`, { content });
+    return response.data;
+};
+
+/**
+ * Submits or updates a rating (1-5) for a blog post.
+ * POST /api/blogs/{blog_pk}/ratings/rate/
+ */
+export const rateBlogPostAPI = async (blogId: string | number, rating: number): Promise<{ detail: string }> => {
+    const response = await api.post<{ detail: string }>(`blogs/${blogId}/ratings/rate/`, { rating });
+    return response.data;
+};
+
+/**
+ * Submits or updates a reaction (like/love/insightful) for a blog post.
+ * POST /api/blogs/{blog_pk}/reactions/react/
+ */
+export const reactToBlogPostAPI = async (blogId: string | number, type: BlogReactionType): Promise<{ detail: string }> => {
+    const response = await api.post<{ detail: string }>(`blogs/${blogId}/reactions/react/`, { type });
+    return response.data;
+};
+
+/**
+ * Removes the user's reaction from a blog post.
+ * DELETE /api/blogs/{blog_pk}/reactions/unreact/
+ */
+export const unreactToBlogPostAPI = async (blogId: string | number): Promise<void> => {
+    await api.delete(`blogs/${blogId}/reactions/unreact/`);
+};
+
+// NOTE: Also add unrateBlogPostAPI if you need a specific button to remove a rating.
+// It is not strictly necessary as a new rating overwrites the old one, but for completeness:
+// DELETE /api/blogs/{blog_pk}/ratings/unrate/
+export const unrateBlogPostAPI = async (blogId: string | number): Promise<void> => {
+    await api.delete(`blogs/${blogId}/ratings/unrate/`);
 };

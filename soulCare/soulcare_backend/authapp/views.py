@@ -9,11 +9,19 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
 from rest_framework.exceptions import PermissionDenied, NotFound
 from .models import User,ProviderSchedule,DoctorProfile, CounselorProfile
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Avg, Sum # ADDED Avg, Sum for aggregation
 from datetime import date,datetime,timedelta
+from django.utils import timezone # ADDED for timezone-aware date logic
+
+# NEW IMPORTS FOR PATIENT DASHBOARD STATS
+from habits.models import Habit # Import Habit model
+from moodtracker.models import MoodEntry # Import MoodEntry model
+# Appointment is already imported
 from appointments.models import Appointment
 from chat.models import Conversation, Message
-
+from .utils import send_account_pending_email, send_account_verified_email,send_patient_welcome_email
+from content.models import ContentItem
+from prescriptions.models import Prescription
 
 
 class LoginView(APIView):
@@ -37,6 +45,8 @@ class PatientRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        send_patient_welcome_email(user)
 
         response_data = {
             "id": user.id,
@@ -62,6 +72,8 @@ class DoctorRegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
+        send_account_pending_email(user)
+
         response_data = {
             "id": user.id,
             "username": user.username,
@@ -85,6 +97,8 @@ class CounselorRegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        send_account_pending_email(user)
 
         response_data = {
             "id": user.id,
@@ -136,6 +150,19 @@ class AdminUserViewSet(viewsets.ModelViewSet):
         if role:
             return queryset.filter(role=role)
         return queryset
+
+    def perform_update(self, serializer):
+    # Get the user object BEFORE the update
+        instance = serializer.instance
+        old_verified_status = instance.is_verified
+
+        # Perform the update
+        updated_user = serializer.save()
+
+        # Check if status changed from False to True
+        if not old_verified_status and updated_user.is_verified:
+            send_account_verified_email(updated_user)
+
 
 
 class AdminDashboardStatsView(APIView):
@@ -299,7 +326,7 @@ class DoctorPatientsView(APIView):
 
 
 
-class PatientDetailView(generics.RetrieveAPIView):
+class PatientDetailView(generics.RetrieveUpdateAPIView):
     """
     API view to retrieve details for a specific patient.
     Ensures the requesting doctor/counselor is associated with the patient via an appointment.
@@ -390,6 +417,85 @@ class ProviderDashboardStatsView(APIView):
                 average_rating = user.counselorprofile.rating
         except (DoctorProfile.DoesNotExist, CounselorProfile.DoesNotExist):
             pass # Keep the default 5.0 if profile somehow doesn't exist
+        
+        
+        activity_feed = []
+        
+        # 1. Recent Appointments Logic (Updated)
+        recent_apps = Appointment.objects.filter(provider=user).order_by('-created_at')[:5]
+        for app in recent_apps:
+            # Get patient name safely
+            patient_name = app.patient.username
+            try:
+                 if hasattr(app.patient, 'patientprofile'):
+                    patient_name = app.patient.patientprofile.full_name
+            except: pass
+            
+            activity_type = 'appointment' # Default
+            activity_text = ""
+
+            if app.status == 'pending':
+                activity_type = 'new_patient'
+                activity_text = f"New appointment request from: {patient_name}."
+            
+            elif app.status == 'cancelled':
+                activity_type = 'cancellation'
+                # --- FIX LOGIC HERE ---
+                if app.cancelled_by == 'provider':
+                    activity_text = f"You cancelled the appointment with {patient_name} on {app.date}."
+                else:
+                    # Default to patient if 'cancelled_by' is missing (legacy data) or explicitly 'patient'
+                    activity_text = f"{patient_name} cancelled their appointment for {app.date}."
+            
+            elif app.status == 'scheduled':
+                 activity_text = f"Appointment confirmed with {patient_name} on {app.date}."
+
+            elif app.status == 'completed':
+                 activity_text = f"Appointment completed with {patient_name}."
+
+            # Only add if we generated text (filters out edge cases)
+            if activity_text:
+                activity_feed.append({
+                    "id": f"app_{app.id}",
+                    "type": activity_type,
+                    "text": activity_text,
+                    "date": app.created_at.isoformat()
+                })
+            
+        
+         
+        
+        # 2. Prescriptions Created (Confirmation)
+        if user.role == 'doctor':
+            recent_rx = Prescription.objects.filter(doctor=user).order_by('-created_at')[:5]
+            for rx in recent_rx:
+                patient_name = rx.patient.profile.full_name if hasattr(rx.patient, 'profile') else rx.patient.username
+                activity_feed.append({
+                    "id": f"rx_{rx.id}",
+                    "type": "prescription",
+                    "text": f"Prescription is issued for {patient_name}.",
+                    "date": rx.created_at.isoformat()
+                })
+                
+        
+        # 4. Content Shared
+        # Find content items owned by this user that have been shared
+        shared_content = ContentItem.objects.filter(owner=user).order_by('-updated_at')[:5]
+        
+        for item in shared_content:
+            count = item.shared_with.count()
+            if count > 0:
+                activity_feed.append({
+                    "id": f"content_{item.id}",
+                    "type": "content_shared",
+                    "text": f"\"{item.title}\" shared with {count} patients.",
+                    "date": item.updated_at
+                })
+                
+        
+        # Sort by date (newest first), assuming date strings are ISO format
+        activity_feed.sort(key=lambda x: str(x['date']), reverse=True)
+        recent_activity = activity_feed[:5] # Show top 10 mixed activities
 
         # --- Compile Stats ---
         stats_data = {
@@ -397,6 +503,83 @@ class ProviderDashboardStatsView(APIView):
             'appointments_today': appointments_today,
             'pending_messages': pending_messages,
             'average_rating': average_rating,
+            'recent_activity': recent_activity,
         }
 
         return Response(stats_data, status=status.HTTP_200_OK)
+
+
+# NEW VIEW FOR PATIENT DASHBOARD STATS
+
+
+# In soulcare_backend/authapp/views.py (PatientDashboardStatsView)
+
+class PatientDashboardStatsView(APIView):
+    """
+    Provides real-time aggregated statistics for the Patient Dashboard Quick Stats and Progress.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        patient = request.user
+
+        # Ensure user is a patient
+        if patient.role != 'user':
+            return Response({"error": "Access denied. Only patients can view this dashboard."}, status=status.HTTP_403_FORBIDDEN)
+
+        # --- VARIABLE INITIALIZATION (CRITICAL FIX for Pylance errors) ---
+        next_appointment_data = None
+        daily_progress_percentage = 0
+
+        # --- 1. Current Streak ---
+        # The Habit model uses a 'user' Foreign Key
+        longest_streak = Habit.objects.filter(user=patient).order_by('-streak').first()
+        current_streak = longest_streak.streak if longest_streak else 0
+
+        # --- 2. Today's Mood Score ---
+        today = timezone.localdate()
+        
+
+
+        today_mood_avg = MoodEntry.objects.filter(
+            patient=patient, # Assuming MoodEntry uses 'patient' or 'user' - using 'patient' for now
+            date=today
+
+        ).aggregate(
+            avg_mood=Avg('mood')
+        )['avg_mood'] or 0
+
+        # --- 3. Meditation Time (Mock/Placeholder) ---
+        total_meditation_minutes = 125
+        meditation_sessions = 5
+
+        # --- 4. Next Appointment ---
+        now = timezone.now()
+        next_appointment = Appointment.objects.filter(
+            patient=patient,
+            status='scheduled',
+            start_time__gte=now
+        ).order_by('start_time').first()
+
+        # next_appointment_data initialized above. Only assigned here if an appointment exists.
+        if next_appointment:
+             next_appointment_data = {
+                 'id': next_appointment.id,
+                 'start_time': next_appointment.start_time.isoformat(),
+                 'date': next_appointment.date.isoformat(),
+                 'time': next_appointment.time.isoformat(timespec='minutes'),
+             }
+
+        # --- 5. Daily Progress Percentage (Mocked) ---
+        # daily_progress_percentage initialized above. Assigned the mock value here.
+        daily_progress_percentage = 75
+
+        # --- Final Response ---
+        return Response({
+            'current_streak': current_streak,
+            'today_mood_score': round(today_mood_avg, 1) if today_mood_avg else 0.0,
+            'total_meditation_minutes': total_meditation_minutes,
+            'meditation_sessions': meditation_sessions,
+            'next_appointment': next_appointment_data, # Now always defined
+            'daily_progress_percentage': daily_progress_percentage, # Now always defined
+        })

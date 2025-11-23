@@ -2,8 +2,9 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Prescription
 from .serializers import PrescriptionSerializer
-from authapp.models import User # Import the User model
+from authapp.models import User
 from .permissions import IsDoctorAndOwner
+from authapp.utils import send_prescription_shared_email
 
 class PrescriptionViewSet(viewsets.ModelViewSet):
     """
@@ -50,4 +51,9 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
             # This is a final security check
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Only doctors can create prescriptions.")
-        serializer.save(doctor=self.request.user)
+        
+        # Save the prescription and capture the instance
+        prescription = serializer.save(doctor=self.request.user)
+        
+        # --- TRIGGER EMAIL ---
+        send_prescription_shared_email(prescription)

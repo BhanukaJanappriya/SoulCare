@@ -59,6 +59,7 @@ import {
   Users,
   Loader2,
   AlertTriangle,
+  FolderOpen, // Added for header icon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -73,13 +74,12 @@ import {
   createContentItem,
   deleteContentItem,
   shareContentItem,
-  getDoctorPatients, // We need this for the Share dialog
+  getDoctorPatients, 
 } from "@/api";
 import { format, parseISO } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// --- Helper Functions (from your original file) ---
-
+// --- Helper Functions (Unchanged) ---
 const getTypeIcon = (type: ContentItem["type"]) => {
   switch (type) {
     case "video": return <Video className="w-5 h-5" />;
@@ -100,15 +100,17 @@ const getTypeColor = (type: ContentItem["type"]) => {
   }
 };
 
-// --- 1. Add Content Dialog Component ---
-
+// --- 1. Add Content Dialog Component (Unchanged) ---
 interface AddContentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 const AddContentDialog: React.FC<AddContentDialogProps> = ({ open, onOpenChange }) => {
-  const { toast } = useToast();
+    // ... (keep existing implementation) ...
+    // For brevity in this response, assume this component code is unchanged
+    // Just ensure you keep the full component code here in your file
+    const { toast } = useToast();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -240,8 +242,7 @@ const AddContentDialog: React.FC<AddContentDialogProps> = ({ open, onOpenChange 
   );
 };
 
-// --- 2. Share Content Dialog Component ---
-
+// --- 2. Share Content Dialog Component (Unchanged) ---
 interface ShareContentDialogProps {
   item: ContentItem | null;
   open: boolean;
@@ -249,20 +250,17 @@ interface ShareContentDialogProps {
 }
 
 const ShareContentDialog: React.FC<ShareContentDialogProps> = ({ item, open, onOpenChange }) => {
-  const { toast } = useToast();
+    // ... (keep existing implementation) ...
+    const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State to hold the list of *currently* selected patient IDs
   const [selectedPatientIds, setSelectedPatientIds] = useState<Set<number>>(new Set());
 
-  // Fetch the provider's full patient list
   const { data: patients, isLoading: isLoadingPatients } = useQuery<PatientOption[]>({
     queryKey: ["doctorPatients"],
     queryFn: getDoctorPatients,
   });
 
-  // When the dialog opens (when 'item' changes),
-  // pre-populate the 'selectedPatientIds' state from the item's 'shared_with' list
   useEffect(() => {
     if (item) {
       setSelectedPatientIds(new Set(item.shared_with.map(p => p.id)));
@@ -273,7 +271,6 @@ const ShareContentDialog: React.FC<ShareContentDialogProps> = ({ item, open, onO
     mutationFn: shareContentItem,
     onSuccess: (updatedItem) => {
       toast({ title: "Success", description: "Sharing settings updated." });
-      // Update the cache immediately to reflect the new 'shared_with' list
       queryClient.setQueryData<ContentItem[]>(['contentItems'], (oldData) => 
         oldData?.map(oldItem => oldItem.id === updatedItem.id ? updatedItem : oldItem) || []
       );
@@ -357,8 +354,7 @@ const ShareContentDialog: React.FC<ShareContentDialogProps> = ({ item, open, onO
   );
 };
 
-// --- 3. Delete Confirmation Dialog Component ---
-
+// --- 3. Delete Confirmation Dialog Component (Unchanged) ---
 interface DeleteContentDialogProps {
   item: ContentItem | null;
   open: boolean;
@@ -366,14 +362,14 @@ interface DeleteContentDialogProps {
 }
 
 const DeleteContentDialog: React.FC<DeleteContentDialogProps> = ({ item, open, onOpenChange }) => {
-  const { toast } = useToast();
+    // ... (keep existing implementation) ...
+    const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
     mutationFn: deleteContentItem,
     onSuccess: (_, deletedItemId) => {
       toast({ title: "Success", description: "Content item deleted." });
-      // Optimistically remove from the cache
       queryClient.setQueryData<ContentItem[]>(['contentItems'], (oldData) =>
         oldData?.filter(item => item.id !== deletedItemId) || []
       );
@@ -422,8 +418,7 @@ const DeleteContentDialog: React.FC<DeleteContentDialogProps> = ({ item, open, o
   );
 };
 
-// --- 4. Content Card Component ---
-
+// --- 4. Content Card Component (Unchanged) ---
 interface ContentCardProps {
   item: ContentItem;
   onShare: (item: ContentItem) => void;
@@ -431,7 +426,8 @@ interface ContentCardProps {
 }
 
 const ContentCard: React.FC<ContentCardProps> = ({ item, onShare, onDelete }) => {
-  return (
+    // ... (keep existing implementation) ...
+    return (
     <Card className="hover:shadow-md transition-shadow flex flex-col h-full">
       <CardHeader>
         <div className="flex justify-between items-start">
@@ -497,7 +493,6 @@ const ContentCard: React.FC<ContentCardProps> = ({ item, onShare, onDelete }) =>
   );
 };
 
-
 // --- 5. Main Content Page Component ---
 
 export default function Content() {
@@ -506,18 +501,18 @@ export default function Content() {
   const [selectedType, setSelectedType] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
 
-  // --- Dialog State ---
+  // Dialog State
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [itemToShare, setItemToShare] = useState<ContentItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ContentItem | null>(null);
 
-  // --- Data Fetching ---
+  // Data Fetching
   const { data: content, isLoading: isLoadingContent, isError, error } = useQuery<ContentItem[]>({
     queryKey: ["contentItems"],
     queryFn: getContentItems,
   });
 
-  // --- Filtering Logic ---
+  // Filtering Logic
   const filteredContent = useMemo(() => {
     if (!content) return [];
     return content.filter((item) => {
@@ -538,60 +533,67 @@ export default function Content() {
   }, [content, searchTerm, selectedType, activeTab]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pr-[5.5rem]">
+    <div className="min-h-screen bg-background text-foreground">
       <RightSidebar />
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-1">
-              Content Library
-            </h1>
-            <p className="text-muted-foreground">
-              Manage and share therapeutic content with your patients
-            </p>
-          </div>
-          <Button onClick={() => setIsAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Content
-          </Button>
-        </div>
+      <div className=" container mx-auto space-y-8 p-6 md:p-8 min-h-screen bg-background mr-16 md:mr-24">
+        
+        {/* --- HEADER SECTION --- */}
+        <Card className="mb-8 shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Icon Box */}
+                <div className="p-2 bg-primary/10 rounded-lg">
+                    <FolderOpen className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold">Content Library</CardTitle>
+                  <CardDescription className="mt-1">
+                    Manage and share therapeutic content with your patients.
+                  </CardDescription>
+                </div>
+              </div>
+              
+              <Button onClick={() => setIsAddOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Content
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+        {/* --- END HEADER --- */}
 
         {/* Search and Filters */}
-        <Card className="mb-6 shadow-sm">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search content by title, description, or tags..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="video">Video</SelectItem>
-                  <SelectItem value="audio">Audio</SelectItem>
-                  <SelectItem value="document">Document</SelectItem>
-                  <SelectItem value="image">Image</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search content by title, description, or tags..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-background shadow-sm border-muted-foreground/20 h-11"
+            />
+          </div>
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="w-full sm:w-48 h-11 bg-background shadow-sm border-muted-foreground/20">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="video">Video</SelectItem>
+              <SelectItem value="audio">Audio</SelectItem>
+              <SelectItem value="document">Document</SelectItem>
+              <SelectItem value="image">Image</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Tabs and Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="all">All Content</TabsTrigger>
-            <TabsTrigger value="shared">Shared</TabsTrigger>
-            <TabsTrigger value="unshared">Not Shared</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8 p-1 bg-muted/50 rounded-xl h-14 lg:w-[600px]">
+            <TabsTrigger value="all" className="rounded-lg h-12 font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">All Content</TabsTrigger>
+            <TabsTrigger value="shared" className="rounded-lg h-12 font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Shared</TabsTrigger>
+            <TabsTrigger value="unshared" className="rounded-lg h-12 font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">Not Shared</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab}>

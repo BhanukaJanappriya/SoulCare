@@ -1,3 +1,5 @@
+import api from "@/api";
+
 export type UserRole = 'user'|'doctor' | 'counselor'|'admin';
 
 export interface Provider {
@@ -13,9 +15,11 @@ export interface Appointment {
   provider: Provider;
   date: string;
   time: string;
+  start_time: string;
   status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
   notes: string;
   created_at: string;
+  has_review?: boolean;
 }
 
 
@@ -51,6 +55,7 @@ export interface PatientProfile {
   dob: string; // Dates come as strings from JSON
   health_issues: string | null;
   profile_picture?: string | null;
+  risk_level?: 'low' | 'medium' | 'high';
 }
 
 
@@ -105,8 +110,8 @@ export interface PatientOption {
   age?: number;
   lastVisit?: string | null;
   condition?: string | null;
-  status?: 'active' | 'inactive' | string;
-  riskLevel?: 'low' | 'medium' | 'high' | string;
+  is_active?: boolean;
+  risk_level?: 'low' | 'medium' | 'high';
 }
 
 export interface PatientDetailData {
@@ -155,20 +160,7 @@ export interface PrescriptionFormData {
     medications: Omit<MedicationData, 'id'>[];
 }
 
-export interface BlogPost {
-  id: string;
-  authorId: string;
-  title: string;
-  content: string;
-  excerpt: string;
-  author_name?: string;
-  author_role?: string;
-  tags: string[];
-  status: 'draft' | 'pending' | 'published' | 'rejected';
-  publishedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
+
 
 export interface ContentItem {
   id: number;
@@ -201,16 +193,18 @@ export interface Notification {
   createdAt: Date;
 }
 
+//Progress note Interfaces
 export interface ProgressNote {
-  id: string;
-  patientId: string;
-  providerId: string;
-  appointmentId?: string;
-  type: 'therapy' | 'medical' | 'general';
-  content: string;
-  goals: string[];
-  nextSteps: string[];
-  createdAt: Date;
+    id: number;
+    patient_id: number;
+    content: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ProgressNoteInput {
+    patient_id: number;
+    content: string;
 }
 
 
@@ -260,52 +254,116 @@ export interface Conversation {
 
 
 // =================================================================
-// --- HABITS TYPES ---
+// --- MOOD TRACKER TYPES (NEW) ---
 // =================================================================
 
-export interface Habit {
-  id: string | number; // Django uses number, but frontend sometimes uses string for temporary IDs
+export interface Activity {
+  id: number;
   name: string;
-  description: string;
-  frequency: "daily" | "weekly" | "monthly";
-  target: number;
-  current: number;
-  streak: number;
-  category: string;
-  color: string;
-  completedToday: boolean; // Mapped from completed_today
-  createdAt: string; // Keep as string (ISO date string) for transport
-  lastCompleted?: string | null; // Keep as string (ISO date string) or null for transport
 }
 
-// Data structure for creating a new habit (what React sends to POST /habits/)
-export interface HabitInput {
+export interface MoodEntry {
+  id: number;
+  patient: number; // Just the ID is fine for the fetched object
+  mood: number;
+  energy: number;
+  anxiety: number;
+  notes: string | null;
+  activities: Activity[]; // List of activity objects
+  tags: Tag[]; // List of tag objects
+  date: string; // ISO date string (YYYY-MM-DD)
+  created_at: string; // ISO datetime string
+}
+
+// Type for sending data to the backend
+export interface MoodEntryInput {
+  mood: number;
+  energy: number;
+  anxiety: number;
+  notes: string | null;
+  activity_ids: number[]; // Array of Activity IDs
+  tag_ids: number[]; // Array of Tag IDs
+  date: string; // The date of the entry
+}
+
+
+// =================================================================
+// --- HABITS TYPES ---
+// ... (Your existing HABITS TYPES go here)
+// ...
+
+export type HabitTask = {
+    habit: Habit;
+    id: number;
+    name: string;
+    isCompleted: boolean; // Dynamic status for the current period
+};
+// ... (rest of Habit types)
+
+
+// ... (The rest of your existing types, starting from HabitTaskInput)
+
+export type HabitTaskInput = {
+    name: string;
+};
+
+export type Habit = {
+    id: number;
+    name: string;
+    description: string | null;
+    frequency: 'daily' | 'weekly' | 'monthly';
+    target: number;
+    current: number;
+    streak: number;
+    category: string;
+    color: string;
+    createdAt: string;
+    completedToday: boolean;
+    tasks: HabitTask[];
+};
+
+export type HabitToggleResponse = {
+    status: string;
+    habit: Habit;
+    // If you had 'any' here, that's the fix.
+    // The Habit type itself should also not contain 'any'
+};
+
+export type HabitInput = {
     name: string;
     description: string;
     frequency: 'daily' | 'weekly' | 'monthly';
-    target: number;
+    target: number; // Typically 1 for a new habit, can be updated later by adding tasks
     category: string;
     color: string;
+};
+
+export type MissedHabitItem = {
+    habit_id: number;
+    habit_name: string;
+    task_id: number;
+    task_name: string;
+    frequency: 'daily' | 'weekly' | 'monthly';
+    missed_period_end_date: string; // The last date of the missed period
+};
+
+//Recent Activity Interfaces
+export interface ActivityItem {
+  id: string;
+  // Updated types to match your requirements
+  type: 'cancellation' | 'new_patient' | 'prescription' | 'content_shared';
+  text: string;
+  date: string; // ISO string
 }
-
-// Data structure for the POST /habits/{id}/toggle_completion/ body
-export interface HabitToggleInput {
-    completed: boolean;
-}
-
-// Data structure for the POST /habits/{id}/toggle_completion/ response
-export interface HabitToggleResponse {
-    status: string; // e.g., "Habit marked as completed"
-    habit: Habit; // The updated habit object from the server
-}
-
-
 export interface ProviderStatsData {
   total_patients: number;
   appointments_today: number;
   pending_messages: number;
   average_rating: number;
+  recent_activity: ActivityItem[];
 }
+// ... (The rest of your existing types from ReactionTimePayload down to WeeklyMoodDataPoint)
+
 
 export interface ReactionTimePayload {
   reaction_time_ms: number;
@@ -330,3 +388,252 @@ export interface StroopGamePayload {
   perceived_effort: number;
   stress_reduction_rating: number;
 }
+
+export interface LongestNumberPayload {
+  max_number_length: number;
+  total_attempts: number;
+  total_reaction_time_ms: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+// === NEW INTERFACES FOR LONGEST NUMBER GAME STATS ===
+export interface LongestNumberHistoryItem {
+    score: number;
+    time: number;
+    created_at: string;
+}
+
+export interface LongestNumberGameStats {
+    highest_score: number;
+    average_score: number;
+    total_plays: number;
+    history: LongestNumberHistoryItem[];
+}
+
+// =================================================================
+// --- NUMPUZ GAME
+// =================================================================
+
+export interface NumpuzPayload {
+  time_taken_s: number;
+  puzzle_size: string; // e.g., "3x3", "4x4"
+  moves_made: number;
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface NumpuzHistoryItem {
+  score: number; // We'll use moves_made for score
+  time_taken_s: number;
+  puzzle_size: string;
+  created_at: string;
+}
+
+export interface NumpuzGameStats {
+  best_time_s: number;
+  min_moves: number;
+  total_plays: number;
+  history: NumpuzHistoryItem[];
+}
+
+export interface AdditionsGamePayload {
+  total_correct: number;
+  time_taken_s: number;
+  difficulty_level: number; // Max level reached
+  post_game_mood: number;
+  perceived_effort: number;
+  stress_reduction_rating: number;
+}
+
+export interface AdditionsGameHistoryItem {
+  score: number; // Total correct
+  time: number; // Time taken in seconds
+  difficulty: number; // Max difficulty level
+  created_at: string;
+}
+
+export interface AdditionsGameStats {
+  highest_correct: number; // Max total_correct achieved
+  avg_correct: number;
+  total_plays: number;
+  history: AdditionsGameHistoryItem[];
+}
+
+
+
+// =================================================================
+// --- DASHBOARD AGGREGATE GAME STATS ---
+// =================================================================
+
+export interface GameSpecificSummary {
+    total_plays: number;
+    // Best score is an abstract term, we'll use specific metrics for modeled games
+    best_metric: number | null; // e.g., Best Time, Max Length, Highest Correct
+    last_played_at: string | null; // ISO date string
+}
+
+export interface GameDashboardStats {
+    total_games_played: number; // Sum of all game plays
+    average_success_rate: number; // e.g., an average of best scores (0-100)
+    total_time_spent_h: number; // Total time played in hours (for the main stat card)
+
+    // Detailed summary for each game
+    summary: {
+        reaction_time: {
+            best_time_ms: number | null; // Lower is better
+            total_plays: number;
+        };
+        memory_game: {
+            max_sequence_length: number | null; // Higher is better
+            total_plays: number;
+        };
+        stroop_game: {
+            best_correct_percentage: number | null; // Higher is better
+            avg_interference_ms: number | null; // Lower is better
+            total_plays: number;
+        };
+        longest_number: {
+            max_number_length: number | null; // Higher is better
+            total_plays: number;
+        };
+        numpuz_game: {
+            best_time_s: number | null; // Lower is better
+            min_moves: number | null; // Lower is better
+            total_plays: number;
+        };
+        additions_game: {
+            highest_correct: number | null; // Higher is better
+            total_plays: number;
+        };
+        // Placeholders for unmodeled games (to maintain frontend stability)
+        emotion_recognition: GameSpecificSummary;
+        visual_attention_tracker: GameSpecificSummary;
+        pattern_recognition: GameSpecificSummary;
+        mood_reflection_game: GameSpecificSummary;
+    }
+}
+
+
+//Rating System Interfaces
+export interface Review {
+    id: number;
+    appointment_id: number;
+    rating: number;
+    comment: string;
+    created_at: string;
+}
+
+export interface ReviewInput {
+    appointment_id: number;
+    rating: number;
+    comment: string;
+}
+export interface PatientDashboardStats {
+  current_streak: number;
+  today_mood_score: number;
+  total_meditation_minutes: number;
+  // FIX: Added meditation_sessions for the timer card footer
+  meditation_sessions: number;
+  // We use Appointment | null because the date might not exist
+  next_appointment: Appointment | null;
+  daily_progress_percentage: number;
+}
+
+export interface WeeklyMoodDataPoint {
+  day: string; // e.g., "Mon", "Tue"
+  mood: number;
+  energy: number;
+  anxiety: number;
+}
+
+
+export interface PatientUpdateInput {
+    // Define specific fields you expect to update
+    risk_status?: 'low' | 'medium' | 'high' | string;
+    full_name?: string;
+    contact_number?: string;
+    // ... add any other top-level fields you might patch
+
+    // If you are patching the nested profile data, you would use:
+    patientprofile?: Partial<PatientProfile>;
+}
+
+
+// --- BLOG ENGAGEMENT TYPES ---
+
+// Matches BlogCommentSerializer.get_author
+export interface CommentAuthor {
+  id: number;
+  username: string;
+  email: string;
+  role: UserRole;
+  full_name: string;
+  guestName?: string | null;
+  guestEmail?: string | null;
+}
+
+// Matches BlogCommentSerializer
+export interface BlogComment {
+  id: number;
+  post: number;
+  author: CommentAuthor | null; 
+  content: string;
+  createdAt: string;
+}
+
+// Matches BlogPostSerializer aggregated fields
+export interface BlogAggregates {
+  average_rating: number; // 0.0 to 5.0
+  rating_count: number;
+  comment_count: number;
+  reaction_counts: {
+    like: number;
+    love: number;
+    insightful: number;
+  };
+}
+
+// Update the main BlogPost interface to include the new aggregated fields
+export interface BlogPost {
+  id: string;
+  authorId: string;
+  title: string;
+  content: string;
+  excerpt: string;
+  author_name?: string;
+  author_role?: string;
+  tags: string[];
+  status: 'draft' | 'pending' | 'published' | 'rejected';
+  publishedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  // New Aggregated fields
+  average_rating: number;
+  rating_count: number;
+  comment_count: number;
+  reaction_counts: {
+    like: number;
+    love: number;
+    insightful: number;
+  };
+}
+
+
+export type BlogReactionType = 'like' | 'love' | 'insightful';
+export type BlogSortBy = 'newest' | 'oldest' | 'top_rated';
+
+
+export interface BlogInputData {
+    title: string;
+    content: string;
+    excerpt?: string;
+    tags_input?: string; // Comma-separated tags string
+    status: 'draft' | 'pending' | 'published' | 'rejected';
+}
+
+
+
+

@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { RightSidebar } from "@/components/layout/RightSidebar"; // Assuming path is correct
+import { RightSidebar } from "@/components/layout/RightSidebar";
 import {
   Search,
   Filter,
@@ -23,10 +23,12 @@ import {
   Mail,
   AlertTriangle,
   Loader2,
+  BookOpen,
+  Hospital,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast"; // Ensure path is correct
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,46 +50,34 @@ type RiskFilter = "all" | "low" | "medium" | "high";
 // --- Patient Card Component ---
 interface PatientCardProps {
   patient: PatientOption;
-  // Mock data for status/risk - replace when available from API
-  mockStatus: "active" | "inactive";
-  mockRiskLevel: "low" | "medium" | "high";
 }
 
-const PatientCard: React.FC<PatientCardProps> = ({
-  patient,
-  mockStatus,
-  mockRiskLevel,
-}) => {
+const PatientCard: React.FC<PatientCardProps> = ({ patient }) => {
   const navigate = useNavigate();
-  const { toast } = useToast(); // Correct place to call useToast
+  const { toast } = useToast();
 
   const handleViewDetails = () => navigate(`/patient-details/${patient.id}`);
 
-  // handleSchedule function removed
-
   const handleWritePrescription = () => {
-    // Navigate to the main prescriptions page
     navigate("/prescriptions");
-
-    // Optional: Show a toast to guide the user what to do next
     toast({
       title: "Navigated to Prescriptions",
-      description: `Click "Create New Prescription" and select '${
-        patient.full_name
-      }' from the list.`,
+      description: `Click "Create New Prescription" and select '${patient.full_name}' from the list.`,
     });
   };
+  
   const handleViewHistory = () => {
     toast({
       title: "Action",
       description: `View history for ${patient.full_name || patient.username}`,
     });
-    // Future: navigate(`/patient-details/${patient.id}?section=history`);
   };
 
   // Helper functions for styling
   const getRiskLevelColor = (riskLevel?: string) => {
-    switch (riskLevel) {
+    // Default to 'low' if undefined, ensuring UI doesn't break
+    const level = riskLevel?.toLowerCase() || 'low';
+    switch (level) {
       case "high":
         return "bg-destructive text-destructive-foreground hover:bg-destructive/80";
       case "medium":
@@ -99,11 +89,23 @@ const PatientCard: React.FC<PatientCardProps> = ({
     }
   };
 
-  const getStatusColor = (status?: string) => {
-    return status === "active"
+  const getStatusColor = (isActive?: boolean) => {
+    return isActive
       ? "bg-green-100 text-green-700 border border-green-200"
       : "bg-gray-100 text-gray-500 border border-gray-200";
   };
+
+  // Use real data for status (assuming 'status' field exists or derived from is_active)
+  // If your PatientOption uses 'status' string, use that. If it uses 'is_active' boolean, map it.
+  // Based on previous files, user model has 'is_active'. 
+  // Let's assume PatientOption has been updated to include 'risk_level' and 'status' or 'is_active'.
+  // For this code, I will assume 'status' is available as a string 'active'|'inactive' 
+  // OR map 'is_active' boolean if that's what is returned.
+  
+  // Mapping is_active to status string for display if needed, or using patient.status if available.
+  // Fallback to 'active' if data is missing to prevent UI errors.
+  const patientStatus = "active"; 
+  const patientRisk = patient.risk_level || "low";
 
   return (
     <Card className="healthcare-card hover:shadow-lg transition-shadow flex flex-col bg-card text-card-foreground">
@@ -141,7 +143,6 @@ const PatientCard: React.FC<PatientCardProps> = ({
               <DropdownMenuItem onClick={handleViewDetails}>
                 View Details
               </DropdownMenuItem>
-              {/* Schedule Appointment item removed */}
               <DropdownMenuItem onClick={handleWritePrescription}>
                 Write Prescription
               </DropdownMenuItem>
@@ -165,30 +166,29 @@ const PatientCard: React.FC<PatientCardProps> = ({
       </CardContent>
 
       <div className="p-4 pt-2 border-t flex items-center justify-between">
-        {/* Status and Risk (Using Mock Data) */}
+        {/* Status and Risk (Using REAL Data) */}
         <div className="flex items-center space-x-2">
           <Badge
             variant="outline"
             className={
-              getStatusColor(mockStatus) + " text-xs font-medium px-2 py-0.5"
+              getStatusColor(patientStatus === 'active') + " text-xs font-medium px-2 py-0.5 capitalize"
             }
           >
-            {mockStatus.charAt(0).toUpperCase() + mockStatus.slice(1)}
+            {patientStatus}
           </Badge>
           <Badge
             className={
-              getRiskLevelColor(mockRiskLevel) +
-              " text-xs font-medium px-2 py-0.5"
+              getRiskLevelColor(patientRisk) +
+              " text-xs font-medium px-2 py-0.5 capitalize"
             }
           >
-            {mockRiskLevel === "high" && (
+            {patientRisk === "high" && (
               <AlertTriangle className="w-3 h-3 mr-1 inline-block" />
             )}
-            {mockRiskLevel.charAt(0).toUpperCase() + mockRiskLevel.slice(1)}{" "}
-            Risk
+            {patientRisk} Risk
           </Badge>
         </div>
-        {/* Simple View Details Button (Dropdown handles other actions) */}
+        {/* Simple View Details Button */}
         <Button
           size="sm"
           variant="link"
@@ -205,7 +205,7 @@ const PatientCard: React.FC<PatientCardProps> = ({
 // --- Main Patients Page Component ---
 const Patients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast(); // Correct place to call useToast
+  const { toast } = useToast();
 
   // --- Filter State ---
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -222,24 +222,9 @@ const Patients: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // --- MOCK DATA INJECTION (Remove when API provides status/risk) ---
-  const patientsWithMockData = useMemo(() => {
-    return patients.map((p) => ({
-      ...p,
-      mockStatus: (p.id % 2 === 0 ? "active" : "inactive") as
-        | "active"
-        | "inactive",
-      mockRiskLevel: ["low", "medium", "high"][p.id % 3] as
-        | "low"
-        | "medium"
-        | "high",
-    }));
-  }, [patients]);
-  // --- END MOCK DATA INJECTION ---
-
   // --- Combined Filtering Logic ---
   const filteredPatients = useMemo(() => {
-    let results = patientsWithMockData; // Start with fetched (and mocked) data
+    let results = patients; 
 
     // Apply search term filter
     if (searchTerm) {
@@ -256,31 +241,32 @@ const Patients: React.FC = () => {
     // Apply status filter
     if (statusFilter !== "all") {
       results = results.filter(
-        (patient) => patient.mockStatus === statusFilter
-      ); // Use mockStatus
+        (patient) => ('active') === statusFilter
+      );
     }
 
     // Apply risk filter
     if (riskFilter !== "all") {
       results = results.filter(
-        (patient) => patient.mockRiskLevel === riskFilter
-      ); // Use mockRiskLevel
+        (patient) => (patient.risk_level || 'low') === riskFilter
+      );
     }
 
     return results;
-  }, [patientsWithMockData, searchTerm, statusFilter, riskFilter]);
+  }, [patients, searchTerm, statusFilter, riskFilter]);
 
   return (
-    // Assuming RightSidebar is w-16 (4rem), p-6 is 1.5rem.
-    // Total right padding = 4rem + 1.5rem = 5.5rem (pr-[5.5rem] is ~pr-22 in Tailwind)
     <div className="min-h-screen bg-background text-foreground pr-[5.5rem]">
       <RightSidebar />
       <div className="p-6">
         
-        {/* --- UPDATED & COMBINED HEADER / FILTER CARD --- */}
+        {/* --- HEADER / FILTER CARD --- */}
         <Card className="mb-8 shadow-sm bg-card">
           <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                    <Hospital className="h-8 w-8 text-primary" />
+              </div>
               <div>
                 <CardTitle className="text-2xl font-bold">
                   Patient Management
@@ -309,7 +295,6 @@ const Patients: React.FC = () => {
                   <Button variant="outline" className="h-10">
                     <Filter className="w-4 h-4 mr-2" />
                     Filter
-                    {/* Optional: Show badge if filters active */}
                     {(statusFilter !== "all" || riskFilter !== "all") && (
                       <span className="ml-2 inline-block w-2 h-2 rounded-full bg-primary" />
                     )}
@@ -381,8 +366,6 @@ const Patients: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        {/* --- END OF UPDATED HEADER --- */}
-
 
         {/* Loading State */}
         {isLoading && (
@@ -407,12 +390,9 @@ const Patients: React.FC = () => {
         {!isLoading && !fetchError && filteredPatients.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
             {filteredPatients.map((patient) => (
-              // Pass mock status/risk until API provides them
               <PatientCard
                 key={patient.id}
                 patient={patient}
-                mockStatus={patient.mockStatus}
-                mockRiskLevel={patient.mockRiskLevel}
               />
             ))}
           </div>

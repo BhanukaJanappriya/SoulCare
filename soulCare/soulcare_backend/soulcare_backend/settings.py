@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
 
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -58,6 +61,7 @@ INSTALLED_APPS = [
     'mentalGames',
     'content',
     'user_settings',
+    'reviews',
 
 
 
@@ -181,5 +185,14 @@ CHANNEL_LAYERS = {
     },
 }
 
-STRIPE_PUBLISHABLE_KEY = '***REMOVED***' 
-STRIPE_SECRET_KEY = '***REMOVED***'
+
+# --- EMAIL CONFIGURATION ---
+# For Development: This prints emails to the console/terminal
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Default settings (required even for console backend)
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 1025
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'SoulCare <noreply@soulcare.com>'

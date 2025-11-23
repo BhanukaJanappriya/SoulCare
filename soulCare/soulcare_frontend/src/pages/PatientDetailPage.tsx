@@ -1,22 +1,30 @@
 // src/pages/PatientDetailPage.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // Added useMutation, useQueryClient
 // --- ADD NEW API FUNCTIONS ---
 import { 
     getPatientDetailsAPI, 
     getPatientAppointments, 
-    getPatientPrescriptions 
+    getPatientPrescriptions,
+    updatePatientDetailsAPI,
+    getProgressNotesAPI,
+    createProgressNoteAPI,
+    deleteProgressNoteAPI,
 } from '@/api';
 // --- ADD Appointment and PrescriptionData TYPES ---
 import { 
     PatientDetailData, 
     Appointment, 
-    PrescriptionData 
+    PrescriptionData,
+    ProgressNote,
+    ProgressNoteInput
 } from '@/types';
 import { 
     Loader2, AlertTriangle, ArrowLeft, Mail, Phone, Calendar as CalendarIcon, 
-    MapPin, Stethoscope, FileText, User, ClipboardX, Clock 
+    MapPin, Stethoscope, FileText, User, ClipboardX, Clock, Activity, 
+    Plus,
+    Trash2
 } from 'lucide-react'; // Added more icons
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,6 +36,17 @@ import { useToast } from "@/hooks/use-toast";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"; // Import Table components
+// --- NEW IMPORTS FOR RISK SELECTION ---
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 // --- (Helper components for the lists, you can move these to a separate file if you prefer) ---
 
@@ -117,13 +136,152 @@ const PatientPrescriptionsList: React.FC<{ patientId: string | number }> = ({ pa
         </div>
     );
 };
-// --- (End of helper components) ---
 
+
+//Progress Note Component
+
+const ProgressNotesList: React.FC<{ patientId: string | number }> = ({ patientId }) => {
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
+    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [newNoteContent, setNewNoteContent] = useState("");
+    const [noteToDelete, setNoteToDelete] = useState<number | null>(null); // State for delete dialog
+
+    const { data: notes, isLoading } = useQuery<ProgressNote[]>({
+        queryKey: ['progressNotes', patientId],
+        queryFn: () => getProgressNotesAPI(patientId),
+    });
+
+    const createMutation = useMutation({
+        mutationFn: createProgressNoteAPI,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['progressNotes', patientId] });
+            toast({ title: "Note Added", description: "Progress note saved successfully." });
+            setIsAddOpen(false);
+            setNewNoteContent("");
+        },
+        onError: () => {
+             toast({ variant: "destructive", title: "Error", description: "Failed to save note." });
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: deleteProgressNoteAPI,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['progressNotes', patientId] });
+            toast({ title: "Note Deleted", description: "Progress note removed." });
+            setNoteToDelete(null);
+        },
+        onError: () => {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete note." });
+            setNoteToDelete(null);
+        }
+    });
+
+    const handleSave = () => {
+        if (!newNoteContent.trim()) return;
+        createMutation.mutate({
+            patient_id: Number(patientId),
+            content: newNoteContent
+        });
+    };
+
+    return (
+        <>
+             <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-muted-foreground">Private notes for your reference.</p>
+             </div>
+
+             {isLoading ? (
+                 <div className="text-center py-4"><Loader2 className="w-5 h-5 animate-spin mx-auto"/></div>
+             ) : notes && notes.length > 0 ? (
+                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                     {notes.map(note => (
+                         <div key={note.id} className="p-3 bg-muted/30 rounded-md border text-sm group relative hover:bg-muted/50 transition-colors">
+                             <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                 <span>{format(parseISO(note.created_at), 'PPP p')}</span>
+                                 
+                                 {/* Delete Button (Visible on Hover) */}
+                                 <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2"
+                                    onClick={() => setNoteToDelete(note.id)}
+                                 >
+                                     <Trash2 className="w-3.5 h-3.5" />
+                                 </Button>
+                             </div>
+                             <p className="whitespace-pre-wrap text-foreground pr-6">{note.content}</p>
+                         </div>
+                     ))}
+                 </div>
+             ) : (
+                 <div className="text-center py-6 border-2 border-dashed rounded-md text-muted-foreground text-sm">
+                     No progress notes yet.
+                 </div>
+             )}
+
+             {/* Add Note Dialog */}
+             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                 <DialogContent>
+                     <DialogHeader>
+                         <DialogTitle>Add Progress Note</DialogTitle>
+                         <DialogDescription>
+                             This note is private to you and will not be seen by other providers.
+                         </DialogDescription>
+                     </DialogHeader>
+                     <Textarea 
+                        value={newNoteContent} 
+                        onChange={(e) => setNewNoteContent(e.target.value)}
+                        placeholder="Enter note details..."
+                        className="min-h-[150px]"
+                     />
+                     <DialogFooter>
+                         <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                         <Button onClick={handleSave} disabled={createMutation.isPending}>
+                             {createMutation.isPending ? 'Saving...' : 'Save Note'}
+                         </Button>
+                     </DialogFooter>
+                 </DialogContent>
+             </Dialog>
+
+             {/* Delete Confirmation Dialog */}
+             <AlertDialog open={!!noteToDelete} onOpenChange={() => setNoteToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Note?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this progress note? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={() => noteToDelete && deleteMutation.mutate(noteToDelete)}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+             
+             <div className="mt-4 flex justify-end">
+                 <Button variant="outline" size="sm" onClick={() => setIsAddOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" /> Add Note
+                 </Button>
+             </div>
+        </>
+    );
+};
+
+// --- (End of helper components) ---
 
 const PatientDetailPage: React.FC = () => {
     const { patientId } = useParams<{ patientId: string }>();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const queryClient = useQueryClient(); // Need queryClient to invalidate cache after update
 
     // Fetch main patient details
     const { data: patient, isLoading, error: fetchError, isError } = useQuery<PatientDetailData>({
@@ -132,6 +290,33 @@ const PatientDetailPage: React.FC = () => {
         enabled: !!patientId,
         staleTime: 5 * 60 * 1000,
     });
+
+    // --- NEW: Mutation for Updating Risk Level ---
+    const riskMutation = useMutation({
+        mutationFn: (newRisk: string) => updatePatientDetailsAPI(patientId!, {
+            patientprofile: { risk_level: newRisk }
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['patientDetails', patientId] });
+            toast({ title: "Risk Level Updated", description: "Patient risk status has been changed successfully." });
+        },
+        onError: () => {
+            toast({ variant: "destructive", title: "Update Failed", description: "Could not update risk level." });
+        }
+    });
+
+    const handleRiskChange = (val: string) => {
+        riskMutation.mutate(val);
+    };
+
+    const getRiskColor = (level: string = 'low') => {
+        switch(level) {
+            case 'high': return 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100';
+            case 'medium': return 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100';
+            default: return 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100';
+        }
+    };
+    // ---------------------------------------------
 
     const goBack = () => navigate(-1);
 
@@ -182,20 +367,55 @@ const PatientDetailPage: React.FC = () => {
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                        <CardTitle className="text-2xl font-bold truncate">{profile?.full_name || patient.username}</CardTitle>
-                        <CardDescription className="text-sm text-muted-foreground mt-1">
-                            @{patient.username} | Age: {age} | Joined: {format(parseISO(patient.date_joined), 'PPP')}
-                        </CardDescription>
-                         <div className="mt-2 flex items-center space-x-2">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-2xl font-bold truncate">{profile?.full_name || patient.username}</CardTitle>
+                                <CardDescription className="text-sm text-muted-foreground mt-1">
+                                    @{patient.username} | Age: {age} | Joined: {format(parseISO(patient.date_joined), 'PPP')}
+                                </CardDescription>
+                            </div>
+                            
+                            {/* --- NEW: Stylish Risk Level Selector --- */}
+                            <div className="flex flex-col items-end gap-1.5">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider flex items-center gap-1">
+                                    <Activity className="w-3 h-3" /> Risk Status
+                                </span>
+                                <Select 
+                                    defaultValue={profile?.risk_level || 'low'} 
+                                    onValueChange={handleRiskChange}
+                                    disabled={riskMutation.isPending}
+                                >
+                                    <SelectTrigger className={`w-[130px] h-8 text-xs font-bold border shadow-sm transition-all ${getRiskColor(profile?.risk_level)} focus:ring-offset-0 focus:ring-1`}>
+                                        <SelectValue placeholder="Select Risk" />
+                                    </SelectTrigger>
+                                    <SelectContent align="end">
+                                        <SelectItem value="low" className="text-green-700 focus:text-green-800 focus:bg-green-50 font-medium">
+                                            Low Risk
+                                        </SelectItem>
+                                        <SelectItem value="medium" className="text-yellow-700 focus:text-yellow-800 focus:bg-yellow-50 font-medium">
+                                            Medium Risk
+                                        </SelectItem>
+                                        <SelectItem value="high" className="text-red-700 focus:text-red-800 focus:bg-red-50 font-medium">
+                                            High Risk
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {/* ---------------------------------------- */}
+                        </div>
+
+                         <div className="mt-3 flex items-center space-x-2">
                              <Badge variant={patient.is_active ? "default" : "secondary"} className={`text-xs ${patient.is_active ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                                 {patient.is_active ? 'Active' : 'Inactive'}
                              </Badge>
                          </div>
                     </div>
-                     <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-                        <Button size="sm" onClick={() => navigate('/messages')}> <Mail className="mr-2 h-4 w-4" /> Message (TBD)</Button>
-                     </div>
                 </CardHeader>
+                
+                {/* Action Bar embedded in card */}
+                <div className="px-6 py-3 bg-muted/30 border-t flex justify-end">
+                    <Button size="sm" onClick={() => navigate('/messages')}> <Mail className="mr-2 h-4 w-4" /> Message Patient</Button>
+                </div>
             </Card>
 
             {/* Detailed Info Grid */}
@@ -269,12 +489,12 @@ const PatientDetailPage: React.FC = () => {
 
              <Card className="shadow-sm">
                  <CardHeader className="flex flex-row items-center justify-between">
-                     <CardTitle className="text-lg">Progress Notes</CardTitle>
-                     <Button variant="outline" size="sm" onClick={() => toast({ title: "Action", description: "Open add note modal" })}>Add Note</Button>
+                     <CardTitle className="text-lg flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" /> Progress Notes
+                     </CardTitle>
                  </CardHeader>
                  <CardContent>
-                    {/* TODO: Fetch and display progress notes */}
-                    <p className="text-muted-foreground">Progress notes feature coming soon.</p>
+                    <ProgressNotesList patientId={patient.id} />
                  </CardContent>
              </Card>
 
