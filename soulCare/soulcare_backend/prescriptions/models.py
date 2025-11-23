@@ -9,6 +9,7 @@ class Prescription(models.Model):
     diagnosis = models.TextField()
     date_issued = models.DateField(auto_now_add=True)
     notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Prescription for {self.patient.username} by {self.doctor.username} on {self.date_issued}"

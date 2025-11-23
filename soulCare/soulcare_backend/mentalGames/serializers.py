@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ReactionTimeResult, MemoryGameResult, StroopGameResult
+from .models import ReactionTimeResult, MemoryGameResult, StroopGameResult,LongestNumberGameResult,NumpuzGameResult,AdditionsGameResult
 
 
 class ReactionTimeResultSerializer(serializers.ModelSerializer):
@@ -59,3 +59,78 @@ class StroopGameResultSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['user', 'created_at']
+
+# Longest Number Sequence game
+class LongestNumberGameResultSerializer(serializers.ModelSerializer):
+    # Explicitly define fields to complement null=True in model
+    perceived_effort = serializers.IntegerField(required=False)
+    stress_reduction_rating = serializers.IntegerField(required=False)
+
+    post_game_mood = serializers.IntegerField(required=False)
+
+    # ADDED: Make total_reaction_time_ms required=False to align with default=0 in model
+    total_reaction_time_ms = serializers.IntegerField(required=False)
+
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+
+
+
+    class Meta:
+        model = LongestNumberGameResult
+        fields = [
+            'id',
+            'user',
+            'max_number_length',
+            'total_reaction_time_ms',
+            'total_attempts',
+            'post_game_mood',
+            'perceived_effort',
+            'stress_reduction_rating',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'user','created_at']
+
+class NumpuzGameResultSerializer(serializers.ModelSerializer):
+    perceived_effort = serializers.IntegerField(required=False)
+    stress_reduction_rating = serializers.IntegerField(required=False)
+    post_game_mood = serializers.IntegerField(required=False)
+
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = NumpuzGameResult
+        fields = [
+            'id',
+            'time_taken_s',
+            'puzzle_size',
+            'moves_made',
+            'post_game_mood',
+            'perceived_effort',
+            'stress_reduction_rating',
+            'user',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+class AdditionsGameResultSerializer(serializers.ModelSerializer):
+    perceived_effort = serializers.IntegerField(required=False)
+    stress_reduction_rating = serializers.IntegerField(required=False)
+    post_game_mood = serializers.IntegerField(required=False)
+
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = AdditionsGameResult
+        fields = [
+            'id',
+            'total_correct',
+            'time_taken_s',
+            'difficulty_level',
+            'post_game_mood',
+            'perceived_effort',
+            'stress_reduction_rating',
+            'user',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']

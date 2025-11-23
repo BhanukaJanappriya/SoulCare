@@ -2,10 +2,11 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Appointment
-from .serializers import AppointmentReadSerializer, AppointmentWriteSerializer
+from .models import Appointment,ProgressNote
+from .serializers import AppointmentReadSerializer, AppointmentWriteSerializer,ProgressNoteSerializer
 from authapp.models import User
 from datetime import date
+from authapp.utils import send_appointment_approved_email,send_appointment_cancelled_email
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -100,8 +101,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if new_status == 'completed' and appointment.status != 'scheduled':
             return Response({'error': 'Only scheduled appointments can be marked as completed.'}, status=status.HTTP_400_BAD_REQUEST)
         
+        old_status = appointment.status
         appointment.status = new_status
+        
+        if new_status == 'cancelled':
+            appointment.cancelled_by = 'provider'
+        
         appointment.save()
+        
+        if old_status == 'pending' and new_status == 'scheduled':
+            send_appointment_approved_email(appointment)
+            
+        elif new_status == 'cancelled' and old_status != 'cancelled':
+            send_appointment_cancelled_email(appointment, cancelled_by_role='provider')
         
         # Return the updated appointment data using the read serializer
         serializer = AppointmentReadSerializer(appointment)
@@ -126,7 +138,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return Response({'error': 'This appointment can no longer be cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
         
         appointment.status = 'cancelled'
+        
+        appointment.cancelled_by = 'patient'
+        
         appointment.save()
+        
+        send_appointment_cancelled_email(appointment, cancelled_by_role='patient')
         
         # Return the updated appointment data
         serializer = AppointmentReadSerializer(appointment)
@@ -153,3 +170,29 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         # Return a success response with no content, which is standard for DELETE
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    
+class ProgressNoteViewSet(viewsets.ModelViewSet):
+    serializer_class = ProgressNoteSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        - Providers see ONLY notes they wrote for the specific patient.
+        """
+        user = self.request.user
+        if user.role not in ['doctor', 'counselor']:
+            return ProgressNote.objects.none()
+
+        queryset = ProgressNote.objects.filter(provider=user)
+        
+        # Filter by patient_id (Required)
+        patient_id = self.request.query_params.get('patient_id')
+        if patient_id:
+            queryset = queryset.filter(patient_id=patient_id)
+            
+        return queryset
+
+    def perform_create(self, serializer):
+        # Auto-assign the logged-in provider
+        serializer.save(provider=self.request.user)

@@ -8,6 +8,7 @@ from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 from .models import ContentItem
 from .serializers import ContentItemSerializer
 from authapp.models import User
+from authapp.utils import send_content_shared_email
 
 class ContentViewSet(viewsets.ModelViewSet):
     """
@@ -27,6 +28,10 @@ class ContentViewSet(viewsets.ModelViewSet):
         Providers can only see and manage their *own* content.
         """
         user = self.request.user
+        
+        if user.role == 'admin' or user.is_superuser:
+            return ContentItem.objects.all().order_by('-created_at')
+        
         if user.role not in ['doctor', 'counselor']:
             return ContentItem.objects.none()
         return ContentItem.objects.filter(owner=user)
@@ -48,10 +53,18 @@ class ContentViewSet(viewsets.ModelViewSet):
         patient_ids = request.data.get('patient_ids', [])
         
         try:
+            
+            current_shared_ids = set(content_item.shared_with.values_list('id', flat=True))
             # Get the actual User objects for the patients
             patients = User.objects.filter(role='user', id__in=patient_ids)
             # 'set' instantly replaces the list with the new one
             content_item.shared_with.set(patients)
+            
+            new_patient_ids = set(patient_ids) - current_shared_ids
+            new_patients = patients.filter(id__in=new_patient_ids)
+            
+            for patient in new_patients:
+                send_content_shared_email(content_item, patient)
             
             # Return the updated object
             serializer = self.get_serializer(content_item)

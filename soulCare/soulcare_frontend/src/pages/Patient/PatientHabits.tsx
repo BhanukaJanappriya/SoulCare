@@ -36,37 +36,55 @@ import {
   CheckCircle,
   TrendingUp,
   Trash2,
-  // --- NEW ICON IMPORTS ---
-  Brain, // For Mental Health
-  Dumbbell, // For Physical Health
-  Apple, // For Nutrition
-  Bed, // For Sleep
-  Users, // For Social
-  Zap, // For Productivity
-  LucideIcon, // Type for Lucide Icons
+  ListPlus,
+  AlertTriangle,
+  Brain,
+  Dumbbell,
+  Apple,
+  Bed,
+  Users,
+  Zap,
+  LucideIcon,
 } from "lucide-react";
+
 import api, {
   getHabitsAPI,
   createHabitAPI,
   deleteHabitAPI,
-  toggleHabitCompletionAPI,
+  createHabitTaskAPI,
+  toggleHabitTaskCompletionAPI,
+  getMissedHabitsAPI,
 } from "@/api";
 
-// --- IMPORT HABIT TYPES FROM THE CENTRAL TYPES FILE ---
-import { Habit, HabitInput } from "@/types"; // Habit type is for API transport (string dates)
+import {
+  Habit,
+  HabitInput,
+  HabitTask,
+  HabitTaskInput,
+  MissedHabitItem,
+} from "@/types";
 
-// --- Define HabitWithDate type for local state (as previously fixed) ---
-type HabitWithDate = Omit<Habit, "createdAt" | "lastCompleted"> & {
+// =================================================================
+// --- LOCAL TYPES (DEFINED OUTSIDE MAIN COMPONENT) ---
+// =================================================================
+
+type HabitWithDate = Omit<Habit, "createdAt"> & {
   createdAt: Date;
-  lastCompleted?: Date;
 };
 
-// Type for the form state
+type NewHabitTaskFormState = {
+  name: string;
+  habitId: number | null;
+};
+
 type NewHabitFormState = Omit<HabitInput, "color"> & {
   frequency: "daily" | "weekly" | "monthly";
 };
 
-// --- NEW FUNCTION: MAP CATEGORY TO ICON ---
+// =================================================================
+// --- HELPER FUNCTIONS (DEFINED OUTSIDE MAIN COMPONENT) ---
+// =================================================================
+
 const getCategoryIcon = (category: string): LucideIcon => {
   switch (category) {
     case "Mental Health":
@@ -82,15 +100,94 @@ const getCategoryIcon = (category: string): LucideIcon => {
     case "Productivity":
       return Zap;
     default:
-      return Target; // Default icon
+      return Target;
   }
 };
+
+// =================================================================
+// --- TASK CREATION DIALOG COMPONENT (FIX FOR INPUT SHAKING) ---
+// =================================================================
+
+const TaskCreationDialog: React.FC<{
+  isAddingTask: boolean;
+  setIsAddingTask: (open: boolean) => void;
+  newTask: NewHabitTaskFormState;
+  setNewTask: React.Dispatch<React.SetStateAction<NewHabitTaskFormState>>;
+  addNewTask: () => Promise<void>;
+  habits: HabitWithDate[];
+}> = ({
+  isAddingTask,
+  setIsAddingTask,
+  newTask,
+  setNewTask,
+  addNewTask,
+  habits,
+}) => (
+  <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Add New Task to Habit</DialogTitle>
+        <CardDescription>
+          Break down a habit into multiple, trackable steps.
+        </CardDescription>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Select Habit</Label>
+          <Select
+            value={String(newTask.habitId || "")}
+            onValueChange={(value) =>
+              setNewTask((prev) => ({ ...prev, habitId: parseInt(value) }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a parent habit" />
+            </SelectTrigger>
+            <SelectContent>
+              {habits.map((h) => (
+                <SelectItem key={h.id} value={String(h.id)}>
+                  {h.name} ({h.frequency})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Task Name</Label>
+          <Input
+            placeholder="e.g., Drink 2 glasses of water"
+            value={newTask.name}
+            // The stable state update here prevents the component re-render loop
+            onChange={(e) =>
+              setNewTask((prev) => ({ ...prev, name: e.target.value }))
+            }
+          />
+        </div>
+        <div className="flex gap-2 pt-4">
+          <Button onClick={addNewTask} className="flex-1">
+            Add Task
+          </Button>
+          <Button variant="outline" onClick={() => setIsAddingTask(false)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+);
+
+// =================================================================
+// --- MAIN PATIENT HABITS COMPONENT ---
+// =================================================================
 
 const PatientHabits: React.FC = () => {
   const { toast } = useToast();
 
   const [habits, setHabits] = useState<HabitWithDate[]>([]);
+  const [missedHabits, setMissedHabits] = useState<MissedHabitItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isAddingHabit, setIsAddingHabit] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
 
   const [newHabit, setNewHabit] = useState<NewHabitFormState>({
     name: "",
@@ -100,7 +197,10 @@ const PatientHabits: React.FC = () => {
     category: "Mental Health",
   });
 
-  const [isAddingHabit, setIsAddingHabit] = useState(false);
+  const [newTask, setNewTask] = useState<NewHabitTaskFormState>({
+    name: "",
+    habitId: null,
+  });
 
   const categories = [
     "Mental Health",
@@ -111,8 +211,18 @@ const PatientHabits: React.FC = () => {
     "Productivity",
   ];
 
-  // --- API CALLS (LOGIC REMAINS THE SAME) ---
+  // --- FETCH MISSED HABITS ---
+  const fetchMissedHabits = useCallback(async () => {
+    try {
+      const data = await getMissedHabitsAPI();
+      setMissedHabits(data);
+    } catch (error) {
+      console.error("Error fetching missed habits:", error);
+      // NOTE: Do not show toast on 404, as it will be fixed with the URL change
+    }
+  }, []);
 
+  // --- FETCH ALL HABITS ---
   const fetchHabits = useCallback(async () => {
     setLoading(true);
     try {
@@ -121,9 +231,6 @@ const PatientHabits: React.FC = () => {
       const formattedHabits: HabitWithDate[] = data.map((h) => ({
         ...h,
         createdAt: new Date(h.createdAt as string),
-        lastCompleted: h.lastCompleted
-          ? new Date(h.lastCompleted as string)
-          : undefined,
       }));
 
       setHabits(formattedHabits);
@@ -139,60 +246,81 @@ const PatientHabits: React.FC = () => {
     }
   }, [toast]);
 
+  // Combined fetch in useEffect
   useEffect(() => {
     fetchHabits();
-  }, [fetchHabits]);
+    fetchMissedHabits();
+  }, [fetchHabits, fetchMissedHabits]);
 
-  const toggleHabitCompletion = async (habit: HabitWithDate) => {
-    const newCompletionState = !habit.completedToday;
-    const habitId = habit.id;
-
+  // --- TOGGLE TASK COMPLETION (UPDATED TO USE FULL HABIT RESPONSE) ---
+  const toggleTaskCompletion = async (
+    habitId: number,
+    task: HabitTask,
+    newCompletionState: boolean
+  ) => {
+    const taskId = task.id;
     const originalHabits = habits;
 
-    setHabits((prev) =>
-      prev.map((h) =>
-        h.id === habitId ? { ...h, completedToday: newCompletionState } : h
-      )
+    // Minimal optimistic update for the specific task checkbox
+    setHabits((prevHabits) =>
+      prevHabits.map((h) => {
+        if (h.id === habitId) {
+          return {
+            ...h,
+            tasks: h.tasks.map((t) =>
+              t.id === taskId ? { ...t, isCompleted: newCompletionState } : t
+            ),
+          };
+        }
+        return h;
+      })
     );
 
     try {
-      const response = await toggleHabitCompletionAPI(
-        habitId,
+      // 1. Call the API endpoint
+      const response = await toggleHabitTaskCompletionAPI(
+        taskId,
         newCompletionState
       );
 
-      const updatedHabitData: HabitWithDate = {
-        ...response.habit,
-        createdAt: new Date(response.habit.createdAt as string),
-        lastCompleted: response.habit.lastCompleted
-          ? new Date(response.habit.lastCompleted as string)
-          : undefined,
-      };
+      // 2. Extract the full, updated habit object from the response
+      const updatedHabitData = response.habit;
 
+      // 3. Update the habits state with the full server data
       setHabits((prev) =>
-        prev.map((h) => (h.id === habitId ? updatedHabitData : h))
+        prev.map((h) => {
+          if (h.id === habitId) {
+            // Overwrite the old habit data with the fresh, server-calculated data
+            return {
+              ...updatedHabitData,
+              createdAt: new Date(updatedHabitData.createdAt),
+            } as HabitWithDate;
+          }
+          return h;
+        })
       );
 
+      // Check if missed habits need to be re-fetched (e.g., if a missed task was completed)
+      fetchMissedHabits();
+
       toast({
-        title: newCompletionState ? "Great job!" : "Habit unmarked!",
-        description: newCompletionState
-          ? "You've completed another habit today!"
-          : "Keep going with your habits!",
+        title: newCompletionState ? "Task Completed!" : "Task Unmarked!",
+        description: `Task: ${task.name} has been updated. Habit status refreshed.`,
       });
     } catch (error) {
-      console.error("Error toggling habit completion:", error);
-      setHabits(originalHabits);
+      console.error("Error toggling habit task completion:", error);
+      setHabits(originalHabits); // Rollback on error
       toast({
         title: "Error",
-        description: `Failed to ${
-          newCompletionState ? "complete" : "unmark"
-        } habit.`,
+        description: `Failed to update task: ${task.name}.`,
         variant: "destructive",
       });
     }
   };
 
+  // --- ADD NEW HABIT ---
   const addNewHabit = async () => {
+    // ... (logic remains the same)
     if (!newHabit.name.trim()) {
       toast({
         title: "Error",
@@ -213,9 +341,6 @@ const PatientHabits: React.FC = () => {
       const createdHabit: HabitWithDate = {
         ...data,
         createdAt: new Date(data.createdAt as string),
-        lastCompleted: data.lastCompleted
-          ? new Date(data.lastCompleted as string)
-          : undefined,
       };
 
       setHabits((prev) => [...prev, createdHabit]);
@@ -242,6 +367,56 @@ const PatientHabits: React.FC = () => {
     }
   };
 
+  // --- ADD NEW TASK ---
+  const addNewTask = async () => {
+    if (!newTask.name.trim() || !newTask.habitId) {
+      toast({
+        title: "Error",
+        description: "Please enter a task name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const createdTask = await createHabitTaskAPI(newTask.habitId, {
+        name: newTask.name,
+      });
+
+      // Update the habit in the state
+      setHabits((prev) =>
+        prev.map((h) => {
+          if (h.id === newTask.habitId) {
+            const updatedTasks = [...h.tasks, createdTask];
+            // Update the habit target to match the new task count
+            return {
+              ...h,
+              tasks: updatedTasks,
+              target: updatedTasks.length,
+            };
+          }
+          return h;
+        })
+      );
+
+      setNewTask({ name: "", habitId: null });
+      setIsAddingTask(false);
+
+      toast({
+        title: "Task added!",
+        description: "A new task has been added to your habit.",
+      });
+    } catch (error) {
+      console.error("Error adding new task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create new task.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // --- DELETE HABIT ---
   const deleteHabit = async (habitId: string | number) => {
     try {
       await deleteHabitAPI(habitId);
@@ -262,142 +437,167 @@ const PatientHabits: React.FC = () => {
     }
   };
 
-  // --- STATS CALCULATIONS (LOGIC REMAINS THE SAME) ---
-
+  // --- STATS CALCULATIONS ---
   const completedHabitsToday = habits.filter((h) => h.completedToday).length;
   const totalHabits = habits.length;
   const completionRate =
     totalHabits > 0 ? (completedHabitsToday / totalHabits) * 100 : 0;
-
   const bestStreak = Math.max(...habits.map((h) => h.streak), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <main className="p-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          {/* Header (REMAINS THE SAME) */}
+          {/* Header */}
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
-                Daily Habits
+                Habits Tracker
               </h1>
               <p className="text-muted-foreground">
-                Track and build positive habits for better mental health
+                Break down habits into tasks and stay on track
               </p>
             </div>
-
-            <Dialog open={isAddingHabit} onOpenChange={setIsAddingHabit}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Habit
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Habit</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Habit Name</Label>
-                    <Input
-                      placeholder="e.g., Morning Meditation"
-                      value={newHabit.name}
-                      onChange={(e) =>
-                        setNewHabit((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea
-                      placeholder="Brief description of your habit"
-                      value={newHabit.description}
-                      onChange={(e) =>
-                        setNewHabit((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setIsAddingTask(true)}
+                className="gap-2"
+              >
+                <ListPlus className="w-4 h-4" />
+                Add Task
+              </Button>
+              <Dialog open={isAddingHabit} onOpenChange={setIsAddingHabit}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Habit
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Habit</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {/* ... (Habit form fields) ... */}
                     <div className="space-y-2">
-                      <Label>Category</Label>
-                      <Select
-                        value={newHabit.category}
-                        onValueChange={(value) =>
-                          setNewHabit((prev) => ({ ...prev, category: value }))
+                      <Label>Habit Name</Label>
+                      <Input
+                        placeholder="e.g., Morning Meditation"
+                        value={newHabit.name}
+                        onChange={(e) =>
+                          setNewHabit((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label>Frequency</Label>
-                      <Select
-                        value={newHabit.frequency}
-                        onValueChange={(
-                          value: "daily" | "weekly" | "monthly"
-                        ) =>
-                          setNewHabit((prev) => ({ ...prev, frequency: value }))
+                      <Label>Description</Label>
+                      <Textarea
+                        placeholder="Brief description of your habit"
+                        value={newHabit.description}
+                        onChange={(e) =>
+                          setNewHabit((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
                         }
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Category</Label>
+                        <Select
+                          value={newHabit.category}
+                          onValueChange={(value) =>
+                            setNewHabit((prev) => ({
+                              ...prev,
+                              category: value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat} value={cat}>
+                                {cat}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Frequency</Label>
+                        <Select
+                          value={newHabit.frequency}
+                          onValueChange={(
+                            value: "daily" | "weekly" | "monthly"
+                          ) =>
+                            setNewHabit((prev) => ({
+                              ...prev,
+                              frequency: value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Target Task Count</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={newHabit.target}
+                        onChange={(e) =>
+                          setNewHabit((prev) => ({
+                            ...prev,
+                            target: parseInt(e.target.value) || 1,
+                          }))
+                        }
+                        placeholder="Enter 1 if it's a single-step habit"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-4">
+                      <Button onClick={addNewHabit} className="flex-1">
+                        Create Habit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsAddingHabit(false)}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        Cancel
+                      </Button>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Target ({newHabit.frequency})</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newHabit.target}
-                      onChange={(e) =>
-                        setNewHabit((prev) => ({
-                          ...prev,
-                          target: parseInt(e.target.value) || 1,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="flex gap-2 pt-4">
-                    <Button onClick={addNewHabit} className="flex-1">
-                      Create Habit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsAddingHabit(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
+            {/* Render the MOVED dialog here */}
+            <TaskCreationDialog
+              isAddingTask={isAddingTask}
+              setIsAddingTask={setIsAddingTask}
+              newTask={newTask}
+              setNewTask={setNewTask}
+              addNewTask={addNewTask}
+              habits={habits}
+            />
           </div>
 
-          {/* Stats Overview (REMAINS THE SAME) */}
+          {/* Stats Overview */}
           {loading ? (
+            // ... (Skeleton loading) ...
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {[...Array(4)].map((_, i) => (
                 <Card key={i}>
@@ -483,12 +683,13 @@ const PatientHabits: React.FC = () => {
             </div>
           )}
 
-          {/* Progress Overview (REMAINS THE SAME) */}
+          {/* Progress Overview */}
           <Card>
             <CardHeader>
-              <CardTitle>Today's Progress</CardTitle>
+              <CardTitle>Current Progress</CardTitle>
               <CardDescription>
-                {completedHabitsToday} of {totalHabits} habits completed
+                {completedHabitsToday} of {totalHabits} habits completed for the
+                current period.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -496,7 +697,46 @@ const PatientHabits: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Habits List (MODIFIED) */}
+          {/* MISSED HABITS SECTION */}
+          {missedHabits.length > 0 && (
+            <Card className="border-l-4 border-destructive bg-destructive/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-5 h-5" />
+                  Missed Tasks ({missedHabits.length})
+                </CardTitle>
+                <CardDescription>
+                  These tasks were not completed in their previous cycle. Get
+                  back on track!
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {missedHabits.map((item, index) => (
+                  <div
+                    key={index}
+                    className="p-3 border rounded-lg bg-card/50 flex flex-col space-y-1 text-sm"
+                  >
+                    <p className="font-semibold text-foreground">
+                      {item.task_name}
+                    </p>
+                    <p className="text-muted-foreground">
+                      Habit: {item.habit_name}
+                    </p>
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <Badge variant="secondary" className="capitalize">
+                        {item.frequency}
+                      </Badge>
+                      <span className="text-destructive/80">
+                        Missed on: {item.missed_period_end_date}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Habits List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {loading
               ? // Habit List Skeleton
@@ -508,8 +748,8 @@ const PatientHabits: React.FC = () => {
                   </Card>
                 ))
               : habits.map((habit) => {
-                  // Get the relevant icon component
                   const IconComponent = getCategoryIcon(habit.category);
+                  const totalTasks = habit.tasks.length || habit.target;
 
                   return (
                     <Card key={habit.id} className="relative">
@@ -517,9 +757,7 @@ const PatientHabits: React.FC = () => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <CardTitle className="text-lg flex items-center gap-2">
-                              {/* --- NEW: Category Icon Integration --- */}
                               <IconComponent className="w-4 h-4 text-primary" />
-                              {/* --------------------------------------- */}
                               {habit.name}
                             </CardTitle>
                             <CardDescription className="mt-1">
@@ -527,6 +765,17 @@ const PatientHabits: React.FC = () => {
                             </CardDescription>
                           </div>
                           <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setNewTask({ name: "", habitId: habit.id });
+                                setIsAddingTask(true);
+                              }}
+                              className="text-primary hover:text-primary/80"
+                            >
+                              <ListPlus className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -541,65 +790,128 @@ const PatientHabits: React.FC = () => {
                       <CardContent className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            {/* --- NEW: Habit Color Circle --- */}
                             <div
                               className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: habit.color }}
                             />
-                            {/* ------------------------------- */}
                             <Badge variant="outline">{habit.category}</Badge>
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <Flame className="w-4 h-4 text-orange-500" />
-                              {habit.streak} day streak
+                              {habit.streak} {habit.frequency} streak
                             </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {habit.current}/{habit.target} {habit.frequency}
+                          <div className="text-sm font-semibold">
+                            {habit.current}/{totalTasks}{" "}
+                            <Badge variant="secondary" className="capitalize">
+                              {habit.frequency}
+                            </Badge>
                           </div>
                         </div>
 
+                        {/* Progress Bar */}
                         <Progress
-                          value={(habit.current / habit.target) * 100}
+                          value={(habit.current / totalTasks) * 100}
                           className="h-2"
                         />
 
-                        <div className="flex items-center justify-between pt-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={habit.completedToday}
-                              onCheckedChange={() =>
-                                toggleHabitCompletion(habit)
-                              }
-                              id={`habit-${habit.id}`}
-                            />
-                            <Label
-                              htmlFor={`habit-${habit.id}`}
-                              className={`text-sm ${
-                                habit.completedToday
-                                  ? "line-through text-muted-foreground"
-                                  : ""
-                              }`}
-                            >
-                              Mark as completed today
+                        {/* Task List / Single Completion */}
+                        {habit.tasks.length > 0 ? (
+                          <div className="space-y-2 pt-2">
+                            <Label className="text-xs font-medium uppercase text-muted-foreground">
+                              Tasks
                             </Label>
+                            {habit.tasks.map((task, taskIndex) => (
+                              <div
+                                key={task.id}
+                                className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={task.isCompleted}
+                                    onCheckedChange={(checked) =>
+                                      toggleTaskCompletion(
+                                        habit.id,
+                                        task,
+                                        !!checked
+                                      )
+                                    }
+                                    id={`task-${task.id}`}
+                                  />
+                                  <Label
+                                    htmlFor={`task-${task.id}`}
+                                    className={`text-sm cursor-pointer ${
+                                      task.isCompleted
+                                        ? "line-through text-muted-foreground"
+                                        : "text-foreground"
+                                    }`}
+                                  >
+                                    {task.name}
+                                  </Label>
+                                </div>
+                                {task.isCompleted && (
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                )}
+                              </div>
+                            ))}
+                            {habit.completedToday && (
+                              <Badge
+                                variant="default"
+                                className="mt-2 w-full justify-center bg-green-500 hover:bg-green-600"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Habit Completed for this {habit.frequency}!
+                              </Badge>
+                            )}
                           </div>
-                          {habit.completedToday && (
-                            <Badge
-                              variant="default"
-                              className="bg-green-500 hover:bg-green-600"
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Done
-                            </Badge>
-                          )}
-                        </div>
+                        ) : (
+                          // Single-task completion (fallback/initial state)
+                          <div className="flex items-center justify-between pt-2">
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={habit.completedToday}
+                                onCheckedChange={() => {
+                                  if (
+                                    habit.target > 0 &&
+                                    habit.tasks.length === 0
+                                  ) {
+                                    toast({
+                                      title: "Hint",
+                                      description:
+                                        "Please break this habit down into at least one task using the 'Add Task' button.",
+                                      variant: "default",
+                                    });
+                                    return;
+                                  }
+                                }}
+                                id={`habit-${habit.id}-single`}
+                                disabled={true} // Disable checkbox to force task breakdown
+                              />
+                              <Label
+                                htmlFor={`habit-${habit.id}-single`}
+                                className={`text-sm text-muted-foreground italic`}
+                              >
+                                {habit.target} {habit.frequency} completion. (
+                                <span
+                                  className="font-semibold text-primary/80 cursor-pointer"
+                                  onClick={() => {
+                                    setNewTask({ name: "", habitId: habit.id });
+                                    setIsAddingTask(true);
+                                  }}
+                                >
+                                  Add your first task
+                                </span>{" "}
+                                to track)
+                              </Label>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   );
                 })}
           </div>
 
-          {/* No Habits Placeholder (REMAINS THE SAME) */}
+          {/* No Habits Placeholder */}
           {!loading && habits.length === 0 && (
             <Card className="py-12">
               <CardContent className="text-center">

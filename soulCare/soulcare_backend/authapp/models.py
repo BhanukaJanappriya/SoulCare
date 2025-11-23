@@ -113,6 +113,13 @@ class User(AbstractUser):
 #     PRIVATE = 'private', 'Private'
 
 class PatientProfile(models.Model):
+    
+    RISK_CHOICES = [
+        ('low', 'Low Risk'),
+        ('medium', 'Medium Risk'),
+        ('high', 'High Risk'),
+    ]
+    
     user = models.OneToOneField('User', on_delete=models.CASCADE)
     full_name = models.CharField(max_length=100)
     nic = models.CharField(max_length=12, unique=True)
@@ -121,6 +128,8 @@ class PatientProfile(models.Model):
     dob = models.DateField(null=True, blank=True)
     health_issues = models.TextField(blank=True, null=True)
     profile_picture = models.ImageField(upload_to='profiles/patients/', blank=True, null=True)
+    
+    risk_level = models.CharField(max_length=10, choices=RISK_CHOICES, default='low')
 
 class DoctorProfile(models.Model):
     user = models.OneToOneField('User', on_delete=models.CASCADE)

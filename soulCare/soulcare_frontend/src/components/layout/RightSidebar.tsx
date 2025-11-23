@@ -24,19 +24,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// ✅ Define proper TypeScript interfaces
+// Your interfaces and helpers are correct
 interface BaseProfile {
   full_name?: string;
   profile_picture?: string | null;
 }
 
-interface UserProfile {
-  username?: string;
-  role?: string;
-  profile?: BaseProfile | null;
-}
-
-// ✅ Type-safe helper functions
 const getProfilePicture = (profile: BaseProfile | null | undefined): string | null => {
   return profile?.profile_picture || null;
 };
@@ -52,17 +45,13 @@ interface NavItem {
   doctorOnly?: boolean;
 }
 
+// Your navItems array is correct
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Patients", path: "/patients" },
   { icon: Calendar, label: "Appointments", path: "/appointments" },
   { icon: Clock, label: "Schedule", path: "/schedule" },
-  {
-    icon: Stethoscope,
-    label: "Prescriptions",
-    path: "/prescriptions",
-    doctorOnly: true,
-  },
+  { icon: Stethoscope, label: "Prescriptions", path: "/prescriptions", doctorOnly: true },
   { icon: Video, label: "Video Calls", path: "/video-calls" },
   { icon: FileText, label: "Content", path: "/content" },
   { icon: BookOpen, label: "Blogs", path: "/blogs" },
@@ -73,8 +62,7 @@ const navItems: NavItem[] = [
 export const RightSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const { t } = useTranslation();
+  const { user, logout } = useAuth(); // Assuming useAuth provides the full user object including 'is_verified'
 
   const filteredNavItems = navItems.filter(
     (item) => !item.doctorOnly || user?.role === "doctor"
@@ -82,29 +70,37 @@ export const RightSidebar: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // ✅ Type-safe profile data extraction
   const profile = user?.profile as BaseProfile | undefined;
   const fullName = getFullName(profile);
-
   const userInitials = fullName
     ? fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase()
     : user?.username ? user.username[0].toUpperCase() : 'U';
-
   const profileImageSrc = getProfilePicture(profile);
 
-  // ✅ Profile Click Handler
   const handleProfileClick = () => {
     navigate('/profile');
   };
 
+  // --- START: NEW CODE FOR VERIFIED STYLING ---
+  // A helper variable to determine if the user is a verified professional
+  const isVerifiedProfessional = (user?.role === 'doctor' || user?.role === 'counselor') && user?.is_verified;
+  // --- END: NEW CODE ---
+
   return (
     <div className="fixed right-0 top-0 h-full w-16 bg-sidebar-bg flex flex-col items-center py-4 z-50 shadow-lg">
-
-      {/* ✅ User Avatar (Now the Navigation Point) */}
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="mb-6 cursor-pointer" onClick={handleProfileClick}>
-            <Avatar className="w-10 h-10">
+            
+            {/* --- START: APPLYING CONDITIONAL STYLING TO AVATAR --- */}
+            {/* We will add a green ring if the professional is verified */}
+            <Avatar className={`w-10 h-10 ${
+              isVerifiedProfessional
+                ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-sidebar-bg'
+                : ''
+            }`}>
+            {/* --- END: APPLYING CONDITIONAL STYLING --- */}
+
               <AvatarImage src={profileImageSrc || ''} alt={`${user?.username}'s profile`} />
               <AvatarFallback className="bg-primary text-white font-semibold text-sm">
                 {userInitials}
@@ -113,16 +109,17 @@ export const RightSidebar: React.FC = () => {
           </div>
         </TooltipTrigger>
         <TooltipContent side="left" className="mr-2">
-          <p>View Profile</p>
+          {/* --- START: DYNAMIC TOOLTIP CONTENT --- */}
+          <p>{isVerifiedProfessional ? `${fullName} (Verified)` : 'View Profile'}</p>
+          {/* --- END: DYNAMIC TOOLTIP CONTENT --- */}
         </TooltipContent>
       </Tooltip>
 
-      {/* Navigation Items */}
+      {/* Navigation Items (unchanged) */}
       <nav className="flex-1 flex flex-col space-y-2">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
-
           return (
             <Tooltip key={item.path}>
               <TooltipTrigger asChild>
@@ -148,7 +145,7 @@ export const RightSidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Logout Button */}
+      {/* Logout Button (unchanged) */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -167,3 +164,21 @@ export const RightSidebar: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
