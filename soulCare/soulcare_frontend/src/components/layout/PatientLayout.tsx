@@ -1,7 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import PatientSidebar from "./PatientSidebar";
-import GreetingHeader from "./GreetingHeader"; // <-- NEW IMPORT
 
 const PatientLayout: React.FC = () => {
   return (
@@ -14,7 +13,6 @@ const PatientLayout: React.FC = () => {
       {/* The `pr-16` padding prevents content from hiding behind the fixed sidebar */}
       <main className="pr-16">
         {/* The Greeting Header is placed at the top */}
-        <GreetingHeader />
         {/* The Outlet content will now have an inner div to manage spacing and prevent the header from taking up space twice */}
         <div className="p-6">
           <Outlet />

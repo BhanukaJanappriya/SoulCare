@@ -1,7 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { AdminSidebar } from "./AdminSidebar";
-import GreetingHeader from "./GreetingHeader";
 
 const AdminLayout: React.FC = () => {
   return (
@@ -12,7 +11,6 @@ const AdminLayout: React.FC = () => {
         {" "}
         {/* pl-64 to offset the width of the sidebar */}
         {/* The Greeting Header is placed at the top of the main area, sticky */}
-        <GreetingHeader />
         {/* The content below the header */}
         <div className="p-6">
           <Outlet />

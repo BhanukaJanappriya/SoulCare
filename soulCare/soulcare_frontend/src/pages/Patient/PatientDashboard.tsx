@@ -41,6 +41,7 @@ import {
   Zap,
   Loader2,
 } from "lucide-react";
+import GreetingHeader from "@/components/layout/GreetingHeader"; // <-- CORRECTLY IMPORTED
 
 // NEW HELPER FUNCTION: Calculates progress based on TASKS (for the Habit Card)
 const calculateHabitProgress = (habits: { tasks: HabitTask[] }[]) => {
@@ -171,292 +172,302 @@ const PatientDashboard: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Quick Stats */}
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {/* Current Streak */}
-          <Card className="hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Current Streak
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {data?.stats.current_streak} days
-                  </p>
-                </div>
-                <Award className="w-8 h-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Today's Mood */}
-          <Card className="hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Today's Mood
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {data?.stats.today_mood_score.toFixed(1) || "N/A"}
-                  </p>
-                </div>
-                <Heart className="w-8 h-8 text-rose-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Meditation */}
-          <Card className="hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Meditation
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {data?.stats.total_meditation_minutes} min
-                  </p>
-                </div>
-                <Brain className="w-8 h-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Next Session */}
-          <Card className="hover-scale">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Next Session
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {nextSessionTime}
-                  </p>
-                </div>
-                <Calendar className="w-8 h-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Mood Tracker */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                Weekly Mood Progress
-              </CardTitle>
-              <CardDescription>
-                Track your mood, energy, and anxiety levels over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-64 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : (
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data?.moodData || []}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        className="opacity-30"
-                      />
-                      <XAxis dataKey="day" />
-                      <YAxis domain={[0, 10]} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--popover))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="mood"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={3}
-                        dot={{
-                          fill: "hsl(var(--primary))",
-                          strokeWidth: 2,
-                          r: 5,
-                        }}
-                        name="Mood"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="energy"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
-                        name="Energy"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="anxiety"
-                        stroke="#f59e0b"
-                        strokeWidth={2}
-                        dot={{ fill: "#f59e0b", strokeWidth: 2, r: 4 }}
-                        name="Anxiety"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Activity Tracking (Habit Card) */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-primary" />
-                Habit Tracker
-              </CardTitle>
-              <CardDescription>Your daily habits and progress</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading && <Skeleton className="h-24 w-full" />}
-              {data?.habits.map((habit, index) => {
-                const completedTasks = habit.tasks.filter(
-                  (t) => t.isCompleted
-                ).length;
-                const totalTasks = habit.tasks.length;
-                const progress =
-                  totalTasks > 0
-                    ? Math.round((completedTasks / totalTasks) * 100)
-                    : 0;
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-foreground">
-                          {habit.name}
-                        </span>
-                        <Badge variant="outline">
-                          {/* Display habit completion status */}
-                          {habit.completedToday
-                            ? "Completed"
-                            : `${completedTasks}/${totalTasks} tasks`}
-                        </Badge>
-                      </div>
-                      <Progress value={progress} className="h-2" />
-                    </div>
+    <div className="p-0">
+      {" "}
+      {/* Use p-0 here, as the Layout provides the p-6 now */}
+      {/* NEW: Place GreetingHeader here */}
+      <GreetingHeader />
+      {/* The rest of the content is wrapped in its own padding to flow below the sticky header */}
+      <div className="p-6 space-y-6">
+        {" "}
+        {/* Added space-y-6 for vertical spacing */}
+        {/* Quick Stats */}
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {/* Current Streak */}
+            <Card className="hover-scale">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Current Streak
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {data?.stats.current_streak} days
+                    </p>
                   </div>
-                );
-              })}
-              {!isLoading && data?.habits.length === 0 && (
-                <p className="text-center text-muted-foreground">
-                  No habits set up yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Daily Progress (Pie Chart) */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-primary">Daily Progress</CardTitle>
-              <CardDescription>Habits completed today</CardDescription>{" "}
-              {/* Updated description */}
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="h-48 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <Award className="w-8 h-8 text-primary" />
                 </div>
-              ) : (
-                <>
-                  <div className="h-48 flex items-center justify-center">
+              </CardContent>
+            </Card>
+
+            {/* Today's Mood */}
+            <Card className="hover-scale">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Today's Mood
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {data?.stats.today_mood_score.toFixed(1) || "N/A"}
+                    </p>
+                  </div>
+                  <Heart className="w-8 h-8 text-rose-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Meditation */}
+            <Card className="hover-scale">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total Meditation
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {data?.stats.total_meditation_minutes} min
+                    </p>
+                  </div>
+                  <Brain className="w-8 h-8 text-purple-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Next Session */}
+            <Card className="hover-scale">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Next Session
+                    </p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {nextSessionTime}
+                    </p>
+                  </div>
+                  <Calendar className="w-8 h-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Mood Tracker */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Weekly Mood Progress
+                </CardTitle>
+                <CardDescription>
+                  Track your mood, energy, and anxiety levels over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="h-64 flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={80}
-                          dataKey="value"
-                          startAngle={90}
-                          endAngle={90 + pieData[0].value * 3.6}
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
+                      <LineChart data={data?.moodData || []}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          className="opacity-30"
+                        />
+                        <XAxis dataKey="day" />
+                        <YAxis domain={[0, 10]} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--popover))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="mood"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={3}
+                          dot={{
+                            fill: "hsl(var(--primary))",
+                            strokeWidth: 2,
+                            r: 5,
+                          }}
+                          name="Mood"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="energy"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
+                          name="Energy"
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="anxiety"
+                          stroke="#f59e0b"
+                          strokeWidth={2}
+                          dot={{ fill: "#f59e0b", strokeWidth: 2, r: 4 }}
+                          name="Anxiety"
+                        />
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="text-center mt-4">
-                    <p className="text-4xl font-extrabold text-primary">
-                      {dailyHabitPercentage}%
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Habits Completed
-                    </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Activity Tracking (Habit Card) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-primary" />
+                  Habit Tracker
+                </CardTitle>
+                <CardDescription>
+                  Your daily habits and progress
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isLoading && <Skeleton className="h-24 w-full" />}
+                {data?.habits.map((habit, index) => {
+                  const completedTasks = habit.tasks.filter(
+                    (t) => t.isCompleted
+                  ).length;
+                  const totalTasks = habit.tasks.length;
+                  const progress =
+                    totalTasks > 0
+                      ? Math.round((completedTasks / totalTasks) * 100)
+                      : 0;
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-foreground">
+                            {habit.name}
+                          </span>
+                          <Badge variant="outline">
+                            {/* Display habit completion status */}
+                            {habit.completedToday
+                              ? "Completed"
+                              : `${completedTasks}/${totalTasks} tasks`}
+                          </Badge>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                      </div>
+                    </div>
+                  );
+                })}
+                {!isLoading && data?.habits.length === 0 && (
+                  <p className="text-center text-muted-foreground">
+                    No habits set up yet.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Daily Progress (Pie Chart) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-primary">Daily Progress</CardTitle>
+                <CardDescription>Habits completed today</CardDescription>{" "}
+                {/* Updated description */}
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="h-48 flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <>
+                    <div className="h-48 flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={80}
+                            dataKey="value"
+                            startAngle={90}
+                            endAngle={90 + pieData[0].value * 3.6}
+                          >
+                            {pieData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="text-center mt-4">
+                      <p className="text-4xl font-extrabold text-primary">
+                        {dailyHabitPercentage}%
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Habits Completed
+                      </p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Meditation Timer Card (REPLACEMENT) */}
-          <MeditationTimerCard
-            totalSessionsLogged={data?.stats.total_meditation_minutes || 0}
-            onSessionComplete={handleMeditationComplete}
-          />
+            {/* Meditation Timer Card (REPLACEMENT) */}
+            <MeditationTimerCard
+              totalSessionsLogged={data?.stats.total_meditation_minutes || 0}
+              onSessionComplete={handleMeditationComplete}
+            />
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={navigateToAppointments}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Book Appointment
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={navigateToJournal}
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Write Journal Entry
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={navigateToGames}
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Play Mind Games
-              </Button>
-            </CardContent>
-          </Card>
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={navigateToAppointments}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Book Appointment
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={navigateToJournal}
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Write Journal Entry
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={navigateToGames}
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Play Mind Games
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
