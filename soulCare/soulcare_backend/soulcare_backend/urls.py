@@ -35,7 +35,7 @@ urlpatterns = [
     path('api/', include('habits.urls')),
     path('api/content/', include('content.urls')),
 
-
+    path('api/settings/', include('user_settings.urls')),
 
 
 ]

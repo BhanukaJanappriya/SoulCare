@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'chatbot',
     'mentalGames',
     'content',
+    'user_settings',
 
 
 
@@ -116,7 +117,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'GDR@1101',
+        'PASSWORD': 'yasiru@2001',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -179,3 +180,6 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+STRIPE_PUBLISHABLE_KEY = '***REMOVED***' 
+STRIPE_SECRET_KEY = '***REMOVED***'
