@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useVerifyUser } from '@/hooks/useAdminUsers';
-import { FileText } from 'lucide-react';
 
 interface AdminUserTableProps {
   users: AdminUserListItem[]; // CORRECTED: The table accepts an array of the new type
@@ -19,20 +18,12 @@ interface AdminUserTableProps {
   isLoading: boolean;
 }
 
-const AdminUserTable: React.FC<AdminUserTableProps> = ({ users, role, isLoading }) => {
+const AdminPatientTable: React.FC<AdminUserTableProps> = ({ users, role, isLoading }) => {
   const { mutate: verifyUser, isPending } = useVerifyUser();
 
   const handleVerify = (userId: number, currentStatus: boolean) => {
     verifyUser({ userId, is_verified: !currentStatus });
   };
-
-  const openDocument = (url: string) => {
-    // Ensure full URL if backend returns relative path
-    const fullUrl = url.startsWith('http') ? url : `http://localhost:8000${url}`;
-    window.open(fullUrl, '_blank');
-  };
-
-  
 
   if (isLoading) {
     return <div className="text-center">Loading users...</div>;
@@ -51,7 +42,6 @@ const AdminUserTable: React.FC<AdminUserTableProps> = ({ users, role, isLoading 
             <TableHead>Username</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Verification Status</TableHead>
-            <TableHead>License</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -71,20 +61,6 @@ const AdminUserTable: React.FC<AdminUserTableProps> = ({ users, role, isLoading 
                 </Badge>
               </TableCell>
               <TableCell>
-                {user.license_document_url ? (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
-                    onClick={() => openDocument(user.license_document_url!)}
-                  >
-                    <FileText className="w-3.5 h-3.5" /> View
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground italic">Not uploaded</span>
-                )}
-              </TableCell>
-              <TableCell>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -102,4 +78,4 @@ const AdminUserTable: React.FC<AdminUserTableProps> = ({ users, role, isLoading 
   );
 };
 
-export default AdminUserTable;
+export default AdminPatientTable;

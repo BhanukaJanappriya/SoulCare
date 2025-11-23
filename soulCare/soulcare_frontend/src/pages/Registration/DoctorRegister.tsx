@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 // Import icons for dynamic feedback
-import { Stethoscope, ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { Stethoscope, ArrowLeft, CheckCircle2, XCircle,Upload } from "lucide-react";
 
 // Helper component to display validation rules dynamically
 const ValidationItem: React.FC<{ isValid: boolean; text: string }> = ({ isValid, text }) => (
@@ -39,6 +39,8 @@ const DoctorRegister: React.FC = () => {
     availability: "",
     license_number:"",
   });
+
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
 
   // Your original state for handling form status
   const [errors, setErrors] = useState<string[]>([]);
@@ -94,6 +96,7 @@ const DoctorRegister: React.FC = () => {
       return; 
     }
     
+    
     // 2. Check password security rules before submitting
     const isPasswordValid = Object.values(passwordValidation).every(Boolean);
     if (!isPasswordValid) {
@@ -102,12 +105,32 @@ const DoctorRegister: React.FC = () => {
     }
     // --- END: NEW SUBMISSION CHECKS ---
 
+    if (!licenseFile) {
+        setErrors(["Please upload your license document for verification."]);
+        return;
+    }
+
     setIsLoading(true);
     try {
-      const { confirm_password, ...payload } = formData;
+      // Create FormData object
+      const submissionData = new FormData();
+      submissionData.append("username", formData.username);
+      submissionData.append("full_name", formData.full_name);
+      submissionData.append("email", formData.email);
+      submissionData.append("password", formData.password);
+      submissionData.append("nic", formData.nic);
+      submissionData.append("contact_number", formData.contact_number);
+      submissionData.append("specialization", formData.specialization);
+      submissionData.append("availability", formData.availability);
+      submissionData.append("license_number", formData.license_number);
+      submissionData.append("license_document", licenseFile); // Append the file
+
       const response = await axios.post(
         "http://localhost:8000/api/auth/register/doctor/",
-        payload
+        submissionData,
+        {
+            headers: { "Content-Type": "multipart/form-data" } // Important!
+        }
       );
       setSuccessMsg("Your account is pending admin approval.");
       console.log(response.data);
@@ -217,6 +240,21 @@ const DoctorRegister: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="license_number">License Number</Label>
                 <Input id="license_number" name="license_number" type="text" value={formData.license_number} onChange={handleChange} placeholder="Enter License Number" required/>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="license_document">License Document (PDF/Image)</Label>
+                <div className="flex items-center gap-2">
+                    <Input 
+                        id="license_document" 
+                        type="file" 
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
+                        className="file:text-primary file:font-medium"
+                        required
+                    />
+                </div>
+                <p className="text-xs text-muted-foreground">Upload a clear copy of your medical license.</p>
               </div>
 
               {errors.length > 0 && (

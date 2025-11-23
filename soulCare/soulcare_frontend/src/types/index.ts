@@ -68,6 +68,7 @@ export interface AdminUserListItem {
   is_active: boolean;
   full_name: string;
   date_joined: string;
+  license_document_url?: string | null;
 }
 
 

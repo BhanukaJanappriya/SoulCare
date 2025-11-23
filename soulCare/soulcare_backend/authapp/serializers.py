@@ -98,10 +98,12 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
     specialization = serializers.CharField()
     availability = serializers.CharField()
     license_number = serializers.CharField()
+    
+    license_document = serializers.FileField(required=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password','full_name','nic', 'contact_number','specialization','availability','license_number']
+        fields = ['username', 'email', 'password','full_name','nic', 'contact_number','specialization','availability','license_number','license_document']
         
     
     def validate_nic(self, value):
@@ -117,6 +119,7 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
         specialization = validated_data.pop('specialization')
         availability = validated_data.pop('availability')
         license_number = validated_data.pop('license_number')
+        license_document = validated_data.pop('license_document')
 
         user = User.objects.create_user(
             username=validated_data['username'],
@@ -134,6 +137,7 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
             contact_number=contact_number,
             availability=availability,
             license_number = license_number,
+            license_document=license_document,
         )
 
         return user
@@ -145,10 +149,12 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
     expertise = serializers.CharField()
     contact_number = serializers.CharField()
     license_number = serializers.CharField()
+    
+    license_document = serializers.FileField(required=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password','full_name','nic', 'expertise', 'contact_number','license_number']
+        fields = ['username', 'email', 'password','full_name','nic', 'expertise', 'contact_number','license_number','license_document']
         
     def validate_nic(self, value):
         if not validate_nic_uniqueness(value):
@@ -162,6 +168,7 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
         expertise = validated_data.pop('expertise')
         contact_number = validated_data.pop('contact_number')
         license_number = validated_data.pop('license_number')
+        license_document = validated_data.pop('license_document')
 
         user = User.objects.create_user(
             username=validated_data['username'],
@@ -178,6 +185,7 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
             expertise=expertise,
             contact_number=contact_number,
             license_number = license_number,
+            license_document=license_document,
 
         )
 
@@ -232,6 +240,8 @@ class AdminUserManagementSerializer(serializers.ModelSerializer):
     """
     # Use a SerializerMethodField to implement custom logic for getting the full_name.
     full_name = serializers.SerializerMethodField()
+    
+    license_document_url = serializers.SerializerMethodField() 
 
     class Meta:
         model = User
@@ -244,11 +254,12 @@ class AdminUserManagementSerializer(serializers.ModelSerializer):
             'is_verified',   # This field can be updated by the admin.
             'is_active',     # This field can also be updated.
             'full_name',     # This comes from our custom method below.
-            'date_joined'
+            'date_joined',
+            'license_document_url'
         ]
         # For security, make fields that shouldn't be changed in this view read-only.
         # The admin will update is_verified and is_active via PATCH requests.
-        read_only_fields = ['id', 'username', 'email', 'role', 'full_name', 'date_joined']
+        read_only_fields = ['id', 'username', 'email', 'role', 'full_name', 'date_joined','license_document_url']
 
     def get_full_name(self, obj):
         """
@@ -263,9 +274,20 @@ class AdminUserManagementSerializer(serializers.ModelSerializer):
             return obj.counselorprofile.full_name
         if obj.role == 'user' and hasattr(obj, 'patientprofile'):
             return obj.patientprofile.full_name
-
+        
         # As a safe fallback, return the user's username if no specific profile is found.
         return obj.username
+    
+    def get_license_document_url(self, obj):
+        # Return the URL of the license document if it exists
+        try:
+            if obj.role == 'doctor' and hasattr(obj, 'doctorprofile') and obj.doctorprofile.license_document:
+                return obj.doctorprofile.license_document.url
+            if obj.role == 'counselor' and hasattr(obj, 'counselorprofile') and obj.counselorprofile.license_document:
+                return obj.counselorprofile.license_document.url
+        except Exception:
+            pass
+        return None
 
 
 class DoctorProfileUpdateSerializer(serializers.ModelSerializer):
