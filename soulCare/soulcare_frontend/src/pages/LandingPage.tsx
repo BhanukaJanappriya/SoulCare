@@ -211,10 +211,10 @@ const LandingPage: React.FC = () => {
       {/* --- MODIFIED: Public Blog Section (Appears only on scroll) --- */}
       <div className="w-full max-w-6xl mx-auto py-12 px-4">
         <div className="text-center mb-10 px-4">
-          <h2 className="text-4xl font-bold text-gray-800 text-primary mb-3">
+          <h2 className="text-4xl font-bold text-gray-800 mb-3">
             Latest Mental Wellness Insights
           </h2>
-          <p className="text-lg text-gray-500">
+          <p className="text-lg text-gray-600">
             Read curated articles from our licensed Doctors and Counselors.
           </p>
         </div>

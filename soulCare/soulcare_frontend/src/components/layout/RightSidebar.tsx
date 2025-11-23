@@ -1,5 +1,6 @@
 import React from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Users,

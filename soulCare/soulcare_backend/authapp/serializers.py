@@ -1,10 +1,31 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderSchedule
+from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderSchedule 
+import pyotp
 #from appointments.serializers import AppointmentReadSerializer
 #from prescriptions.serializers import PrescriptionSerializer
 
+class UserSerializer(serializers.ModelSerializer):
+    profile = serializers.SerializerMethodField()
+    profile_visibility = serializers.CharField(source='settings.profile_visibility', default='public')
+    show_online_status = serializers.BooleanField(source='settings.show_online_status', default=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'role', 'is_verified', 
+            'profile', 'profile_visibility', 'show_online_status'
+        ]
+
+    def get_profile(self, obj):
+        if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            return DoctorProfileSerializer(obj.doctorprofile).data
+        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            return CounselorProfileSerializer(obj.counselorprofile).data
+        elif obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return PatientProfileSerializer(obj.patientprofile).data
+        return None
 
 def validate_nic_uniqueness(nic_value):
     """
@@ -32,6 +53,23 @@ class LoginSerializer(serializers.Serializer):
 
         if not user.is_active:
             raise serializers.ValidationError("User is not active")
+        
+#         # We check if the 'settings' relation exists and if 2FA is enabled
+#         if hasattr(user, 'settings') and user.settings.two_factor_enabled:
+#             otp_code = data.get('otp')
+
+#             if not otp_code:
+#                 # CASE A: 2FA is on, but no code provided.
+#                 # Return a special flag to tell Frontend to ask for code.
+#                 return {
+#                     'requires_2fa': True,
+#                     'message': 'Please enter your 6-digit 2FA code.'
+#                 }
+            
+#             # CASE B: Code provided. Verify it.
+#             totp = pyotp.TOTP(user.settings.two_factor_secret)
+#             if not totp.verify(otp_code):
+#                 raise serializers.ValidationError("Invalid or expired 2FA code.")
 
         refresh = RefreshToken.for_user(user)
         return {
@@ -39,7 +77,10 @@ class LoginSerializer(serializers.Serializer):
             'access': str(refresh.access_token),
             'role': user.role,
             'email': user.username,
+            'requires_2fa': False
         }
+    
+
 
 class PatientRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only = True)
