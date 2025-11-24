@@ -580,7 +580,7 @@ export interface CommentAuthor {
 export interface BlogComment {
   id: number;
   post: number;
-  author: CommentAuthor | null; 
+  author: CommentAuthor | null;
   content: string;
   createdAt: string;
 }
@@ -635,6 +635,26 @@ export interface BlogInputData {
     status: 'draft' | 'pending' | 'published' | 'rejected';
 }
 
+export interface AssessmentQuestion {
+    id: number;
+    text: string;
+    order: number;
+    // questionnaire: number; // For internal use, may not be needed on client
+}
 
 
+export interface AssessmentResponseInput {
+    question_id: number;
+    score: number; // 0 to 4
+}
 
+export interface AssessmentResult {
+    id: number;
+    questionnaire_title: string;
+    raw_score: number;       // e.g., 50 (max 80)
+    scaled_score: number;    // e.g., 62 (max 100)
+    level: number;           // 1 to 5
+    level_display: string;   // e.g., "Possible signs of depression (37-63)"
+    interpretation: string;  // The detailed text interpretation
+    submitted_at: string;    // ISO date string
+}

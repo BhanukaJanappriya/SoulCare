@@ -62,7 +62,8 @@ INSTALLED_APPS = [
     'content',
     'reviews',
     'user_settings',
-    
+    'assessments',
+
 
 
 
@@ -122,7 +123,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'GDR@1101',
+        'PASSWORD': 'Bhanuka@2001',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -197,3 +198,8 @@ EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
 EMAIL_USE_TLS = False
 DEFAULT_FROM_EMAIL = 'SoulCare <noreply@soulcare.com>'
+
+
+STRIPE_PUBLIC_KEY = 'STRIPE_PUBLIC_KEY', 'pk_test_dummy_value'
+STRIPE_SECRET_KEY = 'STRIPE_SECRET_KEY', 'sk_test_dummy_value'
+STRIPE_WEBHOOK_SECRET ='STRIPE_WEBHOOK_SECRET', 'whsec_dummy_value'
