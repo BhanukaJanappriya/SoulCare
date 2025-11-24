@@ -530,10 +530,24 @@ const PatientGames: React.FC = () => {
     <div className="p-6 min-h-screen bg-background">
       {/* Header Section with Loading/Error Info */}
       <div className="mb-8">
+        <Card className="shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <Gamepad2 className="h-8 w-8 text-primary" />
+              <div>
+                <CardTitle className="text-2xl font-bold">
+                  Mental Health Detection Games 🧠
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Play engaging games designed to assess and monitor your
+                  cognitive and emotional well-being
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Mental Health Detection Games 🧠
-          </h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2"></h1>
           <Button
             variant="outline"
             size="sm"
@@ -547,10 +561,7 @@ const PatientGames: React.FC = () => {
             {isLoading ? "Loading..." : "Refresh Data"}
           </Button>
         </div>
-        <p className="text-muted-foreground">
-          Play engaging games designed to assess and monitor your cognitive and
-          emotional well-being
-        </p>
+        <p className="text-muted-foreground"></p>
         {error && (
           <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 rounded-md text-red-700 dark:text-red-300">
             <p className="text-sm font-medium">{error}</p>

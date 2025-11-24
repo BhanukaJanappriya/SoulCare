@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,12 +83,22 @@ export default function PatientBlogs() {
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-text-dark mb-2">
-            SoulCare Insights & Articles
-          </h1>
-          <p className="text-text-muted">
-            Read curated articles and resources for better mental health.
-          </p>
+          <Card className="shadow-sm bg-card">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <BookOpen className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-2xl font-bold">
+                    SoulCare Insights & Articles
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Read curated articles and resources for better mental
+                    health.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
 
         {/* NEW: Sorting and Filter Bar */}
@@ -186,10 +202,10 @@ export default function PatientBlogs() {
 
       {/* --- Full Article Dialog Component (MODIFIED) --- */}
       <FullArticleDialog
-          post={selectedArticle}
-          isOpen={isArticleDialogOpen}
-          onOpenChange={setIsArticleDialogOpen}
-          showEngagement={true}
+        post={selectedArticle}
+        isOpen={isArticleDialogOpen}
+        onOpenChange={setIsArticleDialogOpen}
+        showEngagement={true}
       />
     </>
   );

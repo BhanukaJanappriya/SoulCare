@@ -2,7 +2,13 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, createReviewAPI } from "@/api";
 import { Appointment } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -500,12 +506,21 @@ const PatientAppointments: React.FC = () => {
         {/* Page Header with gradient text effect */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">
-              My Appointments <span className="text-primary"></span>
-            </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
-              Manage your bookings and view your medical history.
-            </p>
+            <Card className="shadow-sm bg-card">
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <Calendar className="h-8 w-8 text-primary" />
+                  <div>
+                    <CardTitle className="text-2xl font-bold">
+                      My Appointments
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Manage your bookings and view your medical history.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
           </div>
           <Button
             asChild
