@@ -3,6 +3,9 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderSchedule 
 import pyotp
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 #from appointments.serializers import AppointmentReadSerializer
 #from prescriptions.serializers import PrescriptionSerializer
 
@@ -538,3 +541,46 @@ class PatientDetailSerializer(serializers.ModelSerializer):
             profile.save()
             
         return instance
+
+
+# Serializers To Foget Password Feature
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        # Check if user exists (optional security choice: some prefer not to reveal existence)
+        # But for UX, it's often better to validate.
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("No user found with this email address.")
+        return value
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+    uidb64 = serializers.CharField(write_only=True)
+    token = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        
+        # Validate UID and Token
+        try:
+            uid = force_str(urlsafe_base64_decode(data['uidb64']))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError("Invalid link or user does not exist.")
+
+        if not default_token_generator.check_token(user, data['token']):
+             raise serializers.ValidationError("Invalid or expired reset token.")
+        
+        # Pass the user object to the view
+        self.user = user
+        return data
+
+    def save(self):
+        # Set the new password
+        self.user.set_password(self.validated_data['new_password'])
+        self.user.save()
+        return self.user
