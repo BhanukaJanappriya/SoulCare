@@ -55,7 +55,7 @@ export interface PatientProfile {
   dob: string; // Dates come as strings from JSON
   health_issues: string | null;
   profile_picture?: string | null;
-  risk_level?: 'low' | 'medium' | 'high';
+  risk_level?: 'low' | 'medium' | 'high'| string;
 }
 
 export type ProfessionalProfile = DoctorProfile | CounselorProfile;
@@ -659,4 +659,19 @@ export interface AssessmentResult {
     level_display: string;   // e.g., "Possible signs of depression (37-63)"
     interpretation: string;  // The detailed text interpretation
     submitted_at: string;    // ISO date string
+}
+// FeedBack Data Types
+
+export interface Feedback {
+    id: number;
+    user: BasicUserInfo; // Reusing existing user type
+    content: string;
+    rating: number;
+    is_approved: boolean;
+    created_at: string;
+}
+
+export interface FeedbackInput {
+    content: string;
+    rating: number;
 }

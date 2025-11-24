@@ -40,6 +40,7 @@ import ManageCounselorsPage from "./pages/admin/ManageCounselorsPage";
 import ManagePatientsPage from "./pages/admin/ManagePatientsPage";
 import ManageBlogsPage from "./pages/admin/ManageBlogsPage";
 import ManageContentPage from "./pages/admin/ManageContentPage";
+import ManageFeedbackPage from "./pages/admin/ManageFeedbackPage";
 
 //Patient imports
 import PatientLayout from "./components/layout/PatientLayout";
@@ -242,6 +243,8 @@ const App = () => (
               <Route path="manage-patients" element={<ManagePatientsPage />} />
               <Route path="manage-blogs" element={<ManageBlogsPage />} />
               <Route path="manage-content" element={<ManageContentPage />} />
+              <Route path="manage-feedback" element={<ManageFeedbackPage />} />
+
             </Route>
 
             {/* --- Not Found Route --- */}

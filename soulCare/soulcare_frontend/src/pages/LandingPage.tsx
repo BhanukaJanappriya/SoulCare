@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query"; // NEW
-import { getBlogPostsAPI } from "@/api"; // NEW
-import type { BlogPost, UserRole, BlogSortBy } from "@/types"; // NEW
+import { getBlogPostsAPI,getPublicFeedbackAPI } from "@/api"; // NEW
+import type { BlogPost, UserRole, BlogSortBy,Feedback } from "@/types"; // NEW
 import {
   Stethoscope,
   Brain,
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"; // NEW
 import { Label } from "@/components/ui/label"; // NEW
+import { Quote } from "lucide-react";
 
 // --- NEW: Simplified Public Blog Card Component ---
 const PublicBlogCard: React.FC<{
@@ -77,6 +78,13 @@ const LandingPage: React.FC = () => {
     setSelectedArticle(post);
     setIsArticleDialogOpen(true);
   };
+
+
+  const { data: feedbacks } = useQuery<Feedback[]>({
+    queryKey: ["publicFeedback"],
+    queryFn: getPublicFeedbackAPI,
+  });
+
 
   // Fetch latest published blogs (publicly accessible)
   const { data: blogs, isLoading: isLoadingBlogs } = useQuery<BlogPost[]>({
@@ -283,6 +291,42 @@ const LandingPage: React.FC = () => {
         )}
       </div>
       {/* --- END NEW: Public Blog Section --- */}
+
+      <div className="w-full bg-blue py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-primary text-4xl font-bold text-center  mb-12">What Our Community Says</h2>
+          
+          {feedbacks && feedbacks.length > 0 ? (
+              <div className="grid md:grid-cols-3 gap-8">
+                  {feedbacks.slice(0, 3).map((item) => (
+                      <Card key={item.id} className="bg-slate-50 border-none shadow-sm relative overflow-hidden">
+                          <CardContent className="pt-10 pb-6 px-6">
+                              <Quote className="absolute top-4 left-4 w-8 h-8 text-primary/20" />
+                              <p className="text-muted-foreground mb-6 italic relative z-10">"{item.content}"</p>
+                              
+                              <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                      {item.user.full_name?.[0] || item.user.username[0].toUpperCase()}
+                                  </div>
+                                  <div>
+                                      <p className="font-semibold text-sm text-foreground">{item.user.full_name || item.user.username}</p>
+                                      <p className="text-xs text-muted-foreground capitalize">{item.user.role}</p>
+                                  </div>
+                                  <div className="ml-auto flex">
+                                      {Array.from({ length: item.rating }).map((_, i) => (
+                                          <Star key={i} className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                      ))}
+                                  </div>
+                              </div>
+                          </CardContent>
+                      </Card>
+                  ))}
+              </div>
+          ) : (
+              <p className="text-center text-muted-foreground">No testimonials yet. Be the first to share your story!</p>
+          )}
+        </div>
+      </div>
 
       {/* Full Article Dialog (Enabled for public reading/engagement) */}
       <FullArticleDialog

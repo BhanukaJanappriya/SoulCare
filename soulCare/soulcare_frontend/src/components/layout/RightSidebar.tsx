@@ -1,6 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +13,8 @@ import {
   Stethoscope,
   Video,
   BookOpen,
+  MessageSquarePlus,
+
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+import { FeedbackDialog } from "@/components/common/FeedbackDialog";
 
 // Your interfaces and helpers are correct
 interface BaseProfile {
@@ -63,6 +66,7 @@ export const RightSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth(); // Assuming useAuth provides the full user object including 'is_verified'
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   const filteredNavItems = navItems.filter(
     (item) => !item.doctorOnly || user?.role === "doctor"
@@ -87,7 +91,7 @@ export const RightSidebar: React.FC = () => {
   // --- END: NEW CODE ---
 
   return (
-    <div className="fixed right-0 top-0 h-full w-16 bg-sidebar-bg flex flex-col items-center py-4 z-50 shadow-lg">
+    <div className="fixed right-0 top-0 h-full w-16 bg-sidebar-bg flex flex-col justify-between items-center py-4 z-50 shadow-lg">
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="mb-6 cursor-pointer" onClick={handleProfileClick}>
@@ -116,6 +120,7 @@ export const RightSidebar: React.FC = () => {
       </Tooltip>
 
       {/* Navigation Items (unchanged) */}
+    
       <nav className="flex-1 flex flex-col space-y-2">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
@@ -145,14 +150,32 @@ export const RightSidebar: React.FC = () => {
         })}
       </nav>
 
+      <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsFeedbackOpen(true)}
+              className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 mb-2"
+            >
+              <MessageSquarePlus className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="mr-2">
+            <p>Give Feedback</p>
+          </TooltipContent>
+      </Tooltip>
+      
+
       {/* Logout Button (unchanged) */}
+      
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
             onClick={logout}
-            className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-red-500/20 hover:text-red-200 transition-all duration-200"
+            className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 mb-2"
           >
             <LogOut className="w-5 h-5" />
           </Button>
@@ -161,24 +184,12 @@ export const RightSidebar: React.FC = () => {
           <p>Logout</p>
         </TooltipContent>
       </Tooltip>
+    
+      
+     <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
     </div>
+    
   );
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ 

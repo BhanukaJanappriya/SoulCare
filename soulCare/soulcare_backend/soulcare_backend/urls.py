@@ -34,10 +34,14 @@ urlpatterns = [
     path('api/content/', include('content.urls')),
     path('api/reviews/', include('reviews.urls')),
     path('api/settings/', include('user_settings.urls')),
-    path('api/reviews/', include('reviews.urls')),
     path('api/', include('assessments.urls')),
     path('api/chatbot/', include('chatbot.urls')),
 
+
+
+    path('api/settings/', include('user_settings.urls')),
+    path('api/reviews/', include('reviews.urls')),
+    path('api/feedback/', include('feedback.urls')),
 
 
 

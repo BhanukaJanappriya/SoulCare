@@ -256,7 +256,7 @@ const Patients: React.FC = () => {
   }, [patients, searchTerm, statusFilter, riskFilter]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pr-[5.5rem]">
+    <div className="min-h-screen bg-background text-foreground pr-[5.5rem] pl-[1.0rem]">
       <RightSidebar />
       <div className="p-6">
         

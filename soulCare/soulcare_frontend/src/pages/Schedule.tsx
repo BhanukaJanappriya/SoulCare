@@ -89,7 +89,7 @@ const Schedule: React.FC = () => {
     return (
         <div className="min-h-screen bg-background text-foreground ">
             <RightSidebar />
-            <div className="space-y-8 p-6 md:p-8 min-h-screen bg-background mr-16 md:mr-24">
+            <div className="space-y-8 p-6 md:p-8 min-h-screen bg-background mr-16 ">
                 
                 {/* --- HEADER --- */}
                 <Card className="shadow-sm bg-card">

@@ -353,7 +353,7 @@ const PatientDetailPage: React.FC = () => {
 
     return (
         // Added right padding to account for sidebar
-        <div className="p-6 space-y-6 pb-10 pr-[5.5rem]"> 
+        <div className="p-6 space-y-6 pb-10 pr-[2rem] pl-[2rem] "> 
             <Button variant="outline" size="sm" onClick={goBack} className="mb-0">
                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Patients List
             </Button>

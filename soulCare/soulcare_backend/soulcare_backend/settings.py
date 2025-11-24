@@ -63,7 +63,8 @@ INSTALLED_APPS = [
     'reviews',
     'user_settings',
     'assessments',
-
+    'feedback',
+    
 
 
 
@@ -123,7 +124,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'Bhanuka@2001',
+        'PASSWORD': 'GDR@1101',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -206,3 +207,5 @@ STRIPE_WEBHOOK_SECRET ='STRIPE_WEBHOOK_SECRET', 'whsec_dummy_value'
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+
+

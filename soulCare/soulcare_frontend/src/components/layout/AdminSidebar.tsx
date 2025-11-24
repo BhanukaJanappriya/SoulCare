@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   FileText,
   FolderOpen,
+  MessageSquare,
 } from 'lucide-react';
 
 // Define the navigation items for the admin panel
@@ -21,6 +22,7 @@ const adminNavItems = [
   { icon: Users, label: "Manage Patients", path: "/admin/manage-patients" },
   { icon: FileText, label: "Manage Blogs", path: "/admin/manage-blogs" },
   { icon: FolderOpen, label: "Manage Contents", path: "/admin/manage-content" },
+  { icon: MessageSquare, label: "Manage FeedBacks", path: "/admin/manage-feedback" },
 
 ];
 

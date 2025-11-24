@@ -50,6 +50,8 @@ import {
   AssessmentQuestion,
   AssessmentResponseInput,
   AssessmentResult,
+  Feedback,
+  FeedbackInput,
 
 } from '@/types';
 
@@ -979,4 +981,36 @@ export const sendChatbotMessageAPI = async (message: string): Promise<string> =>
     console.error("Error sending chatbot message:", error);
     throw error;
   }
+};
+// =================================================================
+// --- FEEDBACK API ---
+// =================================================================
+
+export const getPublicFeedbackAPI = async (): Promise<Feedback[]> => {
+    // Use 'api' instance (public endpoint if configured, or standard)
+    // Backend logic handles filtering for non-admins automatically
+    const response = await api.get<Feedback[]>('feedback/');
+    return response.data;
+};
+
+export const createFeedbackAPI = async (data: FeedbackInput): Promise<Feedback> => {
+    const response = await api.post<Feedback>('feedback/', data);
+    return response.data;
+};
+
+// Admin functions
+export const getAdminFeedbackAPI = async (): Promise<Feedback[]> => {
+    // GET /api/feedback/?mode=admin -> Returns ALL items (if user is admin)
+    const response = await api.get<Feedback[]>('feedback/', {
+        params: { mode: 'admin' } 
+    });
+    return response.data;
+};
+
+export const approveFeedbackAPI = async (id: number): Promise<void> => {
+    await api.patch(`feedback/${id}/approve/`);
+};
+
+export const rejectFeedbackAPI = async (id: number): Promise<void> => {
+    await api.patch(`feedback/${id}/reject/`);
 };
