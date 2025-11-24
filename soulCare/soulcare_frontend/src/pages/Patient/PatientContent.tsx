@@ -20,6 +20,7 @@ import {
   BrainCircuit,
   History,
   CornerDownLeft,
+  Library,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -85,7 +86,21 @@ const PatientContent: React.FC = () => {
 
   const renderContentLibrary = () => (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">My Library & Tools</h1>
+      <Card className="shadow-sm bg-card">
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <Library className="h-8 w-8 text-primary" />
+            <div>
+              <CardTitle className="text-2xl font-bold">
+                My Library & Tools
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Access articles, videos, and tools for your mental well-being.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* --- 1. Assessment Card (NEW FEATURE) --- */}
       <Card className="shadow-lg border-2 border-primary/20 transition-all duration-300 hover:shadow-xl">
