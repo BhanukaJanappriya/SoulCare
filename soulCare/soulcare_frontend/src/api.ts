@@ -46,7 +46,10 @@ import {
   BlogComment,
   BlogReactionType,
   BlogSortBy,
-  BlogInputData
+  BlogInputData,
+  AssessmentQuestion,
+  AssessmentResponseInput,
+  AssessmentResult,
 
 } from '@/types';
 
@@ -909,3 +912,57 @@ export const unreactToBlogPostAPI = async (blogId: string | number): Promise<voi
 export const unrateBlogPostAPI = async (blogId: string | number): Promise<void> => {
     await api.delete(`blogs/${blogId}/ratings/unrate/`);
 };
+
+
+
+// =================================================================
+// --- Basic Questionnaire ---
+// =================================================================
+
+/**
+ * Fetches the list of questions for the latest active assessment (e.g., Depression Test).
+ * The endpoint is GET /api/assessments/latest-questions/
+ */
+export const getAssessmentQuestionsAPI = async (): Promise<AssessmentQuestion[]> => {
+  try {
+    const response = await api.get<AssessmentQuestion[]>('assessments/latest_questions/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching assessment questions:', error);
+    throw error;
+  }
+};
+
+/**
+ * Submits the patient's responses and receives the calculated result.
+ * The endpoint is POST /api/assessments/submit-response/
+ */
+export const submitAssessmentResponseAPI = async (
+  data: AssessmentResponseInput[]
+): Promise<AssessmentResult> => {
+  try {
+    // Note: The backend expects an object with a 'responses' key: { responses: [...] }
+    const response = await api.post<AssessmentResult>('assessments/submit_response/', { responses: data });
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting assessment response:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches the patient's history of assessment results.
+ * The endpoint is GET /api/assessments/history/
+ */
+export const getAssessmentHistoryAPI = async (): Promise<AssessmentResult[]> => {
+  try {
+    const response = await api.get<AssessmentResult[]>('assessments/history/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching assessment history:', error);
+    throw error;
+  }
+};
+
+
+
