@@ -1,5 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import axios from "axios";
 import { User } from "@/types/index";
 import { axiosInstance, api } from "@/api";
@@ -9,22 +15,25 @@ interface LoginResponse {
   refresh: string;
   role: string;
   email: string;
+  requires_2fa?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (
     username: string,
-    password: string
+    password: string,
+    otp?: string
   ) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => void;
   isLoading: boolean;
   fetchUser: (token: string) => Promise<User | null>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
-// ✅ Keep useAuth in the same file (with ESLint disabled)
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -39,18 +48,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Helper to set tokens in headers for immediate use
+  const setAuthHeaders = (token: string) => {
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  };
+
   const fetchUser = useCallback(async (token: string): Promise<User | null> => {
     try {
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      setAuthHeaders(token);
+      // NOTE: Adjust 'auth/user/' if your backend uses 'auth/users/me/'
       const response = await api.get<User>("auth/user/");
       setUser(response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching user details:", error);
+      // If fetching user fails, the token might be stale, so log out locally
+      setUser(null);
       localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
       delete api.defaults.headers.common["Authorization"];
       delete axiosInstance.defaults.headers.common["Authorization"];
-      setUser(null);
       return null;
     }
   }, []);
@@ -59,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const initializeAuth = async () => {
       const token = localStorage.getItem("accessToken");
       if (token) {
-        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        setAuthHeaders(token);
         await fetchUser(token);
       }
       setIsLoading(false);
@@ -67,21 +85,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     initializeAuth();
   }, [fetchUser]);
 
-  const login = async (username: string, password: string) => {
-    delete api.defaults.headers.common["Authorization"];
-    delete axiosInstance.defaults.headers.common["Authorization"];
+  const login = async (username: string, password: string, otp?: string) => {
     setIsLoading(true);
 
     try {
+      // 1. Send Login Request
       const response = await axiosInstance.post<LoginResponse>("login/", {
         username,
         password,
+        otp,
       });
-      const { access } = response.data;
-      localStorage.setItem("accessToken", access);
-      api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
 
+      const { access, refresh } = response.data;
+
+      // 2. CRITICAL: Save Access Token for api.ts to read
+      localStorage.setItem("accessToken", access);
+      localStorage.setItem("refreshToken", refresh);
+
+      // 3. Set headers and fetch profile
+      setAuthHeaders(access);
       const loggedInUser = await fetchUser(access);
+
       setIsLoading(false);
 
       if (loggedInUser) {
@@ -89,31 +113,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } else {
         return {
           success: false,
-          error: "Failed to fetch user profile after login.",
+          error: "Login successful, but failed to load user profile.",
         };
       }
     } catch (error: unknown) {
-      const errorData = (error as { response?: { data?: unknown } })?.response?.data;
-      let errorMessage = "An unknown error occurred. Please try again.";
+      setIsLoading(false);
+      let errorMessage = "Login failed. Please check your credentials.";
 
-      if (errorData && typeof errorData === "object") {
-        const data = errorData as Record<string, unknown>;
+      // Safe type narrowing instead of 'any'
+      if (axios.isAxiosError(error) && error.response?.data) {
+        // Assert the shape of the error data
+        const errorData = error.response.data as {
+          detail?: string;
+          non_field_errors?: string[];
+        };
 
-        if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
-          errorMessage = (data.non_field_errors as string[]).join(" ");
-        } else if (data.detail && typeof data.detail === "string") {
-          errorMessage = data.detail;
-        } else {
-          const messages = Object.values(data)
-            .flat()
-            .filter((v): v is string => typeof v === "string");
-          errorMessage = messages.join(" ");
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors.join(" ");
         }
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
       }
 
-      setIsLoading(false);
       return { success: false, error: errorMessage };
     }
   };
@@ -121,8 +142,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = () => {
     setUser(null);
     localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+
+    // Clear headers
     delete api.defaults.headers.common["Authorization"];
     delete axiosInstance.defaults.headers.common["Authorization"];
+
+    // Optional: Redirect to login if needed
+    if (!window.location.pathname.includes("/auth/login")) {
+      window.location.href = "/auth/login";
+    }
   };
 
   return (
@@ -131,162 +160,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     </AuthContext.Provider>
   );
 };
-
-
-// /* eslint-disable react-refresh/only-export-components */
-// import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-// import { User } from "@/types/index";
-// import { axiosInstance, api } from "@/api";
-
-// interface LoginResponse {
-//   access: string;
-//   refresh: string;
-//   requires_2fa?: boolean;
-//   role: string;
-//   email: string;
-//   // Include other fields returned by backend if necessary
-// }
-
-// interface AuthContextType {
-//   user: User | null;
-//   // ✅ UPDATE 1: Add 'otp' as an optional 3rd argument here
-//   login: (
-//     username: string,
-//     password: string,
-//     otp?: string 
-//   ) => Promise<{ success: boolean; error?: string; user?: User }>;
-//   logout: () => void;
-//   isLoading: boolean;
-//   fetchUser: (token: string) => Promise<User | null>;
-// }
-
-// export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// export const useAuth = () => {
-//   const context = useContext(AuthContext);
-//   if (!context) {
-//     throw new Error("useAuth must be used within an AuthProvider");
-//   }
-//   return context;
-// };
-
-// export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-//   children,
-// }) => {
-//   const [user, setUser] = useState<User | null>(null);
-//   const [isLoading, setIsLoading] = useState(true);
-
-//   const fetchUser = useCallback(async (token: string): Promise<User | null> => {
-//     try {
-//       // Make sure your 'users/me/' endpoint exists and returns the user profile
-//       const response = await api.get<User>("auth/users/me/", {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       return response.data;
-//     } catch (error) {
-//       console.error("Failed to fetch user profile", error);
-//       return null;
-//     }
-//   }, []);
-
-//   useEffect(() => {
-//     const initializeAuth = async () => {
-//       const token = localStorage.getItem("accessToken");
-//       if (token) {
-//         // Set default headers for future requests
-//         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-//         axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-        
-//         const userData = await fetchUser(token);
-//         if (userData) {
-//           setUser(userData);
-//         } else {
-//           // Token invalid or user load failed
-//           logout(); 
-//         }
-//       }
-//       setIsLoading(false);
-//     };
-
-//     initializeAuth();
-//   }, [fetchUser]);
-
-//   // ✅ UPDATE 2: Update the function implementation to accept 'otp'
-//   const login = async (username: string, password: string, otp?: string) => {
-//     setIsLoading(true);
-//     try {
-//       // ✅ UPDATE 3: Construct payload dynamically
-//       const payload: any = { username, password };
-//       if (otp) {
-//         payload.otp = otp;
-//       }
-
-//       // Send the payload (which now includes OTP if provided)
-//       const response = await api.post<LoginResponse>("auth/login/", payload);
-
-//       const { access, refresh } = response.data;
-
-//       // Save tokens
-//       localStorage.setItem("accessToken", access);
-//       localStorage.setItem("refreshToken", refresh);
-
-//       // Set API headers
-//       api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
-//       axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${access}`;
-
-//       // Fetch full user profile
-//       const userData = await fetchUser(access);
-
-//       if (userData) {
-//         setUser(userData);
-//         setIsLoading(false);
-//         return { success: true, user: userData };
-//       } else {
-//         setIsLoading(false);
-//         return {
-//           success: false,
-//           error: "Failed to fetch user profile after login.",
-//         };
-//       }
-//     } catch (error: unknown) {
-//       const errorData = (error as { response?: { data?: unknown } })?.response?.data;
-//       let errorMessage = "An unknown error occurred. Please try again.";
-
-//       if (errorData && typeof errorData === "object") {
-//         const data = errorData as Record<string, unknown>;
-
-//         if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
-//           errorMessage = (data.non_field_errors as string[]).join(" ");
-//         } else if (data.detail && typeof data.detail === "string") {
-//           errorMessage = data.detail;
-//         } else {
-//           // Extract errors from specific fields (like 'otp')
-//           const messages = Object.values(data)
-//             .flat()
-//             .filter((v): v is string => typeof v === "string");
-//           errorMessage = messages.join(" ");
-//         }
-//       } else if (error instanceof Error) {
-//         errorMessage = error.message;
-//       }
-
-//       setIsLoading(false);
-//       // Ensure we propagate the error so the Login page can display it
-//       return { success: false, error: errorMessage };
-//     }
-//   };
-
-//   const logout = () => {
-//     setUser(null);
-//     localStorage.removeItem("accessToken");
-//     localStorage.removeItem("refreshToken"); // Good practice to remove refresh token too
-//     delete api.defaults.headers.common["Authorization"];
-//     delete axiosInstance.defaults.headers.common["Authorization"];
-//   };
-
-//   return (
-//     <AuthContext.Provider value={{ user, login, logout, isLoading, fetchUser }}>
-//       {children}
-//     </AuthContext.Provider>
-//   );
-// };

@@ -203,3 +203,6 @@ DEFAULT_FROM_EMAIL = 'SoulCare <noreply@soulcare.com>'
 STRIPE_PUBLIC_KEY = 'STRIPE_PUBLIC_KEY', 'pk_test_dummy_value'
 STRIPE_SECRET_KEY = 'STRIPE_SECRET_KEY', 'sk_test_dummy_value'
 STRIPE_WEBHOOK_SECRET ='STRIPE_WEBHOOK_SECRET', 'whsec_dummy_value'
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")

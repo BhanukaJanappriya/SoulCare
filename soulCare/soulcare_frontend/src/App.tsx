@@ -30,6 +30,7 @@ import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import PatientDetailPage from "./pages/PatientDetailPage";
+import PatientChatBot from "./pages/Patient/PatientChatBot";
 
 //admin imports
 import AdminLayout from "./components/layout/AdminLayout";
@@ -56,6 +57,7 @@ import MoodTracker from "./pages/Patient/MoodTracker";
 import PatientMessages from "./pages/Patient/PatientMessages";
 import PatientContent from "./pages/Patient/PatientContent";
 import PatientProfile from "./pages/Patient/PatientProfile";
+
 
 const queryClient = new QueryClient();
 
@@ -217,6 +219,7 @@ const App = () => (
               <Route path="mood" element={<MoodTracker />} />
               <Route path="messages" element={<PatientMessages />} />
               <Route path="content" element={<PatientContent />} />
+              <Route path="/patient/chatbot" element={<PatientChatBot />} />
             </Route>
 
             {/* --- Admin Routes --- */}
