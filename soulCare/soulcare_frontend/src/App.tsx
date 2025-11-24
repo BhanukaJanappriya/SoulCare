@@ -14,6 +14,10 @@ import DoctorRegister from "./pages/Registration/DoctorRegister";
 import PatientRegister from "./pages/Registration/PatientRegister";
 import Dashboard from "./pages/Dashboard";
 
+// forgot password imports
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+
 import Patients from "./pages/Patients";
 import Appointments from "./pages/Appointments";
 import Profile from "./pages/Profile";
@@ -70,6 +74,8 @@ const App = () => (
             <Route path="/auth/signup" element={<PatientRegister />} />
             <Route path="/counselor-register" element={<CounselorRegister />} />
             <Route path="/doctor-register" element={<DoctorRegister />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/reset-password/:uid/:token" element={<ResetPassword />} />
 
             <Route
               path="/patient-details/:patientId"
