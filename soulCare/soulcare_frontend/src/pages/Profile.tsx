@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, Edit, Save, Camera, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/api";
-import { User, DoctorProfile, CounselorProfile, PatientProfile } from "@/types";
+import { User, DoctorProfile, CounselorProfile, PatientProfile, CombinedProfile, ProfessionalProfile } from "@/types";
 
 // ---------------- TYPES ----------------
 type ProfileUpdateValue = string | File | undefined | null;
@@ -29,15 +29,25 @@ interface ApiErrorResponse {
 }
 
 // -------------- HELPERS ----------------
-const isDoctor = (profile: any): profile is DoctorProfile => "specialization" in profile;
-const isCounselor = (profile: any): profile is CounselorProfile => "expertise" in profile;
-const isPatient = (profile: any): profile is PatientProfile => "address" in profile && "nic" in profile;
-const hasRating = (profile: any): profile is DoctorProfile | CounselorProfile => "rating" in profile;
-const hasLicense = (profile: any): profile is DoctorProfile | CounselorProfile => "license_number" in profile;
-const hasAvailability = (profile: any): profile is DoctorProfile => "availability" in profile;
-const getBio = (profile: any): string => profile.bio || ""; 
-const getProfilePicture = (profile: any): string | null => profile.profile_picture || null;
-
+// ✅ FIX: Replacing all 'any' in signatures with 'CombinedProfile'
+const isDoctor = (profile: CombinedProfile): profile is DoctorProfile => "specialization" in profile;
+const isCounselor = (profile: CombinedProfile): profile is CounselorProfile => "expertise" in profile;
+const isPatient = (profile: CombinedProfile): profile is PatientProfile => "address" in profile && "nic" in profile;
+const hasRating = (profile: CombinedProfile): profile is DoctorProfile | CounselorProfile => "rating" in profile;
+const isProfessional = (profile: CombinedProfile): profile is ProfessionalProfile =>
+  isDoctor(profile) || isCounselor(profile);
+const hasLicense = (profile: CombinedProfile): profile is DoctorProfile | CounselorProfile =>
+  isProfessional(profile) && "license_number" in profile;
+const hasAvailability = (profile: CombinedProfile): profile is DoctorProfile =>
+  isDoctor(profile) && "availability" in profile;
+const getBio = (profile: CombinedProfile): string => {
+    // Only attempt to access bio if the profile is Professional, as Patients don't have it
+    if (isProfessional(profile)) {
+        return profile.bio || "";
+    }
+    return ""; // Return empty string for Patient profiles
+};
+const getProfilePicture = (profile: CombinedProfile): string | null => profile.profile_picture || null;
 const buildFormData = (data: ProfileUpdateData): FormData => {
     const formData = new FormData();
     for (const key in data) {
@@ -89,7 +99,7 @@ export default function Profile() {
   const handleSave = async () => {
     if (!user || !user.profile) return;
     setIsEditing(false);
-    
+
     const profileUpdateData: ProfileUpdateData = {
         'full_name': formData.full_name,
         'contact_number': formData.contact_number,
@@ -126,9 +136,9 @@ export default function Profile() {
       const apiError = error as ApiErrorResponse;
       if (apiError.response?.data) {
         const errorData = apiError.response.data;
-        if (errorData.detail && typeof errorData.detail === 'string') { errorMessage = errorData.detail; } 
+        if (errorData.detail && typeof errorData.detail === 'string') { errorMessage = errorData.detail; }
         else if (errorData.non_field_errors) {
-          if (Array.isArray(errorData.non_field_errors)) { errorMessage = errorData.non_field_errors.join(' '); } 
+          if (Array.isArray(errorData.non_field_errors)) { errorMessage = errorData.non_field_errors.join(' '); }
           else if (typeof errorData.non_field_errors === 'string') { errorMessage = errorData.non_field_errors; }
         }
       } else if (error instanceof Error) {
@@ -155,11 +165,11 @@ export default function Profile() {
     return <div className="min-h-screen bg-page-bg flex items-center justify-center"><div>Loading profile...</div></div>;
   }
 
-  const profile = user.profile as any;
+  const profile = user.profile as CombinedProfile;
   const profilePictureUrl = getProfilePicture(profile);
   const profileImageSrc = file ? URL.createObjectURL(file) : profilePictureUrl;
   const roleLabel = isDoctor(profile) ? "Specialization" : isCounselor(profile) ? "Expertise" : "Address";
-  
+
   const isVerifiedProfessional = (user.role === 'doctor' || user.role === 'counselor') && user.is_verified;
 
   // --- INLINE CSS STYLE OBJECTS ---
@@ -205,9 +215,9 @@ export default function Profile() {
                       {profile.full_name?.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" hidden />
-                  
+
                   {isVerifiedProfessional && (
                     <div style={verifiedBadgeStyle} title="Verified Professional">
                       <Check className="h-4 w-4 text-white" strokeWidth={3} />
