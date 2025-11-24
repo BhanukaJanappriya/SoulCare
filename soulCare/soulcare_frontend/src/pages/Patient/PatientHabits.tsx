@@ -446,9 +446,9 @@ const PatientHabits: React.FC = () => {
   const bestStreak = Math.max(...habits.map((h) => h.streak), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <main className="p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <div className="p-6 space-y-6 min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <main>
+        <div className="max-w-8xl mx-auto space-y-6">
           {/* Header */}
           <Card className="shadow-sm bg-card">
             <CardHeader>

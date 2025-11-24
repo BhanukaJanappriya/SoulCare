@@ -502,10 +502,10 @@ const PatientAppointments: React.FC = () => {
 
   return (
     <div className="p-6 md:p-8 min-h-screen bg-background/50">
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-8xl mx-auto space-y-8">
         {/* Page Header with gradient text effect */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b">
-          <div>
+        <div className=" flex-col  sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b">
+          <div className="mb-8">
             <Card className="shadow-sm bg-card">
               <CardHeader>
                 <div className="flex items-center gap-4">

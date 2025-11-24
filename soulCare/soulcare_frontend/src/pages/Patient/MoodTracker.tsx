@@ -350,7 +350,7 @@ const MoodTracker: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-8xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <Card className="shadow-sm bg-card">
