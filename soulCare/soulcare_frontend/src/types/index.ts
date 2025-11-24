@@ -58,6 +58,8 @@ export interface PatientProfile {
   risk_level?: 'low' | 'medium' | 'high';
 }
 
+export type ProfessionalProfile = DoctorProfile | CounselorProfile;
+export type CombinedProfile = PatientProfile | DoctorProfile | CounselorProfile;
 
 export interface AdminUserListItem {
   id: number;
