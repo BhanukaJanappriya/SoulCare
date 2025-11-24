@@ -39,6 +39,8 @@ const CounselorRegister: React.FC = () => {
     license_number: "",
   });
 
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+
   // State for general form errors (from backend), success messages, and loading
   const [errors, setErrors] = useState<string[]>([]);
   const [successMsg, setSuccessMsg] = useState("");
@@ -98,12 +100,30 @@ const CounselorRegister: React.FC = () => {
       setErrors(["Password does not meet all security requirements."]);
       return;
     }
+
+    if (!licenseFile) {
+        setErrors(["Please upload your license document for verification."]);
+        return;
+    }
+
     // --- END: SUBMISSION CHECKS ---
 
     setIsLoading(true);
     try {
-      const { confirm_password, ...payload } = formData;
-      await axios.post("http://localhost:8000/api/auth/register/counselor/", payload);
+      const submissionData = new FormData();
+      submissionData.append("username", formData.username);
+      submissionData.append("full_name", formData.full_name);
+      submissionData.append("email", formData.email);
+      submissionData.append("password", formData.password);
+      submissionData.append("nic", formData.nic);
+      submissionData.append("contact_number", formData.contact_number);
+      submissionData.append("expertise", formData.expertise);
+      submissionData.append("license_number", formData.license_number);
+      submissionData.append("license_document", licenseFile);
+
+      await axios.post("http://localhost:8000/api/auth/register/counselor/", submissionData, {
+          headers: { "Content-Type": "multipart/form-data" }
+      });
       setSuccessMsg("Your account is pending admin approval.");
     } catch (err: any) {
       setSuccessMsg("");
@@ -210,6 +230,19 @@ const CounselorRegister: React.FC = () => {
                 <Label htmlFor="license_number">License Number</Label>
                 <Input id="license_number" name="license_number" type="text" value={formData.license_number} onChange={handleChange} placeholder="Enter Your license number" required />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="license_document">License Document (PDF/Image)</Label>
+                <Input 
+                    id="license_document" 
+                    type="file" 
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
+                    className="file:text-primary file:font-medium"
+                    required
+                />
+                <p className="text-xs text-muted-foreground">Upload a clear copy of your counselor license.</p>
+              </div>
               
               {errors.length > 0 && (
                 <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
@@ -252,5 +285,3 @@ const CounselorRegister: React.FC = () => {
 };
 
 export default CounselorRegister;
-
-

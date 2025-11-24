@@ -68,6 +68,7 @@ export interface AdminUserListItem {
   is_active: boolean;
   full_name: string;
   date_joined: string;
+  license_document_url?: string | null;
 }
 
 
@@ -77,8 +78,15 @@ export interface User {
   email: string;
   role: UserRole;
   is_verified: boolean;
+  profile_visibility: 'public' | 'private' | 'patients_only';
+  show_online_status: boolean;
   // The nested profile object
   profile: DoctorProfile | CounselorProfile | PatientProfile | null;
+}
+
+export interface UserSettings {
+  profile_visibility: 'public' | 'private' | 'patients_only';
+  show_online_status: boolean;
 }
 
 export interface BasicUserInfo {

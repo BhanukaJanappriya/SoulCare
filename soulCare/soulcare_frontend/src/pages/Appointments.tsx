@@ -19,11 +19,12 @@ import {
     Trash2, 
     Search, 
     Filter, 
-    CalendarCheck, 
+    CalendarRange,
     History,
     CalendarDays,
     FileText, // Changed icon to match prescription style if desired, or keep Calendar
-    PlusCircle
+    PlusCircle,
+    CalendarCheck
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -81,10 +82,7 @@ const Appointments: React.FC = () => {
     const deleteMutation = useMutation({
         mutationFn: deleteAppointment,
         onSuccess: () => {
-            toast({ title: "Success", description: "Appointment deleted from history." });
-        },
-        onError: (error: any) => {
-            toast({ variant: "destructive", title: "Error", description: error.response?.data?.error || "Could not delete appointment." });
+            toast({ title: "Success", description: "Record deleted." });
         },
         onSettled: ()=> {
             queryClient.invalidateQueries({ queryKey: ['providerAppointments'] });
@@ -95,6 +93,7 @@ const Appointments: React.FC = () => {
         mutation.mutate({ id, status });
     };
 
+    // Helper colors for status badges
     const getStatusColor = (status: string) => {
         switch (status) {
             case "pending": return "bg-yellow-50 text-yellow-700 border-yellow-200/60 shadow-sm";

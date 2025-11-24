@@ -35,6 +35,10 @@ urlpatterns = [
     path('api/reviews/', include('reviews.urls')),
 
 
+    path('api/settings/', include('user_settings.urls')),
+    path('api/reviews/', include('reviews.urls')),
+
+
 
 ]
 

@@ -3,80 +3,57 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import BlogPost, BlogComment, BlogRating, BlogReaction
 from .serializers import BlogPostSerializer, BlogCommentSerializer
-from .permissions import IsAuthorOrAdmin
+from .permissions import IsAuthorOrAdmin # Assuming you have a permissions file
 from django.utils import timezone
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count # Added Avg, Count
 from authapp.utils import send_blog_status_email
-from rest_framework import serializers as rf_serializers # For ValidationError
-
-# --- Helper to get user/session identification fields for reaction/rating ---
-def get_user_or_session_kwargs(request):
-    """
-    Returns kwargs for BlogRating/BlogReaction based on authentication status.
-    Prioritizes authenticated user. Falls back to session_key for anonymous users.
-    """
-    if request.user.is_authenticated:
-        return {'user': request.user}
-
-    # For unauthenticated users, check for session_key (Guest submission)
-    session_key = request.data.get('session_key')
-    if session_key:
-        return {'session_key': session_key}
-
-    # Return empty dict if no identification is available
-    return {}
 
 # --- NEW VIEWSETS FOR COMMENTS, RATINGS, REACTIONS ---
 
 class BlogCommentViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for Blog Comments. Nested under /api/blogs/<blog_pk>/comments/.
+    """
     serializer_class = BlogCommentSerializer
-    # CHANGED: Allow any user (authenticated or not) to read/create a comment
-    permission_classes = [permissions.AllowAny]
+    # Anyone who is logged in can comment/read comments
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
+        # Filter comments for a specific post (obtained from the URL)
         post_pk = self.kwargs.get('blog_pk')
         if post_pk:
-            # Only return comments where the author is set OR guest name is set (excluding empty submissions)
-            return BlogComment.objects.filter(post=post_pk).filter(Q(author__isnull=False) | Q(guest_name__isnull=False)).order_by('createdAt')
+            return BlogComment.objects.filter(post=post_pk).order_by('createdAt')
+        # Allow viewing all comments only to Admin
         elif self.request.user.is_superuser:
             return BlogComment.objects.all().order_by('createdAt')
         return BlogComment.objects.none()
 
     def perform_create(self, serializer):
+        # Automatically set the author to the logged-in user and the post from the URL
         post_pk = self.kwargs.get('blog_pk')
-        is_authenticated = self.request.user.is_authenticated
-
         try:
             post = BlogPost.objects.get(pk=post_pk)
-
-            if is_authenticated:
-                serializer.save(author=self.request.user, post=post)
-            else:
-                # Guest submission: require guest_name
-                guest_name = self.request.data.get('guest_name')
-                if not guest_name:
-                    raise rf_serializers.ValidationError({"guest_name": "Name is required for guest comments."})
-
-                # Save as guest
-                serializer.save(
-                    post=post,
-                    guest_name=guest_name,
-                    guest_email=self.request.data.get('guest_email'),
-                    # author=None is implicit since it's not passed
-                )
+            # You need the 'serializers' module to raise ValidationError here,
+            # so we'll import it correctly *only* for the validation part.
+            from . import serializers as blog_serializers # Correct relative import
+            serializer.save(author=self.request.user, post=post)
         except BlogPost.DoesNotExist:
+            # Note: We need to import the ValidationError from the rest_framework.serializers module
+            from rest_framework import serializers as rf_serializers
             raise rf_serializers.ValidationError("Blog post not found.")
 
     def perform_destroy(self, instance):
-        # Only authenticated users (author or admin) can delete their comments
-        if self.request.user.is_authenticated and (self.request.user == instance.author or self.request.user.role == 'admin' or self.request.user.is_superuser):
+        # Allow deletion only if the user is the comment author or an Admin/Superuser
+        if self.request.user == instance.author or self.request.user.role == 'admin' or self.request.user.is_superuser:
             instance.delete()
         else:
             raise permissions.PermissionDenied("You do not have permission to delete this comment.")
 
 class BlogRatingViewSet(viewsets.ViewSet):
-    # CHANGED: Allow any user to access (rate/unrate)
-    permission_classes = [permissions.AllowAny]
+    """
+    Handles user rating submissions. Users can only POST/PUT/DELETE, not GET a list.
+    """
+    permission_classes = [permissions.IsAuthenticated]
 
     @action(detail=False, methods=['post'], url_path='rate')
     def rate_post(self, request, blog_pk=None):
@@ -91,23 +68,12 @@ class BlogRatingViewSet(viewsets.ViewSet):
 
         rating_value = int(value)
 
-        # --- NEW: Get Identification Kwargs ---
-        identification_kwargs = get_user_or_session_kwargs(request)
-        if not identification_kwargs:
-            return Response({"detail": "Authentication or Session ID is required to rate."}, status=401)
-        # --- END NEW ---
-
-        try:
-            # Check if user/session has already rated this post
-            rating, created = BlogRating.objects.update_or_create(
-                post=post,
-                **identification_kwargs, # Pass user or session_key
-                defaults={'value': rating_value}
-            )
-        except Exception as e:
-            # Catch database errors like multiple null session_key
-            return Response({"detail": f"Failed to save rating. Error: {e}"}, status=500)
-
+        # Check if user has already rated this post
+        rating, created = BlogRating.objects.update_or_create(
+            post=post,
+            user=request.user,
+            defaults={'value': rating_value}
+        )
 
         if created:
             return Response({"detail": "Rating added successfully."}, status=201)
@@ -116,20 +82,9 @@ class BlogRatingViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['delete'], url_path='unrate')
     def unrate_post(self, request, blog_pk=None):
-        # Requires authentication OR session_key
-        if not request.user.is_authenticated and not request.data.get('session_key'):
-             return Response({"detail": "Authentication or Session ID is required to unrate."}, status=401)
-
         try:
             post = BlogPost.objects.get(pk=blog_pk)
-
-            if request.user.is_authenticated:
-                rating = BlogRating.objects.get(post=post, user=request.user)
-            else:
-                session_key = request.data.get('session_key')
-                if not session_key: return Response({"detail": "Missing session ID."}, status=400)
-                rating = BlogRating.objects.get(post=post, session_key=session_key)
-
+            rating = BlogRating.objects.get(post=post, user=request.user)
             rating.delete()
             return Response({"detail": "Rating removed successfully."}, status=204)
         except BlogPost.DoesNotExist:
@@ -138,8 +93,10 @@ class BlogRatingViewSet(viewsets.ViewSet):
             return Response({"detail": "You have not rated this post."}, status=404)
 
 class BlogReactionViewSet(viewsets.ViewSet):
-    # CHANGED: Allow any user to access (react/unreact)
-    permission_classes = [permissions.AllowAny]
+    """
+    Handles user reactions (like/love/insightful) submissions.
+    """
+    permission_classes = [permissions.IsAuthenticated]
 
     @action(detail=False, methods=['post'], url_path='react')
     def react_post(self, request, blog_pk=None):
@@ -148,23 +105,17 @@ class BlogReactionViewSet(viewsets.ViewSet):
         except BlogPost.DoesNotExist:
             return Response({"detail": "Blog post not found."}, status=404)
 
-        reaction_type = request.data.get('type')
+        reaction_type = request.data.get('type') # e.g., 'like', 'love'
         valid_types = [t[0] for t in BlogReaction.REACTION_CHOICES]
 
         if reaction_type not in valid_types:
             return Response({"detail": "Invalid reaction type."}, status=400)
 
-        # --- NEW: Get Identification Kwargs ---
-        identification_kwargs = get_user_or_session_kwargs(request)
-        if not identification_kwargs:
-            return Response({"detail": "Authentication or Session ID is required to react."}, status=401)
-        # --- END NEW ---
-
-        # CRITICAL FIX: Changed 'type' to 'reaction_type'
+        # Update or create the reaction
         reaction, created = BlogReaction.objects.update_or_create(
             post=post,
-            **identification_kwargs,
-            defaults={'reaction_type': reaction_type} # <--- FIXED FIELD NAME
+            user=request.user,
+            defaults={'type': reaction_type}
         )
 
         if created:
@@ -174,21 +125,9 @@ class BlogReactionViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['delete'], url_path='unreact')
     def unreact_post(self, request, blog_pk=None):
-        # Requires authentication OR session_key
-        if not request.user.is_authenticated and not request.data.get('session_key'):
-             return Response({"detail": "Authentication or Session ID is required to unreact."}, status=401)
-
         try:
             post = BlogPost.objects.get(pk=blog_pk)
-
-            if request.user.is_authenticated:
-                reaction = BlogReaction.objects.get(post=post, user=request.user)
-            else:
-                session_key = request.data.get('session_key')
-                if not session_key: return Response({"detail": "Missing session ID."}, status=400)
-                # CRITICAL FIX: Use the correct field name in the query: reaction_type
-                reaction = BlogReaction.objects.get(post=post, session_key=session_key)
-
+            reaction = BlogReaction.objects.get(post=post, user=request.user)
             reaction.delete()
             return Response({"detail": "Reaction removed successfully."}, status=204)
         except BlogPost.DoesNotExist:
@@ -197,7 +136,7 @@ class BlogReactionViewSet(viewsets.ViewSet):
             return Response({"detail": "You have not reacted to this post."}, status=404)
 
 
-# --- MAIN BLOG VIEWSET (REMAINS THE SAME) ---
+# --- MAIN BLOG VIEWSET (MODIFIED FOR SORTING) ---
 
 class BlogPostViewSet(viewsets.ModelViewSet):
     queryset = BlogPost.objects.all()
