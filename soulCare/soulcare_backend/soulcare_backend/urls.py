@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/settings/', include('user_settings.urls')),
     path('api/reviews/', include('reviews.urls')),
     path('api/', include('assessments.urls')),
+    path('api/chatbot/', include('chatbot.urls')),
 
 
 

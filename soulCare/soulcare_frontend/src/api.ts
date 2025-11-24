@@ -105,7 +105,8 @@ const handleResponseError = (error: AxiosError) => {
 };
 
 // --- Apply Interceptors ---
-
+axiosInstance.interceptors.request.use(addAuthToken, Promise.reject);
+axiosInstance.interceptors.response.use((response) => response, handleResponseError);
 // FIX 3: Apply the interceptors to BOTH 'api' AND 'axiosInstance'
 // This will fix all your 401 errors.
 
@@ -965,4 +966,17 @@ export const getAssessmentHistoryAPI = async (): Promise<AssessmentResult[]> => 
 };
 
 
+// =================================================================
+// --- AI CHATBOT FUNCTIONS ---
+// =================================================================
 
+export const sendChatbotMessageAPI = async (message: string): Promise<string> => {
+  try {
+    // This automatically uses the Bearer token from the interceptors
+    const response = await api.post<{ response: string }>('chatbot/message/', { message });
+    return response.data.response;
+  } catch (error) {
+    console.error("Error sending chatbot message:", error);
+    throw error;
+  }
+};
