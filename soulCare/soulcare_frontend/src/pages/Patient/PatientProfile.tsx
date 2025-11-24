@@ -6,11 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Save, Camera, User as UserIcon, Mail, Phone, MapPin, Calendar, FileText, CreditCard } from "lucide-react";
+import { Edit, Save, Camera, User as UserIcon, Mail, Phone, MapPin, Calendar, FileText, CreditCard, MessageSquare, Star, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/api";
+import { api, createFeedbackAPI } from "@/api"; // Import createFeedbackAPI
 import { PatientProfile } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useMutation } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 // Helper to build FormData for file uploads
 const buildFormData = (data: Record<string, any>): FormData => {
@@ -25,6 +36,95 @@ const buildFormData = (data: Record<string, any>): FormData => {
     return formData;
 };
 
+// --- Feedback Dialog Component (Inline for simplicity in this file context) ---
+interface FeedbackDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ open, onOpenChange }) => {
+    const { toast } = useToast();
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [content, setContent] = useState("");
+
+    const mutation = useMutation({
+        mutationFn: createFeedbackAPI,
+        onSuccess: () => {
+            toast({ title: "Thank You!", description: "Your feedback has been submitted for review." });
+            onOpenChange(false);
+            setRating(0);
+            setContent("");
+        },
+        onError: () => {
+            toast({ variant: "destructive", title: "Error", description: "Failed to submit feedback." });
+        }
+    });
+
+    const handleSubmit = () => {
+        if (rating === 0) {
+            toast({ variant: "destructive", title: "Error", description: "Please select a rating." });
+            return;
+        }
+        if (!content.trim()) {
+            toast({ variant: "destructive", title: "Error", description: "Please write some feedback." });
+            return;
+        }
+        mutation.mutate({ rating, content });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Give Feedback</DialogTitle>
+                    <DialogDescription>
+                        Share your experience with SoulCare. Your feedback helps us improve.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="flex justify-center gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                                key={star}
+                                type="button"
+                                className="focus:outline-none transition-transform hover:scale-110"
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                onClick={() => setRating(star)}
+                            >
+                                <Star
+                                    className={cn(
+                                        "w-8 h-8 transition-colors",
+                                        (hoverRating || rating) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                    )}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="feedback">Your Message</Label>
+                        <Textarea
+                            id="feedback"
+                            placeholder="What did you like? What can we do better?"
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={handleSubmit} disabled={mutation.isPending}>
+                        {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Submit
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 export default function PatientProfilePage() {
     const { user, fetchUser, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
@@ -32,6 +132,9 @@ export default function PatientProfilePage() {
     const [file, setFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
+    
+    // --- NEW: State for Feedback Dialog ---
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -64,6 +167,7 @@ export default function PatientProfilePage() {
         if (!user) return;
         setIsSaving(true);
 
+        // Prepare flat data for the backend
         const updateData: Record<string, any> = {
             full_name: formData.full_name,
             contact_number: formData.contact_number,
@@ -82,6 +186,7 @@ export default function PatientProfilePage() {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
+            // Refresh user context to show new data/image
             const token = localStorage.getItem('accessToken');
             if (token) await fetchUser(token);
 
@@ -115,35 +220,52 @@ export default function PatientProfilePage() {
     const displayImage = file ? URL.createObjectURL(file) : (profile.profile_picture || undefined);
 
     return (
-        // FIX: Added pr-[5.5rem] to prevent the fixed RightSidebar from covering content
         <div className="container max-w-6xl mx-auto px-6 py-10 space-y-8 pr-[5.5rem]">
-            
             {/* --- Header Section --- */}
-            {/* Added relative and z-index to ensure it stays above background elements but below sidebar */}
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 top-0 pt-2">
+            <div className="z-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 pt-2">
                 <div>
                     <h1 className="text-4xl font-bold text-foreground tracking-tight">My Profile</h1>
                     <p className="text-muted-foreground mt-1">Manage your personal information and health records.</p>
                 </div>
-                <Button
-                    variant="default"
-                    size="lg"
-                    className="shadow-sm transition-all"
-                    onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                    disabled={isSaving}
-                >
-                    {isEditing ? (
-                        <>
-                            <Save className="w-4 h-4 mr-2" />
-                            {isSaving ? "Saving..." : "Save Changes"}
-                        </>
-                    ) : (
-                        <>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Profile
-                        </>
-                    )}
-                </Button>
+                
+                <div className="flex gap-3">
+                    {/* --- NEW: Give Feedback Button --- */}
+                    <Button 
+                        variant="outline" 
+                        size="lg" 
+                        className="shadow-sm"
+                        onClick={() => setIsFeedbackOpen(true)}
+                    >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Give Feedback
+                    </Button>
+
+                    <Button
+                        variant={isEditing ? "default" : "outline"}
+                        size="lg"
+                        className="shadow-sm transition-all"
+                        onClick={() => {
+                            if (isEditing) {
+                                handleSave();
+                            } else {
+                                setIsEditing(true);
+                            }
+                        }}
+                        disabled={isSaving}
+                    >
+                        {isEditing ? (
+                            <>
+                                <Save className="w-4 h-4 mr-2" />
+                                {isSaving ? "Saving..." : "Save Changes"}
+                            </>
+                        ) : (
+                            <>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Profile
+                            </>
+                        )}
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -308,6 +430,9 @@ export default function PatientProfilePage() {
                     </Card>
                 </div>
             </div>
+            
+            {/* --- Dialog Component Instance --- */}
+            <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
         </div>
     );
 }

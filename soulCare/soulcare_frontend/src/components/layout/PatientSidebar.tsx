@@ -14,7 +14,7 @@ import {
   Bell,
   LogOut,
   Library,
-  MessageSquarePlus,
+
 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { FeedbackDialog } from "@/components/common/FeedbackDialog";
+
 
 // ✅ Define proper TypeScript interfaces
 interface BaseProfile {
@@ -55,7 +55,7 @@ const PatientSidebar: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  
 
   const navigationItems = [
     { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
@@ -140,23 +140,7 @@ const PatientSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/*Feed Back Button*/}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsFeedbackOpen(true)}
-              className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 mb-2"
-            >
-              <MessageSquarePlus className="w-5 h-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left" className="mr-2">
-            <p>Give Feedback</p>
-          </TooltipContent>
-        </Tooltip>
-
+    
         {/* ✅ Logout Button */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -174,7 +158,6 @@ const PatientSidebar: React.FC = () => {
           </TooltipContent>
         </Tooltip>
       </div>
-      <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
     </TooltipProvider>
   );
 };
