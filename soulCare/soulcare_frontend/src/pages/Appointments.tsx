@@ -270,7 +270,7 @@ const Appointments: React.FC = () => {
                         View and manage all your patient appointment requests.
                       </CardDescription>
                     </div>
-                  </div>
+                    </div>
                   
                   {/* Optional: Add a button here if needed, like "Settings" or "Calendar View" */}
                   {/* <Button variant="outline">
