@@ -48,6 +48,13 @@ export interface CounselorProfile {
 }
 
 export interface PatientProfile {
+  mh_diagnosis_history: boolean;
+  substance_use: boolean;
+  chronic_illness: boolean;
+  financial_stress_level: number;
+  employment_status: string;
+  marital_status: string;
+  gender: string;
   full_name: string;
   nic: string;
   contact_number: string;
@@ -675,3 +682,31 @@ export interface FeedbackInput {
     content: string;
     rating: number;
 }
+
+
+export interface AdaptiveQuestionSet {
+    title: string;
+    description: string;
+    questions: ContentItem[]; // Assuming ContentItem is the type for the individual question structure
+    max_raw_score: number;
+}
+
+export interface AdaptiveSubmissionResponse {
+    assessment_result: {
+        risk_level: 'low' | 'medium' | 'high';
+        total_score: number;
+        justification: string;
+    };
+    content_recommendations: Array<{
+        title: string;
+        type: string; // Assuming ContentItem['type'] structure
+        url: string;
+    }>;
+    recommended_tags: string[];
+}
+
+export interface AssessmentResponseInput {
+    question_id: number;
+    score: number;
+}
+

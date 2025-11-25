@@ -38,7 +38,7 @@ class LoginView(APIView):
         if serializer.is_valid():
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -425,10 +425,10 @@ class ProviderDashboardStatsView(APIView):
                 average_rating = user.counselorprofile.rating
         except (DoctorProfile.DoesNotExist, CounselorProfile.DoesNotExist):
             pass # Keep the default 5.0 if profile somehow doesn't exist
-        
-        
+
+
         activity_feed = []
-        
+
         # 1. Recent Appointments Logic (Updated)
         recent_apps = Appointment.objects.filter(provider=user).order_by('-created_at')[:5]
         for app in recent_apps:
@@ -438,14 +438,14 @@ class ProviderDashboardStatsView(APIView):
                  if hasattr(app.patient, 'patientprofile'):
                     patient_name = app.patient.patientprofile.full_name
             except: pass
-            
+
             activity_type = 'appointment' # Default
             activity_text = ""
 
             if app.status == 'pending':
                 activity_type = 'new_patient'
                 activity_text = f"New appointment request from: {patient_name}."
-            
+
             elif app.status == 'cancelled':
                 activity_type = 'cancellation'
                 # --- FIX LOGIC HERE ---
@@ -454,7 +454,7 @@ class ProviderDashboardStatsView(APIView):
                 else:
                     # Default to patient if 'cancelled_by' is missing (legacy data) or explicitly 'patient'
                     activity_text = f"{patient_name} cancelled their appointment for {app.date}."
-            
+
             elif app.status == 'scheduled':
                  activity_text = f"Appointment confirmed with {patient_name} on {app.date}."
 
@@ -469,10 +469,10 @@ class ProviderDashboardStatsView(APIView):
                     "text": activity_text,
                     "date": app.created_at.isoformat()
                 })
-            
-        
-         
-        
+
+
+
+
         # 2. Prescriptions Created (Confirmation)
         if user.role == 'doctor':
             recent_rx = Prescription.objects.filter(doctor=user).order_by('-created_at')[:5]
@@ -484,12 +484,12 @@ class ProviderDashboardStatsView(APIView):
                     "text": f"Prescription is issued for {patient_name}.",
                     "date": rx.created_at.isoformat()
                 })
-                
-        
+
+
         # 4. Content Shared
         # Find content items owned by this user that have been shared
         shared_content = ContentItem.objects.filter(owner=user).order_by('-updated_at')[:5]
-        
+
         for item in shared_content:
             count = item.shared_with.count()
             if count > 0:
@@ -499,8 +499,8 @@ class ProviderDashboardStatsView(APIView):
                     "text": f"\"{item.title}\" shared with {count} patients.",
                     "date": item.updated_at
                 })
-                
-        
+
+
         # Sort by date (newest first), assuming date strings are ISO format
         activity_feed.sort(key=lambda x: str(x['date']), reverse=True)
         recent_activity = activity_feed[:5] # Show top 10 mixed activities
@@ -546,7 +546,7 @@ class PatientDashboardStatsView(APIView):
 
         # --- 2. Today's Mood Score ---
         today = timezone.localdate()
-        
+
 
 
         today_mood_avg = MoodEntry.objects.filter(
@@ -604,15 +604,15 @@ class PasswordResetRequestView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             user = User.objects.get(email=email)
-            
+
             # Generate Token
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            
+
             # Construct Link (Point to your Frontend Route)
             # NOTE: Adjust the domain if your frontend runs on a different port
             reset_link = f"http://localhost:5173/auth/reset-password/{uid}/{token}"
-            
+
             # Send Email
             subject = "SoulCare - Reset Your Password"
             message = f"""
@@ -625,14 +625,14 @@ class PasswordResetRequestView(APIView):
 
             If you didn't ask for this, please ignore this email.
             """
-            
+
             # Using your utility function or direct send_mail
             # Since this is a simple text email, send_mail is fine, or reuse your utility if preferred.
             # For simplicity here:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
-            
+
             return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -646,5 +646,5 @@ class PasswordResetConfirmView(APIView):
             serializer.save()
             return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     

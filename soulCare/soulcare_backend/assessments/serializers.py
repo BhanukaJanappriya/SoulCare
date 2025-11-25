@@ -27,8 +27,8 @@ class AssessmentResponseInputSerializer(serializers.Serializer):
         return value
 
 
-# --- Result Data for Frontend ---
 
+# --- Result Data for Frontend ---
 class AssessmentResultSerializer(serializers.ModelSerializer):
     """Serializes the final result for the client."""
     questionnaire_title = serializers.CharField(source='questionnaire.title', read_only=True)

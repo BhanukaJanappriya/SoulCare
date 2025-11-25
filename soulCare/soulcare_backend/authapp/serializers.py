@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderSchedule 
+from .models import User,PatientProfile,DoctorProfile,CounselorProfile,ProviderSchedule
 import pyotp
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'role', 'is_verified', 
+            'id', 'username', 'email', 'role', 'is_verified',
             'profile', 'profile_visibility', 'show_online_status'
         ]
 
@@ -56,23 +56,6 @@ class LoginSerializer(serializers.Serializer):
 
         if not user.is_active:
             raise serializers.ValidationError("User is not active")
-        
-#         # We check if the 'settings' relation exists and if 2FA is enabled
-#         if hasattr(user, 'settings') and user.settings.two_factor_enabled:
-#             otp_code = data.get('otp')
-
-#             if not otp_code:
-#                 # CASE A: 2FA is on, but no code provided.
-#                 # Return a special flag to tell Frontend to ask for code.
-#                 return {
-#                     'requires_2fa': True,
-#                     'message': 'Please enter your 6-digit 2FA code.'
-#                 }
-            
-#             # CASE B: Code provided. Verify it.
-#             totp = pyotp.TOTP(user.settings.two_factor_secret)
-#             if not totp.verify(otp_code):
-#                 raise serializers.ValidationError("Invalid or expired 2FA code.")
 
         refresh = RefreshToken.for_user(user)
         return {
@@ -82,7 +65,7 @@ class LoginSerializer(serializers.Serializer):
             'email': user.username,
             'requires_2fa': False
         }
-    
+
 
 
 class PatientRegistrationSerializer(serializers.ModelSerializer):
@@ -93,12 +76,21 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
     address = serializers.CharField()
     dob = serializers.DateField()
     health_issues = serializers.CharField(required=False)
+    gender = serializers.CharField()
+    marital_status = serializers.CharField()
+    employment_status = serializers.CharField()
+    financial_stress_level = serializers.IntegerField()
+    chronic_illness = serializers.BooleanField()
+    substance_use = serializers.BooleanField()
+    mh_diagnosis_history = serializers.BooleanField()
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password','full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues']
-        
-        
+        fields = ['username', 'email', 'password','full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues','gender', 'marital_status', 'employment_status',
+            'financial_stress_level', 'chronic_illness',
+            'substance_use', 'mh_diagnosis_history']
+
+
     def validate_nic(self, value):
         if not validate_nic_uniqueness(value):
             raise serializers.ValidationError("An account with this NIC card number already exists.")
@@ -112,6 +104,13 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
         address = validated_data.pop('address')
         dob = validated_data.pop('dob')
         health_issues = validated_data.pop('health_issues', '')
+        gender = validated_data.pop('gender')
+        marital_status = validated_data.pop('marital_status')
+        employment_status = validated_data.pop('employment_status')
+        financial_stress_level = validated_data.pop('financial_stress_level')
+        chronic_illness = validated_data.pop('chronic_illness')
+        substance_use = validated_data.pop('substance_use')
+        mh_diagnosis_history = validated_data.pop('mh_diagnosis_history')
 
         user = User.objects.create_user(
             username=validated_data['username'],
@@ -130,6 +129,13 @@ class PatientRegistrationSerializer(serializers.ModelSerializer):
             address=address,
             dob=dob,
             health_issues=health_issues,
+            gender=gender,
+            marital_status=marital_status,
+            employment_status=employment_status,
+            financial_stress_level=financial_stress_level,
+            chronic_illness=chronic_illness,
+            substance_use=substance_use,
+            mh_diagnosis_history=mh_diagnosis_history,
         )
 
         return user
@@ -142,14 +148,14 @@ class DoctorRegistrationSerializer(serializers.ModelSerializer):
     specialization = serializers.CharField()
     availability = serializers.CharField()
     license_number = serializers.CharField()
-    
+
     license_document = serializers.FileField(required=True, write_only=True)
 
     class Meta:
         model = User
         fields = ['username', 'email', 'password','full_name','nic', 'contact_number','specialization','availability','license_number','license_document']
-        
-    
+
+
     def validate_nic(self, value):
         if not validate_nic_uniqueness(value):
             raise serializers.ValidationError("An account with this NIC card number already exists.")
@@ -193,13 +199,13 @@ class CounselorRegistrationSerializer(serializers.ModelSerializer):
     expertise = serializers.CharField()
     contact_number = serializers.CharField()
     license_number = serializers.CharField()
-    
+
     license_document = serializers.FileField(required=True, write_only=True)
 
     class Meta:
         model = User
         fields = ['username', 'email', 'password','full_name','nic', 'expertise', 'contact_number','license_number','license_document']
-        
+
     def validate_nic(self, value):
         if not validate_nic_uniqueness(value):
             raise serializers.ValidationError("An account with this NIC card number already exists.")
@@ -245,13 +251,13 @@ class CounselorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CounselorProfile
         fields = ['full_name', 'nic', 'contact_number', 'expertise', 'license_number','rating','profile_picture', 'bio']
-        
+
 
 
 class PatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
-        fields = ['full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues','profile_picture','risk_level']
+        fields = ['full_name', 'nic', 'contact_number', 'address', 'dob', 'health_issues','profile_picture','risk_level','gender', 'marital_status', 'employment_status','financial_stress_level', 'chronic_illness','substance_use', 'mh_diagnosis_history',]
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -284,8 +290,8 @@ class AdminUserManagementSerializer(serializers.ModelSerializer):
     """
     # Use a SerializerMethodField to implement custom logic for getting the full_name.
     full_name = serializers.SerializerMethodField()
-    
-    license_document_url = serializers.SerializerMethodField() 
+
+    license_document_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -318,10 +324,10 @@ class AdminUserManagementSerializer(serializers.ModelSerializer):
             return obj.counselorprofile.full_name
         if obj.role == 'user' and hasattr(obj, 'patientprofile'):
             return obj.patientprofile.full_name
-        
+
         # As a safe fallback, return the user's username if no specific profile is found.
         return obj.username
-    
+
     def get_license_document_url(self, obj):
         # Return the URL of the license document if it exists
         try:
@@ -358,68 +364,113 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     # This remains SerializerMethodField for READ purposes (GET)
     profile = serializers.SerializerMethodField(read_only=True)
 
-    # --- DEFINE FLAT WRITABLE FIELDS ---
-    # These allow the frontend to send data like 'bio', 'full_name', etc. directly
+    # --- DEFINE FLAT WRITABLE FIELDS (Existing fields) ---
     full_name = serializers.CharField(write_only=True, required=False)
     contact_number = serializers.CharField(write_only=True, required=False)
     bio = serializers.CharField(write_only=True, required=False, allow_blank=True)
     profile_picture = serializers.ImageField(write_only=True, required=False)
-    
-    # Role-specific fields
-    specialization = serializers.CharField(write_only=True, required=False)
-    expertise = serializers.CharField(write_only=True, required=False)
     address = serializers.CharField(write_only=True, required=False)
     health_issues = serializers.CharField(write_only=True, required=False)
-    # Note: We typically don't allow updating NIC via profile edit for security, 
-    # but you can add it if needed.
+    # Role-specific fields (for Doctor/Counselor profiles):
+    specialization = serializers.CharField(write_only=True, required=False)
+    expertise = serializers.CharField(write_only=True, required=False)
+
+    # --- DEFINE NEW ADAPTIVE WRITABLE FIELDS ---
+    gender = serializers.CharField(write_only=True, required=False)
+    marital_status = serializers.CharField(write_only=True, required=False)
+    employment_status = serializers.CharField(write_only=True, required=False)
+    financial_stress_level = serializers.IntegerField(write_only=True, required=False)
+    chronic_illness = serializers.BooleanField(write_only=True, required=False)
+    substance_use = serializers.BooleanField(write_only=True, required=False)
+    mh_diagnosis_history = serializers.BooleanField(write_only=True, required=False)
+
+    def get_profile(self, obj):
+        """
+        Dynamically returns the serialized profile data (Doctor, Counselor, or Patient)
+        for the User instance 'obj'.
+        """
+        # Ensure the serializers are available, using the context if needed for nested fields
+        context = self.context if hasattr(self, 'context') else {}
+
+        if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
+            return DoctorProfileSerializer(obj.doctorprofile, context=context).data
+        elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
+            return CounselorProfileSerializer(obj.counselorprofile, context=context).data
+        elif obj.role == 'user' and hasattr(obj, 'patientprofile'):
+            return PatientProfileSerializer(obj.patientprofile, context=context).data
+        return None
+    # -----------------------------------------------
+
+    # WRITE: Custom update method to handle the profile fields (remains unchanged)
+    def update(self, instance, validated_data):
+        profile = None
+        if instance.role == 'doctor':
+            profile = instance.doctorprofile
+            profile_fields = ['full_name', 'contact_number', 'bio', 'profile_picture', 'specialization']
+
+        elif instance.role == 'counselor':
+            profile = instance.counselorprofile
+            profile_fields = ['full_name', 'contact_number', 'bio', 'profile_picture', 'expertise']
+
+        elif instance.role == 'user':
+            profile = instance.patientprofile
+            profile_fields = [
+                'full_name', 'contact_number', 'address', 'health_issues', 'profile_picture',
+                'gender', 'marital_status', 'employment_status',
+                'financial_stress_level', 'chronic_illness',
+                'substance_use', 'mh_diagnosis_history',
+            ]
+
+        if profile:
+            for field in profile_fields:
+                if field in validated_data:
+                    setattr(profile, field, validated_data[field])
+            profile.save()
+
+        return instance
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'role', 'profile',
-            # Include all the writable fields defined above
+            # Include all the existing and new writable fields defined above
             'full_name', 'contact_number', 'bio', 'profile_picture',
-            'specialization', 'expertise', 'address', 'health_issues'
+            'specialization', 'expertise', 'address', 'health_issues',
+
+            # --- NEW FIELDS IN META ---
+            'gender', 'marital_status', 'employment_status',
+            'financial_stress_level', 'chronic_illness',
+            'substance_use', 'mh_diagnosis_history',
         ]
         read_only_fields = ['id', 'username', 'email', 'role', 'profile']
 
-    # READ: Use the existing get_profile logic (No change here)
-    def get_profile(self, obj):
-        if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
-            return DoctorProfileSerializer(obj.doctorprofile,context=self.context).data
-        if obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
-            return CounselorProfileSerializer(obj.counselorprofile,context=self.context).data
-        if obj.role == 'user' and hasattr(obj, 'patientprofile'):
-            return PatientProfileSerializer(obj.patientprofile,context=self.context).data
-        return None
-
-    # WRITE: Custom update method to handle the profile fields
+    # WRITE: Custom update method to handle the profile fields (MODIFIED)
     def update(self, instance, validated_data):
-        # 1. Update User fields (if any are editable in the future)
-        # For now, we just pass. 
-        # If you wanted to allow email updates, you'd pop it here.
-        
-        # 2. Identify the correct profile instance
         profile = None
         if instance.role == 'doctor':
             profile = instance.doctorprofile
+            # Fields specific to Doctor/Counselor
+            profile_fields = ['full_name', 'contact_number', 'bio', 'profile_picture', 'specialization']
         elif instance.role == 'counselor':
             profile = instance.counselorprofile
+            # Fields specific to Doctor/Counselor
+            profile_fields = ['full_name', 'contact_number', 'bio', 'profile_picture', 'expertise']
         elif instance.role == 'user':
             profile = instance.patientprofile
-        
+            # --- UPDATED: INCLUDE ALL NEW ADAPTIVE FIELDS FOR PATIENT ---
+            profile_fields = [
+                'full_name', 'contact_number', 'address', 'health_issues', 'profile_picture',
+                'gender', 'marital_status', 'employment_status',
+                'financial_stress_level', 'chronic_illness',
+                'substance_use', 'mh_diagnosis_history',
+            ]
+
         # 3. Update the profile instance with data from validated_data
         if profile:
-            # List of all possible profile fields we accept
-            profile_fields = [
-                'full_name', 'contact_number', 'bio', 'profile_picture',
-                'specialization', 'expertise', 'address', 'health_issues'
-            ]
-            
             for field in profile_fields:
                 if field in validated_data:
                     setattr(profile, field, validated_data[field])
-            
+
             profile.save()
 
         return instance
@@ -435,9 +486,9 @@ class ProviderListSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'role', 'profile']
 
     def get_profile(self, obj):
-        
-    
-        
+
+
+
         if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
             return DoctorProfileSerializer(obj.doctorprofile,context=self.context).data
         if obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
@@ -498,7 +549,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
         elif obj.role == 'counselor' and hasattr(obj, 'counselorprofile'):
             profile = obj.counselorprofile
         return getattr(profile, 'contact_number', None) # Return None if not found
-    
+
     def get_risk_level(self, obj):
         if obj.role == 'user' and hasattr(obj, 'patientprofile'):
             return obj.patientprofile.risk_level
@@ -525,11 +576,11 @@ class PatientDetailSerializer(serializers.ModelSerializer):
              #'recent_prescriptions',
         ]
         read_only_fields = fields # Make all fields read-only for this detail view
-        
-    
+
+
     def update(self, instance, validated_data):
         profile_data = validated_data.pop('patientprofile', None)
-        
+
         # Update User fields (if any, though we made them read_only above)
         instance = super().update(instance, validated_data)
 
@@ -539,7 +590,7 @@ class PatientDetailSerializer(serializers.ModelSerializer):
             for attr, value in profile_data.items():
                 setattr(profile, attr, value)
             profile.save()
-            
+
         return instance
 
 
@@ -564,7 +615,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def validate(self, data):
         if data['new_password'] != data['confirm_password']:
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
-        
+
         # Validate UID and Token
         try:
             uid = force_str(urlsafe_base64_decode(data['uidb64']))
@@ -574,7 +625,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
         if not default_token_generator.check_token(user, data['token']):
              raise serializers.ValidationError("Invalid or expired reset token.")
-        
+
         # Pass the user object to the view
         self.user = user
         return data

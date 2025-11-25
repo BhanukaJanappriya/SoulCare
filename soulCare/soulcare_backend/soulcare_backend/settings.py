@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
     # Third-party Apps:
     'rest_framework',
+    'rest_framework.authtoken',
     'rest_framework_simplejwt',
     "corsheaders",
 
@@ -64,7 +65,7 @@ INSTALLED_APPS = [
     'user_settings',
     'assessments',
     'feedback',
-    
+
 
 
 
@@ -124,7 +125,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'GDR@1101',
+        'PASSWORD': 'Bhanuka@2001',
         'HOST': 'localhost',
         'PORT': '3306',
     }

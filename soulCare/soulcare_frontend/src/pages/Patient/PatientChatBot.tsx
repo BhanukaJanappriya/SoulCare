@@ -356,7 +356,7 @@ export default function PatientChatBot() {
   return (
     <div className="min-h-screen p-4 md:p-8">
       {/* HEADER */}
-      <div className="max-w-6xl mx-auto mb-8">
+      <div className="max-w-8xl mx-auto mb-8">
         <Card className="shadow-sm bg-card border-none ring-1 ring-gray-200/50">
           <CardHeader>
             <div className="flex items-center gap-4">
@@ -376,7 +376,7 @@ export default function PatientChatBot() {
         </Card>
       </div>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* SIDEBAR */}
         <div className="lg:col-span-1 space-y-4">
           <Card>
