@@ -21,14 +21,6 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     
     def get_queryset(self):
-        """
-        Filter appointments based on the user's role.
-        
-        - A user (patient) can only see their own appointments.
-        - A provider (doctor/counselor) can see appointments they are the provider for.
-        - A provider can ALSO filter their appointments by a specific patient
-          by using a query parameter: /api/appointments/?patient_id=29
-        """
         user = self.request.user
         
         # --- NEW: Check for patient_id filter from the provider ---
@@ -171,6 +163,23 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # Return a success response with no content, which is standard for DELETE
         return Response(status=status.HTTP_204_NO_CONTENT)
     
+    def perform_update(self, serializer):
+        """
+        Handle appointment updates (like Status changes) and send emails
+        ONLY if the user has enabled notifications.
+        """
+        instance = serializer.save()
+        
+        # Send Approved Email?
+        if instance.status == 'scheduled':
+            # Check if patient has settings and if email_appointment_updates is True
+            if hasattr(instance.patient, 'settings') and instance.patient.settings.email_appointment_updates:
+                send_appointment_approved_email(instance)
+        
+        # Send Cancelled Email?
+        elif instance.status == 'cancelled':
+            if hasattr(instance.patient, 'settings') and instance.patient.settings.email_appointment_updates:
+                send_appointment_cancelled_email(instance)
     
 class ProgressNoteViewSet(viewsets.ModelViewSet):
     serializer_class = ProgressNoteSerializer

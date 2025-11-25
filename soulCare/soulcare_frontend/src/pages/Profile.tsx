@@ -3,16 +3,26 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RightSidebar } from "@/components/layout/RightSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star, Edit, Save, Camera, Check } from "lucide-react";
+import { Star, Edit, Save, Camera, Check, MessageSquare, Loader2, UserIcon } from "lucide-react"; // Added MessageSquare
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/api";
+import { api, createFeedbackAPI } from "@/api"; // Import createFeedbackAPI
 import { User, DoctorProfile, CounselorProfile, PatientProfile, CombinedProfile, ProfessionalProfile } from "@/types";
+import { useMutation } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 // ---------------- TYPES ----------------
 type ProfileUpdateValue = string | File | undefined | null;
@@ -63,6 +73,95 @@ const buildFormData = (data: ProfileUpdateData): FormData => {
     return formData;
 };
 
+// --- Feedback Dialog Component (Inline for simplicity) ---
+interface FeedbackDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ open, onOpenChange }) => {
+    const { toast } = useToast();
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [content, setContent] = useState("");
+
+    const mutation = useMutation({
+        mutationFn: createFeedbackAPI,
+        onSuccess: () => {
+            toast({ title: "Thank You!", description: "Your feedback has been submitted for review." });
+            onOpenChange(false);
+            setRating(0);
+            setContent("");
+        },
+        onError: () => {
+            toast({ variant: "destructive", title: "Error", description: "Failed to submit feedback." });
+        }
+    });
+
+    const handleSubmit = () => {
+        if (rating === 0) {
+            toast({ variant: "destructive", title: "Error", description: "Please select a rating." });
+            return;
+        }
+        if (!content.trim()) {
+            toast({ variant: "destructive", title: "Error", description: "Please write some feedback." });
+            return;
+        }
+        mutation.mutate({ rating, content });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Give Feedback</DialogTitle>
+                    <DialogDescription>
+                        Share your experience with SoulCare. Your feedback helps us improve.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="flex justify-center gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                                key={star}
+                                type="button"
+                                className="focus:outline-none transition-transform hover:scale-110"
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                onClick={() => setRating(star)}
+                            >
+                                <Star
+                                    className={cn(
+                                        "w-8 h-8 transition-colors",
+                                        (hoverRating || rating) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                    )}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="feedback">Your Message</Label>
+                        <Textarea
+                            id="feedback"
+                            placeholder="What did you like? What can we do better?"
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={handleSubmit} disabled={mutation.isPending}>
+                        {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Submit
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 // --------------------------------------
 
 export default function Profile() {
@@ -71,6 +170,9 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // --- NEW: Feedback State ---
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: "", email: "", contact_number: "", profileField: "",
@@ -178,7 +280,7 @@ export default function Profile() {
     display: 'inline-block',
   };
   const avatarRingStyle: React.CSSProperties = {
-    boxShadow: '0 0 0 4px #22c55e',
+    boxShadow: '0 0 0 4px #22c53bff',
     borderRadius: '9999px',
   };
   const verifiedBadgeStyle: React.CSSProperties = {
@@ -187,7 +289,7 @@ export default function Profile() {
     right: '4px',
     height: '24px',
     width: '24px',
-    backgroundColor: '#22c55e',
+    backgroundColor: '#23b319ff',
     borderRadius: '9999px',
     border: '2px solid white',
     display: 'flex',
@@ -201,10 +303,41 @@ export default function Profile() {
     <div className="min-h-screen bg-page-bg flex">
       <div className="flex-1 pr-[5.5rem]">
         <div className="container mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-text-dark mb-2">Profile</h1>
-            <p className="text-text-muted">Manage your professional information</p>
-          </div>
+          
+          {/* --- HEADER SECTION (UPDATED) --- */}
+          
+          <Card className="shadow-sm bg-card w-full mb-8">
+  <CardHeader className="py-4 px-6">
+    <div className="flex items-center justify-between w-full">
+      {/* LEFT */}
+      <div className="flex items-center gap-4">
+        <UserIcon className="h-8 w-8 text-primary" />
+        <div>
+          <CardTitle className="text-2xl font-bold">My Profile</CardTitle>
+          <CardDescription className="mt-1">
+            Manage your professional information
+          </CardDescription>
+        </div>
+      </div>
+
+      {/* RIGHT */}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          size="lg"
+          className="shadow-sm"
+          onClick={() => setIsFeedbackOpen(true)}
+        >
+          <MessageSquare className="w-4 h-4 mr-2" />
+          Give Feedback
+        </Button>
+      </div>
+    </div>
+  </CardHeader>
+</Card>
+
+          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <Card className="lg:col-span-1">
               <CardHeader className="text-center">
@@ -298,17 +431,9 @@ export default function Profile() {
         </div>
       </div>
       <RightSidebar />
+
+      {/* --- Dialog Component Instance --- */}
+      <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

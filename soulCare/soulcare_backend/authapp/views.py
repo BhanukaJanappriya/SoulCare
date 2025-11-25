@@ -253,15 +253,31 @@ class ProviderAvailabilityView(APIView):
         except (ValueError, TypeError):
             return Response({'error': 'Invalid or missing date range.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 2. Define appointment duration (e.g., 60 minutes)
-        slot_duration = timedelta(minutes=60)
+        try:
+            provider = User.objects.get(id=provider_id)
+            duration_minutes = 60 
+            time_format_pref = '12h'
+            
+            # Check if provider has settings and a custom duration saved
+            if hasattr(provider, 'settings') and provider.settings.session_duration:
+                duration_minutes = provider.settings.session_duration
+            
+            
+            # Define appointment duration based on the database value
+            if duration_minutes <= 0:
+                duration_minutes = 60
+            slot_duration = timedelta(minutes=duration_minutes)
+
+        except User.DoesNotExist:
+            return Response({'error': 'Provider not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
 
         # 3. Fetch the provider's general schedule and booked appointments
         provider_schedules = ProviderSchedule.objects.filter(provider_id=provider_id)
         booked_appointments = Appointment.objects.filter(
             provider_id=provider_id,
             date__range=[start_date, end_date],
-            status__in=['scheduled', 'pending'] # Consider pending slots as booked
+            status__in=['scheduled', 'pending']
         )
 
         # Create a quick lookup for booked slots
@@ -271,23 +287,33 @@ class ProviderAvailabilityView(APIView):
         current_date = start_date
         while current_date <= end_date:
             day_slots = []
-            weekday = current_date.weekday() # Monday is 0, Sunday is 6
+            weekday = current_date.weekday()
 
             # Find all working hour blocks for this day of the week
             for schedule in provider_schedules.filter(day_of_week=weekday):
-                current_time = datetime.combine(current_date, schedule.start_time)
-                end_time = datetime.combine(current_date, schedule.end_time)
+                start_dt = datetime.combine(current_date, schedule.start_time)
+                end_dt = datetime.combine(current_date, schedule.end_time)
 
-                # Iterate through the working hours, creating slots
-                while current_time + slot_duration <= end_time:
-                    slot_time = current_time.time()
-                    # Check if this slot is already booked
-                    if (current_date, slot_time) not in booked_slots:
-                        day_slots.append(slot_time.strftime('%H:%M'))
+                if end_dt <= start_dt:
+                    continue
 
-                    current_time += slot_duration
+                last_start_dt = end_dt - slot_duration
+
+                temp_dt = start_dt
+                while temp_dt <= last_start_dt:
+                    slot_time_obj = temp_dt.time()
+
+                    if (current_date, slot_time_obj) not in booked_slots:
+                        if time_format_pref == '24h':
+                            formatted_time = slot_time_obj.strftime('%H:%M')
+                        else:
+                            formatted_time = slot_time_obj.strftime('%I:%M %p')
+                        day_slots.append(formatted_time)
+
+                    temp_dt += slot_duration
 
             if day_slots:
+                day_slots.sort()
                 available_slots[current_date.isoformat()] = day_slots
 
             current_date += timedelta(days=1)

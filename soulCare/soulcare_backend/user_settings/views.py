@@ -164,9 +164,12 @@ class StripeSaveMethodView(APIView):
             settings, _ = UserSettings.objects.get_or_create(user=request.user)
             settings.card_brand = card_info.brand
             settings.card_last4 = card_info.last4
+            settings.card_exp_month = str(card_info.exp_month)
+            settings.card_exp_year = str(card_info.exp_year)
             settings.save()
 
-            return Response({'status': 'updated', 'brand': card_info.brand, 'last4': card_info.last4})
+            return Response({'status': 'updated', 'brand': card_info.brand, 'last4': card_info.last4,'exp_month': card_info.exp_month,
+                'exp_year': card_info.exp_year})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -196,11 +199,6 @@ class UserPreferencesView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         settings, created = UserSettings.objects.get_or_create(user=self.request.user)
         return settings
-    
-# In user_settings/views.py
-
-# Make sure to import your serializer (you'll need to create this if it doesn't exist)
-# from .serializers import UserPrivacySerializer 
 
 class UserPrivacyView(generics.RetrieveUpdateAPIView):
     """ Handles the Privacy settings tab """

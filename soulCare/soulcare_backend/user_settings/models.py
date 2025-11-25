@@ -17,9 +17,8 @@ class UserSettings(models.Model):
     # Language Options
     LANGUAGE_CHOICES = [
         ('en', 'English'),
-        ('es', 'Spanish'),
-        ('fr', 'French'),
-        ('de', 'German'),
+        ('sn', 'Sinhala'),
+        ('tm', 'Tamil'),
     ]
     language = models.CharField(max_length=5, default='en', choices=LANGUAGE_CHOICES)
 
@@ -67,11 +66,26 @@ class UserSettings(models.Model):
     two_factor_enabled = models.BooleanField(default=False)
     two_factor_secret = models.CharField(max_length=32, blank=True, null=True)
 
+    SESSION_DURATION_CHOICES = [
+        (15, '15 Minutes'),
+        (30, '30 Minutes'),
+        (60, '1 Hour'),
+        (120, '2 Hours'),
+    ]
+
+    session_duration = models.IntegerField(default=60, choices=SESSION_DURATION_CHOICES)
+
     # --- Billing ---
     stripe_customer_id = models.CharField(max_length=50, blank=True, null=True)
     card_brand = models.CharField(max_length=20, blank=True, null=True)
     card_last4 = models.CharField(max_length=4, blank=True, null=True)
+    card_exp_month = models.CharField(max_length=2, blank=True, null=True)
+    card_exp_year = models.CharField(max_length=4, blank=True, null=True)
 
+    #---Notification---
+    email_appointment_updates = models.BooleanField(default=True)
+    email_new_messages = models.BooleanField(default=True)
+    email_appointment_reminders = models.BooleanField(default=True)
 
     def __str__(self):
         return f"Settings for {self.user.username}"

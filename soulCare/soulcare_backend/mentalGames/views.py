@@ -10,6 +10,12 @@ from .models import ReactionTimeResult, MemoryGameResult, StroopGameResult,Addit
 from .serializers import ReactionTimeResultSerializer, MemoryGameResultSerializer, StroopGameResultSerializer,LongestNumberGameResultSerializer,NumpuzGameResultSerializer,AdditionsGameResultSerializer
 from authapp.permissions import IsAdminOrCounselor
 
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework import status
+
+
 class ReactionTimeResultListCreateView(generics.ListCreateAPIView):
     # Only authenticated users can access this endpoint
     permission_classes = [IsAuthenticated]
@@ -459,3 +465,113 @@ def dashboard_stats_view(request):
     stats_data['total_time_spent_h'] = round((total_time_ms_sum / 1000) / 3600, 1)
 
     return Response(stats_data)
+
+
+
+
+class AdminGameDataExportView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        game_type = request.query_params.get('game_type')
+        
+        if not game_type:
+            return Response({"error": "Game type is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = HttpResponse(content_type='text/csv')
+        filename = f"{game_type}_data.csv"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response)
+
+        if game_type == 'reaction-time':
+            writer.writerow(['User', 'Date', 'Reaction Time (ms)', 'Mood', 'Effort', 'Calmness'])
+            results = ReactionTimeResult.objects.select_related('user').all().order_by('-created_at')
+            for r in results:
+                writer.writerow([
+                    r.user.username, 
+                    r.created_at.strftime("%Y-%m-%d %H:%M"), 
+                    r.reaction_time_ms, 
+                    r.get_post_game_mood_display(), 
+                    r.perceived_effort, 
+                    r.stress_reduction_rating
+                ])
+
+        elif game_type == 'memory-game':
+            writer.writerow(['User', 'Date', 'Max Sequence', 'Attempts', 'Mood', 'Effort', 'Calmness'])
+            results = MemoryGameResult.objects.select_related('user').all().order_by('-created_at')
+            for r in results:
+                writer.writerow([
+                    r.user.username, 
+                    r.created_at.strftime("%Y-%m-%d %H:%M"), 
+                    r.max_sequence_length, 
+                    r.total_attempts,
+                    r.get_post_game_mood_display(), 
+                    r.perceived_effort, 
+                    r.stress_reduction_rating
+                ])
+
+        elif game_type == 'stroop-game':
+            writer.writerow(['User', 'Date', 'Correct', 'Interference (ms)', 'Time (s)', 'Mood', 'Effort', 'Calmness'])
+            results = StroopGameResult.objects.select_related('user').all().order_by('-created_at')
+            for r in results:
+                writer.writerow([
+                    r.user.username, 
+                    r.created_at.strftime("%Y-%m-%d %H:%M"), 
+                    r.total_correct, 
+                    r.interference_score_ms,
+                    r.total_time_s,
+                    r.get_post_game_mood_display(), 
+                    r.perceived_effort, 
+                    r.stress_reduction_rating
+                ])
+        
+        elif game_type == 'longest-number':
+            writer.writerow(['User', 'Date', 'Max Digits', 'Reaction Time (ms)', 'Attempts', 'Mood', 'Effort', 'Calmness'])
+            results = LongestNumberGameResult.objects.select_related('user').all().order_by('-created_at')
+            for r in results:
+                writer.writerow([
+                    r.user.username, 
+                    r.created_at.strftime("%Y-%m-%d %H:%M"), 
+                    r.max_number_length,
+                    r.total_reaction_time_ms,
+                    r.total_attempts,
+                    r.get_post_game_mood_display(), 
+                    r.perceived_effort, 
+                    r.stress_reduction_rating
+                ])
+
+        elif game_type == 'numpuz-game':
+            writer.writerow(['User', 'Date', 'Time (s)', 'Size', 'Moves', 'Mood', 'Effort', 'Calmness'])
+            results = NumpuzGameResult.objects.select_related('user').all().order_by('-created_at')
+            for r in results:
+                writer.writerow([
+                    r.user.username, 
+                    r.created_at.strftime("%Y-%m-%d %H:%M"), 
+                    r.time_taken_s,
+                    r.puzzle_size,
+                    r.moves_made,
+                    r.get_post_game_mood_display(), 
+                    r.perceived_effort, 
+                    r.stress_reduction_rating
+                ])
+
+        elif game_type == 'additions-game':
+            writer.writerow(['User', 'Date', 'Correct', 'Time (s)', 'Difficulty', 'Mood', 'Effort', 'Calmness'])
+            results = AdditionsGameResult.objects.select_related('user').all().order_by('-created_at')
+            for r in results:
+                writer.writerow([
+                    r.user.username, 
+                    r.created_at.strftime("%Y-%m-%d %H:%M"), 
+                    r.total_correct,
+                    r.time_taken_s,
+                    r.difficulty_level,
+                    r.get_post_game_mood_display(), 
+                    r.perceived_effort, 
+                    r.stress_reduction_rating
+                ])
+
+        else:
+            return Response({"error": "Invalid game type."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return response

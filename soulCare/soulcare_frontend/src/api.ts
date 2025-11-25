@@ -1052,3 +1052,28 @@ export const approveFeedbackAPI = async (id: number): Promise<void> => {
 export const rejectFeedbackAPI = async (id: number): Promise<void> => {
     await api.patch(`feedback/${id}/reject/`);
 };
+
+
+
+export const exportGameDataAPI = async (gameType: string): Promise<void> => {
+  // Endpoint: /api/games/export-csv/?game_type=...
+  // We use axiosInstance (api/auth) if it requires admin auth, or just ensure the token is passed.
+  // Since mentalGames is under 'api/games/', let's use 'api' instance but ensure token header.
+  // Actually, let's use axiosInstance if we can map the path, but since it's a separate app URL...
+  // Let's stick to the 'api' instance but manually ensure the path is correct.
+  
+  const response = await api.get('games/export-csv/', {
+    params: { game_type: gameType },
+    responseType: 'blob', // Important for binary data (files)
+  });
+
+  // Create a download link and click it programmatically
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${gameType}_data.csv`); // File name
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};

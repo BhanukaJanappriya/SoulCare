@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+
+
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query"; // NEW
 import { getBlogPostsAPI,getPublicFeedbackAPI } from "@/api"; // NEW
@@ -12,9 +14,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { RoleCard } from "@/components/ui/role-card";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"; // NEW
-import { Button } from "@/components/ui/button"; // NEW
-import FullArticleDialog from "@/components/common/FullArticleDialog"; // NEW
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import FullArticleDialog from "@/components/common/FullArticleDialog";
 import {
   Select,
   SelectContent,
@@ -25,20 +27,16 @@ import {
 import { Label } from "@/components/ui/label"; // NEW
 import { Quote } from "lucide-react";
 
-// --- NEW: Simplified Public Blog Card Component ---
-const PublicBlogCard: React.FC<{
-  post: BlogPost;
-  onReadMore: (post: BlogPost) => void;
-}> = ({ post, onReadMore }) => (
+// --- Public Blog Card Component ---
+const PublicBlogCard = ({ post, onReadMore }: { post: BlogPost; onReadMore: (post: BlogPost) => void }) => (
   <Card className="hover:shadow-xl transition-shadow border-t-4 border-t-primary/50 flex flex-col h-full">
-    <CardHeader className="flex-grow">
+    <CardHeader className="flex-grow pb-2">
       <div className="flex items-center gap-2 mb-2">
-        {/* Display Average Rating */}
         <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
         <span className="text-sm font-semibold">
-          {post.average_rating.toFixed(1)}{" "}
+          {post.averageRating ? post.averageRating.toFixed(1) : "0.0"}{" "}
           <span className="text-xs text-muted-foreground">
-            ({post.rating_count})
+            ({post.rating_count || 0})
           </span>
         </span>
       </div>
@@ -46,9 +44,9 @@ const PublicBlogCard: React.FC<{
     </CardHeader>
     <CardContent className="pt-0">
       <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
-        {post.excerpt || post.content.substring(0, 150) + "..."}
+        {post.excerpt || (post.content ? post.content.substring(0, 150) + "..." : "")}
       </p>
-      <div className="flex justify-between items-center mt-2">
+      <div className="flex justify-between items-center mt-auto">
         <span className="text-xs text-muted-foreground flex items-center gap-1">
           <Clock className="w-3 h-3" />
           {new Date(post.publishedAt || post.createdAt).toLocaleDateString()}
@@ -64,15 +62,33 @@ const PublicBlogCard: React.FC<{
     </CardContent>
   </Card>
 );
-// --- END NEW COMPONENT ---
 
-const LandingPage: React.FC = () => {
+const LandingPage = () => {
   const navigate = useNavigate();
 
-  // --- NEW BLOG LOGIC STATE ---
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [isLoadingBlogs, setIsLoadingBlogs] = useState(true);
   const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<BlogPost | null>(null);
-  const [sortBy, setSortBy] = useState<BlogSortBy>("newest"); // <-- NEW SORT STATE
+  
+  // --- FIX 2: Explicitly type the state ---
+  const [sortBy, setSortBy] = useState<BlogSortBy>("newest");
+
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      setIsLoadingBlogs(true);
+      try {
+        const data = await getBlogPostsAPI("published", sortBy);
+        setBlogs(data);
+      } catch (error) {
+        console.error("Error loading landing page blogs:", error);
+      } finally {
+        setIsLoadingBlogs(false);
+      }
+    };
+
+    fetchBlogs();
+  }, [sortBy]);
 
   const handleReadMore = (post: BlogPost) => {
     setSelectedArticle(post);
@@ -87,11 +103,6 @@ const LandingPage: React.FC = () => {
 
 
   // Fetch latest published blogs (publicly accessible)
-  const { data: blogs, isLoading: isLoadingBlogs } = useQuery<BlogPost[]>({
-    queryKey: ["publicBlogs", sortBy], // <-- ADD sortBy to queryKey
-    queryFn: () => getBlogPostsAPI("published", sortBy), // <-- PASS sortBy
-    staleTime: 1000 * 60 * 5, // Cache for 5 mins
-  });
   // --- END NEW BLOG LOGIC STATE ---
 
   const handleRoleSelect = (role: UserRole) => {
@@ -103,12 +114,9 @@ const LandingPage: React.FC = () => {
       navigate("/counselor-register", navigationState);
     } else if (role === "doctor") {
       navigate("/doctor-register", navigationState);
-    } else {
-      console.error("Unknown role selected:", role);
     }
   };
 
-  // Feature lists remain the same
   const doctorFeatures = [
     "Create and manage prescriptions",
     "Video consultations with patients",
@@ -143,14 +151,11 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    // Wrap everything in a React Fragment to allow the Dialog to be a sibling
     <>
-      {/* MODIFIED: min-h-[110vh] to force scroll, flex-col for content flow */}
       <div className="min-h-[110vh] healthcare-gradient flex flex-col p-4">
         <div className="w-full max-w-6xl mx-auto flex-grow flex flex-col justify-center">
-          {" "}
-          {/* CENTER CONTENT */}
-          {/* UPDATED: Header with logo */}
+          
+          {/* HERO SECTION */}
           <div className="mb-12 animate-fade-in ">
             <div className="flex flex-col items-center text-center md:flex-row md:items-center md:text-center md:justify-center gap-4">
               <img
@@ -169,7 +174,8 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
           </div>
-          {/* UPDATED: Role Selection Cards */}
+
+          {/* ROLE CARDS */}
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl justify-items-center mx-auto">
             <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
               <RoleCard
@@ -204,11 +210,8 @@ const LandingPage: React.FC = () => {
               />
             </div>
           </div>
-          {/* Footer (Used to force minimal height on initial view) */}
-          <div
-            className="text-center mt-12 animate-fade-in"
-            style={{ animationDelay: "0.8s" }}
-          >
+          
+          <div className="text-center mt-12 animate-fade-in" style={{ animationDelay: "0.8s" }}>
             <p className="text-muted-foreground">
               Secure • HIPAA Compliant • Professional • Trusted
             </p>
@@ -216,7 +219,7 @@ const LandingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* --- MODIFIED: Public Blog Section (Appears only on scroll) --- */}
+      {/* --- BLOG SECTION --- */}
       <div className="w-full max-w-6xl mx-auto py-12 px-4">
         <div className="text-center mb-10 px-4">
           <h2 className="text-primary text-4xl font-bold text-gray-800 mb-3">
@@ -227,7 +230,7 @@ const LandingPage: React.FC = () => {
           </p>
         </div>
 
-        {/* NEW: Filter Section for Landing Page */}
+        {/* Filter Section */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center space-x-2">
             <Label htmlFor="sort" className="font-semibold text-lg">
@@ -235,7 +238,8 @@ const LandingPage: React.FC = () => {
             </Label>
             <Select
               value={sortBy}
-              onValueChange={(value: BlogSortBy) => setSortBy(value)}
+              /* --- FIX 3: Cast the value to BlogSortBy --- */
+              onValueChange={(value) => setSortBy(value as BlogSortBy)}
             >
               <SelectTrigger id="sort" className="w-[180px]">
                 <SelectValue placeholder="Select filter" />
@@ -249,26 +253,20 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Blog Grid */}
         <div className="grid md:grid-cols-3 gap-8 px-8">
           {isLoadingBlogs ? (
-            Array(3)
-              .fill(0)
-              .map((_, i) => (
-                <div
-                  key={i}
-                  className="h-64 bg-gray-200 animate-pulse rounded-lg"
-                />
-              ))
+            Array(3).fill(0).map((_, i) => (
+                <div key={i} className="h-64 bg-gray-200 animate-pulse rounded-lg" />
+            ))
           ) : blogs && blogs.length > 0 ? (
-            blogs
-              .slice(0, 3)
-              .map((post) => (
+            blogs.slice(0, 3).map((post) => (
                 <PublicBlogCard
                   key={post.id}
                   post={post}
                   onReadMore={handleReadMore}
                 />
-              ))
+            ))
           ) : (
             <p className="col-span-3 text-center text-muted-foreground">
               No published articles available yet.
@@ -276,13 +274,13 @@ const LandingPage: React.FC = () => {
           )}
         </div>
 
-        {/* NEW: View All Button */}
+        {/* View All Button */}
         {blogs && blogs.length > 3 && (
           <div className="mt-8 text-center">
             <Button
               variant="default"
               size="lg"
-              onClick={() => navigate("/blogs")}
+              onClick={() => navigate("/patient/blogs")}
               className="shadow-md"
             >
               View All Articles <ArrowRight className="w-5 h-5 ml-2" />
@@ -290,7 +288,6 @@ const LandingPage: React.FC = () => {
           </div>
         )}
       </div>
-      {/* --- END NEW: Public Blog Section --- */}
 
       <div className="w-full bg-blue py-16">
         <div className="max-w-6xl mx-auto px-4">
@@ -333,10 +330,10 @@ const LandingPage: React.FC = () => {
         post={selectedArticle}
         isOpen={isArticleDialogOpen}
         onOpenChange={setIsArticleDialogOpen}
-        showEngagement={true}
-      />
+        showEngagement={false} onReact={undefined} onRate={undefined} onComment={undefined}      />
     </>
   );
 };
 
 export default LandingPage;
+

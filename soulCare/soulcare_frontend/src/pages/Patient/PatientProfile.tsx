@@ -25,35 +25,152 @@ import {
   CreditCard,
   Heart,
   DollarSign,
+  MessageSquare,
+  Star,
+  Loader2,
+  UserCheck2Icon,
+  UserPlusIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/api";
+import { api, createFeedbackAPI } from "@/api"; // Import createFeedbackAPI
 import { PatientProfile } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import axios from "axios"; // Ensure axios is imported for error type checking
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useMutation } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
-// --- NEW TYPE FOR buildFormData INPUT ---
-type FormDataInput = Record<
-  string,
-  string | number | boolean | File | undefined | null
->;
-
-// Helper to build FormData for file uploads (FIX 1: Parameter type replaced 'any')
-const buildFormData = (data: FormDataInput): FormData => {
+// Helper to build FormData for file uploads
+const buildFormData = (data: Record<string, any>): FormData => {
   const formData = new FormData();
   for (const key in data) {
     if (data[key] instanceof File) {
       formData.append(key, data[key]);
     } else if (data[key] !== null && data[key] !== undefined) {
-      // Convert booleans to strings "true" / "false" for DRF compatibility with FormData
-      if (typeof data[key] === "boolean") {
-        formData.append(key, data[key] ? "true" : "false");
-      } else {
-        formData.append(key, String(data[key]));
-      }
+      formData.append(key, String(data[key]));
     }
   }
   return formData;
+};
+
+// --- Feedback Dialog Component (Inline for simplicity in this file context) ---
+interface FeedbackDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
+  open,
+  onOpenChange,
+}) => {
+  const { toast } = useToast();
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [content, setContent] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: createFeedbackAPI,
+    onSuccess: () => {
+      toast({
+        title: "Thank You!",
+        description: "Your feedback has been submitted for review.",
+      });
+      onOpenChange(false);
+      setRating(0);
+      setContent("");
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to submit feedback.",
+      });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (rating === 0) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please select a rating.",
+      });
+      return;
+    }
+    if (!content.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please write some feedback.",
+      });
+      return;
+    }
+    mutation.mutate({ rating, content });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Give Feedback</DialogTitle>
+          <DialogDescription>
+            Share your experience with SoulCare. Your feedback helps us improve.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="flex justify-center gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                className="focus:outline-none transition-transform hover:scale-110"
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                onClick={() => setRating(star)}
+              >
+                <Star
+                  className={cn(
+                    "w-8 h-8 transition-colors",
+                    (hoverRating || rating) >= star
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "text-gray-300"
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="feedback">Your Message</Label>
+            <Textarea
+              id="feedback"
+              placeholder="What did you like? What can we do better?"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={4}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={mutation.isPending}>
+            {mutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : null}
+            Submit
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 // --- CONSTANTS FOR SELECTS ---
@@ -85,7 +202,10 @@ export default function PatientProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form State (Updated to include all fields)
+  // --- NEW: State for Feedback Dialog ---
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
+  // Form State
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -94,14 +214,6 @@ export default function PatientProfilePage() {
     health_issues: "",
     nic: "",
     dob: "",
-    // --- NEW ADAPTIVE FIELDS ---
-    gender: "",
-    marital_status: "",
-    employment_status: "",
-    financial_stress_level: 1,
-    chronic_illness: false,
-    substance_use: false,
-    mh_diagnosis_history: false,
   });
 
   // Sync user data to local state when it loads
@@ -116,14 +228,6 @@ export default function PatientProfilePage() {
         health_issues: profile.health_issues || "",
         nic: profile.nic || "",
         dob: profile.dob || "",
-        // --- SYNCING NEW ADAPTIVE FIELDS ---
-        gender: profile.gender || "",
-        marital_status: profile.marital_status || "",
-        employment_status: profile.employment_status || "",
-        financial_stress_level: profile.financial_stress_level || 1,
-        chronic_illness: profile.chronic_illness || false,
-        substance_use: profile.substance_use || false,
-        mh_diagnosis_history: profile.mh_diagnosis_history || false,
       });
     }
   }, [user]);
@@ -132,22 +236,12 @@ export default function PatientProfilePage() {
     if (!user) return;
     setIsSaving(true);
 
-    // FIX 1: Updated to use FormDataInput type
-    const updateData: FormDataInput = {
-      // --- EXISTING CORE FIELDS ---
+    // Prepare flat data for the backend
+    const updateData: Record<string, any> = {
       full_name: formData.full_name,
       contact_number: formData.contact_number,
       address: formData.address,
       health_issues: formData.health_issues,
-
-      // --- NEW ADAPTIVE FIELDS ---
-      gender: formData.gender,
-      marital_status: formData.marital_status,
-      employment_status: formData.employment_status,
-      financial_stress_level: formData.financial_stress_level,
-      chronic_illness: formData.chronic_illness,
-      substance_use: formData.substance_use,
-      mh_diagnosis_history: formData.mh_diagnosis_history,
     };
 
     if (file) {
@@ -156,32 +250,25 @@ export default function PatientProfilePage() {
 
     const payload = buildFormData(updateData);
 
-    // FIX 2 & 3: Replace 'any' with 'unknown' and use type guard
     try {
       await api.patch("auth/user/", payload, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      // Refresh user context to show new data/image
       const token = localStorage.getItem("accessToken");
       if (token) await fetchUser(token);
 
       toast({ title: "Success", description: "Profile updated successfully." });
       setIsEditing(false);
       setFile(null);
-    } catch (error: unknown) {
-      // FIX 2: Replaced 'any' with 'unknown'
+    } catch (error: any) {
       console.error("Update failed", error);
-
-      let errorMessage = "Failed to update profile.";
-      // FIX 3: Use type guard for safe Axios error checking
-      if (axios.isAxiosError(error) && error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      }
-
       toast({
         variant: "destructive",
         title: "Error",
-        description: errorMessage,
+        description:
+          error.response?.data?.detail || "Failed to update profile.",
       });
     } finally {
       setIsSaving(false);
@@ -214,45 +301,68 @@ export default function PatientProfilePage() {
     ? URL.createObjectURL(file)
     : profile.profile_picture || undefined;
 
-  // Helper to get display label for read-only fields
-  const getLabel = (value: string, options: typeof GENDER_OPTIONS) =>
-    options.find((opt) => opt.value === value)?.label || "Not Set";
-
   return (
     <div className="container max-w-6xl mx-auto px-6 py-10 space-y-8 pr-[5.5rem]">
-      {/* --- Header Section --- */}
-      <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 top-0 pt-2">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground tracking-tight">
-            My Profile
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your personal information and health records.
-          </p>
-        </div>
-        <Button
-          variant="default"
-          size="lg"
-          className="shadow-sm transition-all"
-          onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-          disabled={isSaving}
-        >
-          {isEditing ? (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? "Saving..." : "Save Changes"}
-            </>
-          ) : (
-            <>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
-            </>
-          )}
-        </Button>
-      </div>
+      <Card className="shadow-sm bg-card w-full">
+        <CardHeader>
+          <div className="flex items-center justify-between w-full">
+            {/* LEFT SIDE — HEADER TITLE */}
+            <div className="flex items-center gap-4">
+              <UserIcon className="h-8 w-8 text-primary" />
+              <div>
+                <CardTitle className="text-2xl font-bold">
+                  My Profile
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Manage your professional information
+                </CardDescription>
+              </div>
+            </div>
+
+            {/* RIGHT SIDE — BUTTONS */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                className="shadow-sm"
+                onClick={() => setIsFeedbackOpen(true)}
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Give Feedback
+              </Button>
+
+              <Button
+                variant={isEditing ? "default" : "outline"}
+                size="lg"
+                className="shadow-sm transition-all"
+                onClick={() => {
+                  if (isEditing) {
+                    handleSave();
+                  } else {
+                    setIsEditing(true);
+                  }
+                }}
+                disabled={isSaving}
+              >
+                {isEditing ? (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSaving ? "Saving..." : "Save Changes"}
+                  </>
+                ) : (
+                  <>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* --- Left Column: Identity Card & Risk Level (Span 4) --- */}
+        {/* --- Left Column: Identity Card (Span 4) --- */}
         <div className="lg:col-span-4 space-y-6">
           <Card className="overflow-hidden border-muted shadow-sm">
             <div className="bg-muted/30 h-24 w-full absolute top-0 left-0 z-0" />
@@ -301,25 +411,15 @@ export default function PatientProfilePage() {
               <CardDescription className="flex items-center justify-center gap-1.5 mt-2 text-sm font-medium">
                 <Badge
                   variant="outline"
-                  className={`
-                                        bg-primary/5 border-primary/20 text-primary hover:bg-primary/10
-                                        ${
-                                          profile.risk_level === "high"
-                                            ? "bg-red-500/10 text-red-600 border-red-500"
-                                            : profile.risk_level === "medium"
-                                            ? "bg-yellow-500/10 text-yellow-600 border-yellow-500"
-                                            : ""
-                                        }
-                                    `}
+                  className="bg-primary/5 border-primary/20 text-primary hover:bg-primary/10"
                 >
-                  Risk Level: {profile.risk_level?.toUpperCase() || "LOW"}
+                  Patient Account
                 </Badge>
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-5 relative z-10 bg-card pt-0">
               <div className="grid gap-4 border-t pt-6">
-                {/* NIC */}
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <CreditCard className="w-4 h-4" />
@@ -329,7 +429,6 @@ export default function PatientProfilePage() {
                     {profile.nic || "N/A"}
                   </span>
                 </div>
-                {/* DOB */}
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="w-4 h-4" />
@@ -339,7 +438,6 @@ export default function PatientProfilePage() {
                     {profile.dob || "N/A"}
                   </span>
                 </div>
-                {/* Email */}
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Mail className="w-4 h-4" />
@@ -357,9 +455,8 @@ export default function PatientProfilePage() {
           </Card>
         </div>
 
-        {/* --- Right Column: Details Form & Medical (Span 8) --- */}
+        {/* --- Right Column: Details Form (Span 8) --- */}
         <div className="lg:col-span-8 space-y-6">
-          {/* --- Personal Details Card (Existing) --- */}
           <Card className="shadow-sm border-muted">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
@@ -367,12 +464,11 @@ export default function PatientProfilePage() {
                 Personal Details
               </CardTitle>
               <CardDescription>
-                Update your contact information and primary residence.
+                Update your contact information and personal details.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Full Name */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="full_name"
@@ -393,7 +489,6 @@ export default function PatientProfilePage() {
                     <UserIcon className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
                   </div>
                 </div>
-                {/* Contact Number */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="contact"
@@ -418,7 +513,7 @@ export default function PatientProfilePage() {
                   </div>
                 </div>
               </div>
-              {/* Address */}
+
               <div className="space-y-2">
                 <Label
                   htmlFor="address"
@@ -442,210 +537,6 @@ export default function PatientProfilePage() {
             </CardContent>
           </Card>
 
-          {/* --- NEW CARD: Contextual & Adaptive Information (FIX: ADDED SECTION) --- */}
-          <Card className="shadow-sm border-muted">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary" />
-                Life Context & Adaptive Filters
-              </CardTitle>
-              <CardDescription>
-                These details are used to personalize your assessment questions
-                and resource recommendations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 1. Gender Select */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Gender
-                  </Label>
-                  <select
-                    value={formData.gender}
-                    onChange={(e) =>
-                      setFormData({ ...formData, gender: e.target.value })
-                    }
-                    disabled={!isEditing}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select Gender</option>
-                    {GENDER_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  {!isEditing && (
-                    <p className="text-sm font-medium">
-                      {getLabel(formData.gender, GENDER_OPTIONS)}
-                    </p>
-                  )}
-                </div>
-
-                {/* 2. Marital Status Select */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Marital Status
-                  </Label>
-                  <select
-                    value={formData.marital_status}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        marital_status: e.target.value,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select Status</option>
-                    {MARITAL_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  {!isEditing && (
-                    <p className="text-sm font-medium">
-                      {getLabel(formData.marital_status, MARITAL_OPTIONS)}
-                    </p>
-                  )}
-                </div>
-
-                {/* 3. Employment Status Select */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Employment Status
-                  </Label>
-                  <select
-                    value={formData.employment_status}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        employment_status: e.target.value,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select Status</option>
-                    {EMPLOYMENT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  {!isEditing && (
-                    <p className="text-sm font-medium">
-                      {getLabel(formData.employment_status, EMPLOYMENT_OPTIONS)}
-                    </p>
-                  )}
-                </div>
-
-                {/* 4. Financial Stress Level */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="financial_stress"
-                    className="text-sm font-medium text-muted-foreground"
-                  >
-                    Financial Stress Level (1-5)
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="financial_stress"
-                      type="number"
-                      min="1"
-                      max="5"
-                      value={String(formData.financial_stress_level)}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          financial_stress_level: Math.max(
-                            1,
-                            Math.min(5, parseInt(e.target.value) || 1)
-                          ),
-                        })
-                      }
-                      disabled={!isEditing}
-                      className="w-16 text-center"
-                    />
-                    {!isEditing && (
-                      <p className="text-sm font-medium text-foreground">
-                        (1=Low, 5=Severe)
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 5. Chronic Illness Switch */}
-                <div className="flex items-center justify-between col-span-2 border-t pt-4">
-                  <Label
-                    htmlFor="chronic_illness"
-                    className="text-sm font-medium"
-                  >
-                    Do you have a chronic physical illness?
-                  </Label>
-                  <input
-                    type="checkbox"
-                    checked={formData.chronic_illness}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        chronic_illness: e.target.checked,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="w-5 h-5"
-                  />
-                </div>
-                {/* 6. Substance Use Switch */}
-                <div className="flex items-center justify-between col-span-2 border-t pt-4">
-                  <Label
-                    htmlFor="substance_use"
-                    className="text-sm font-medium"
-                  >
-                    History of significant substance/alcohol use?
-                  </Label>
-                  <input
-                    type="checkbox"
-                    checked={formData.substance_use}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        substance_use: e.target.checked,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="w-5 h-5"
-                  />
-                </div>
-                {/* 7. MH History Switch */}
-                <div className="flex items-center justify-between col-span-2 border-t pt-4">
-                  <Label
-                    htmlFor="mh_diagnosis_history"
-                    className="text-sm font-medium"
-                  >
-                    Have you had a formal mental health diagnosis before?
-                  </Label>
-                  <input
-                    type="checkbox"
-                    checked={formData.mh_diagnosis_history}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        mh_diagnosis_history: e.target.checked,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="w-5 h-5"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* --- Medical Information Card (Existing) --- */}
           <Card className="shadow-sm border-muted">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
@@ -686,6 +577,9 @@ export default function PatientProfilePage() {
           </Card>
         </div>
       </div>
+
+      {/* --- Dialog Component Instance --- */}
+      <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
     </div>
   );
 }

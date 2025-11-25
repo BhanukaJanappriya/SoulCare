@@ -82,20 +82,20 @@ export interface AdminUserListItem {
 
 
 export interface User {
-  id: number; // Corrected to number
+  id: number;
   username: string;
   email: string;
   role: UserRole;
   is_verified: boolean;
   profile_visibility: 'public' | 'private' | 'patients_only';
   show_online_status: boolean;
-  // The nested profile object
   profile: DoctorProfile | CounselorProfile | PatientProfile | null;
 }
 
 export interface UserSettings {
   profile_visibility: 'public' | 'private' | 'patients_only';
   show_online_status: boolean;
+  session_duration?: number;
 }
 
 export interface BasicUserInfo {
@@ -608,6 +608,8 @@ export interface BlogAggregates {
 
 // Update the main BlogPost interface to include the new aggregated fields
 export interface BlogPost {
+  ratingCount: number;
+  averageRating: any;
   id: string;
   authorId: string;
   title: string;
@@ -625,6 +627,7 @@ export interface BlogPost {
   rating_count: number;
   comment_count: number;
   reaction_counts: {
+    [x: string]: number;
     like: number;
     love: number;
     insightful: number;
