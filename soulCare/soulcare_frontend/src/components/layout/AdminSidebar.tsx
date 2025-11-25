@@ -12,6 +12,7 @@ import {
   FileText,
   FolderOpen,
   MessageSquare,
+  Gamepad2
 } from 'lucide-react';
 
 // Define the navigation items for the admin panel
@@ -23,6 +24,7 @@ const adminNavItems = [
   { icon: FileText, label: "Manage Blogs", path: "/admin/manage-blogs" },
   { icon: FolderOpen, label: "Manage Contents", path: "/admin/manage-content" },
   { icon: MessageSquare, label: "Manage FeedBacks", path: "/admin/manage-feedback" },
+  { icon: Gamepad2, label: "Download GameInfo", path: "/admin/game-data" },
 
 ];
 

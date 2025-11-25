@@ -41,6 +41,7 @@ import ManagePatientsPage from "./pages/admin/ManagePatientsPage";
 import ManageBlogsPage from "./pages/admin/ManageBlogsPage";
 import ManageContentPage from "./pages/admin/ManageContentPage";
 import ManageFeedbackPage from "./pages/admin/ManageFeedbackPage";
+import ManageGameDataPage from "./pages/admin/ManageGameDataPage";
 
 //Patient imports
 import PatientLayout from "./components/layout/PatientLayout";
@@ -244,6 +245,7 @@ const App = () => (
               <Route path="manage-blogs" element={<ManageBlogsPage />} />
               <Route path="manage-content" element={<ManageContentPage />} />
               <Route path="manage-feedback" element={<ManageFeedbackPage />} />
+              <Route path="game-data" element={<ManageGameDataPage />} />
 
             </Route>
 

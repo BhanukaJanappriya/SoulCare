@@ -71,22 +71,26 @@ def send_appointment_approved_email(appointment):
     # We must check the role to find the correct profile.
     provider_name = provider.username # Fallback
     
+    provider_type = 'Provider'
+    
     try:
         if provider.role == 'doctor' and hasattr(provider, 'doctorprofile'):
             provider_name = provider.doctorprofile.full_name
+            provider_type = 'Doctor'
         elif provider.role == 'counselor' and hasattr(provider, 'counselorprofile'):
             provider_name = provider.counselorprofile.full_name
+            provider_type = 'Counselor'
     except Exception:
         pass # Keep using username if profile access fails
   
 
     subject = "SoulCare - Appointment Confirmed"
     message = f"""
-    Hello {patient.username},
+    Hello {patient.patientprofile.full_name},
 
     Your appointment request has been CONFIRMED.
 
-    Provider: {provider_name}
+    {provider_type}: {provider_name}
     Date: {appointment.date}
     Time: {appointment.time}
 
@@ -139,11 +143,17 @@ def send_appointment_cancelled_email(appointment, cancelled_by_role):
 def send_content_shared_email(content_item, patient):
     provider = content_item.owner
     provider_name = provider.username
+    provider_type = 'Provider'
+    
     try:
         if provider.role == 'doctor' and hasattr(provider, 'doctorprofile'):
             provider_name = provider.doctorprofile.full_name
+            provider_type = 'Doctor'
+            
         elif provider.role == 'counselor' and hasattr(provider, 'counselorprofile'):
             provider_name = provider.counselorprofile.full_name
+            provider_type = 'Counselor'
+            
     except Exception:
         pass
     
@@ -151,7 +161,7 @@ def send_content_shared_email(content_item, patient):
     message = f"""
     Hello {patient.username},
 
-    {provider_name} has shared a new resource with you: "{content_item.title}".
+    {provider_type}: {provider_name} has shared a new resource with you: "{content_item.title}".
     Log in to your dashboard to view it.
 
     Best regards,
@@ -212,10 +222,13 @@ def send_patient_welcome_email(user):
     Your account has been successfully created. You can now log in to:
     - Browse our verified doctors and counselors.
     - Book appointments.
+    - Take a Questionnaire to assess your Stress level 
     - Use our mood tracker and journaling tools.
-    - Play Stress Reducing Games 
-    - Massage With Professionals
+    - Play Stress Reducing Games. 
+    - Massage With Professionals.
+    - Chat with our AI Companion.
     - Access personalized resources.
+    
 
     Login here: http://localhost:5173/auth/login
 

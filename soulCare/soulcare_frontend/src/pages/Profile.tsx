@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RightSidebar } from "@/components/layout/RightSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star, Edit, Save, Camera, Check, MessageSquare, Loader2 } from "lucide-react"; // Added MessageSquare
+import { Star, Edit, Save, Camera, Check, MessageSquare, Loader2, UserIcon } from "lucide-react"; // Added MessageSquare
 import { useToast } from "@/hooks/use-toast";
 import { api, createFeedbackAPI } from "@/api"; // Import createFeedbackAPI
 import { User, DoctorProfile, CounselorProfile, PatientProfile, CombinedProfile, ProfessionalProfile } from "@/types";
@@ -305,23 +305,38 @@ export default function Profile() {
         <div className="container mx-auto px-6 py-8">
           
           {/* --- HEADER SECTION (UPDATED) --- */}
-          <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-                <h1 className="text-3xl font-bold text-text-dark mb-2">Profile</h1>
-                <p className="text-text-muted">Manage your professional information</p>
-            </div>
-            {/* --- NEW: Give Feedback Button --- */}
-            <Button 
-                variant="outline" 
-                onClick={() => setIsFeedbackOpen(true)}
-                className="shadow-sm"
-                
-            >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Give Feedback
-            </Button>
-          </div>
-          {/* --- END HEADER --- */}
+          
+          <Card className="shadow-sm bg-card w-full mb-8">
+  <CardHeader className="py-4 px-6">
+    <div className="flex items-center justify-between w-full">
+      {/* LEFT */}
+      <div className="flex items-center gap-4">
+        <UserIcon className="h-8 w-8 text-primary" />
+        <div>
+          <CardTitle className="text-2xl font-bold">My Profile</CardTitle>
+          <CardDescription className="mt-1">
+            Manage your professional information
+          </CardDescription>
+        </div>
+      </div>
+
+      {/* RIGHT */}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          size="lg"
+          className="shadow-sm"
+          onClick={() => setIsFeedbackOpen(true)}
+        >
+          <MessageSquare className="w-4 h-4 mr-2" />
+          Give Feedback
+        </Button>
+      </div>
+    </div>
+  </CardHeader>
+</Card>
+
+          
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <Card className="lg:col-span-1">

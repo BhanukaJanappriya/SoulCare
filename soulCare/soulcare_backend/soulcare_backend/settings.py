@@ -123,9 +123,9 @@ ASGI_APPLICATION = 'soulcare_backend.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'Soulcare',
+        'NAME': 'soulcare_db',
         'USER': 'root',
-        'PASSWORD': 'Giha#1234',
+        'PASSWORD': 'GDR@1101',
         'HOST': 'localhost',
         'PORT': '3306',
     }
