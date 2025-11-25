@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RightSidebar } from "@/components/layout/RightSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Settings as SettingsIcon} from "lucide-react";
 import {
   Bell,
   Shield,
@@ -25,6 +26,8 @@ import {
   Calendar,
   Key,
   Lock,
+  Loader2,
+  Hourglass,
   Globe,
   Users,
   QrCode,
@@ -38,11 +41,12 @@ import { api } from "@/api"; // Import API helper
 // --- STRIPE IMPORTS ---
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { previousDay } from "date-fns";
 
 // Initialize Stripe
-const stripePromise = loadStripe("***REMOVED***");
+const stripePromise = loadStripe("pk_test_51SWUjLBPhjlkALLUm7vDDMvMUSY3RWastKIsNgwRbBEoqyA6Ftqff7pB9fuuMLGCFOJlTsJIydkYkL0IvoQoAd2300gsUr1vjz");
 
-// --- COMPONENT: Payment Method Form (Inside Elements Provider) ---
+// --- Payment Method Form ---
 const PaymentMethodForm = ({ onSuccess, onCancel }: { onSuccess: (data: any) => void, onCancel: () => void }) => {
     const stripe = useStripe();
     const elements = useElements();
@@ -98,26 +102,6 @@ const PaymentMethodForm = ({ onSuccess, onCancel }: { onSuccess: (data: any) => 
         } finally {
             setIsProcessing(false);
         }
-
-        // const { error } = await stripe.confirmSetup({
-        //     elements,
-        //     confirmParams: {
-        //         // This URL is where Stripe redirects after completion (not used heavily in SPA but required)
-        //         return_url: window.location.origin + "/settings",
-        //     },
-        //     redirect: "if_required" // Avoid redirect if possible
-        // });
-
-        // if (error) {
-        //     setErrorMessage(error.message || "An error occurred.");
-        //     setIsProcessing(false);
-           
-
-        // } else {
-        //     // Success!
-        //     setIsProcessing(false);
-        //     onSuccess(response.data);
-        // }
     };
 
     return (
@@ -144,6 +128,9 @@ export default function Settings() {
   // --- STATE MANAGEMENT ---
 
   const [notifications, setNotifications] = useState({
+    email_appointment_updates: true,
+    email_new_messages: true,
+    email_appointment_reminders: true,
     emailAppointments: true,
     emailMessages: true,
     emailReminders: true,
@@ -157,9 +144,11 @@ export default function Settings() {
     theme: "light",
     language: "en",
     timezone: "UTC-5",
-    date_format: "MM/DD/YYYY", // Changed camelCase to snake_case to match backend
-    time_format: "12h",        // Changed camelCase to snake_case to match backend
+    date_format: "MM/DD/YYYY", 
+    time_format: "12h", 
   });
+
+  const [sessionDuration, setSessionDuration] = useState<string>("60");
 
   const [privacy, setPrivacy] = useState({
     profileVisibility: "public",
@@ -183,7 +172,8 @@ export default function Settings() {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const [billingInfo, setBillingInfo] = useState({ card_brand: "", card_last4: "" });
+  const [billingInfo, setBillingInfo] = useState({ card_brand: "", card_last4: "" , card_exp_month: "", 
+      card_exp_year: ""});
 
   // --- 2FA STATE ---
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
@@ -205,8 +195,9 @@ export default function Settings() {
     // Fetch Application Preferences from Backend on Load
     const fetchPreferences = async () => {
       try {
-    const [billingRes] = await Promise.all([
-          api.get("settings/billing/info/")
+          const [billingRes,twoFactorRes] = await Promise.all([
+            api.get("settings/billing/info/"),
+            api.get("settings/2fa/status")      
         ]);
 
         const response = await api.get("/settings/preferences/");
@@ -216,8 +207,17 @@ export default function Settings() {
           // Sync the visual theme immediately based on DB value
           // Backend 'auto' maps to Frontend 'system'
           const visualTheme = response.data.theme === 'auto' ? 'system' : response.data.theme;
+          setSessionDuration(String(response.data.session_duration || "60"));          
           setTheme(visualTheme);
         }
+        setNotifications((prev)=>({
+          ...prev,
+          emailAppointments: response.data.email_appointment_updates ?? true,
+          emailMessages: response.data.email_new_messages ?? true,
+          emailReminders: response.data.email_appointment_reminders ?? true,
+        }));
+        
+  
           // 2. Fetch Privacy Settings (NEW)
         const privacyRes = await api.get("/settings/privacy/");
         if (privacyRes.data) {
@@ -227,7 +227,10 @@ export default function Settings() {
           }));
         }
 
+        setIs2FAEnabled(twoFactorRes.data.enabled);
+
         setBillingInfo(billingRes.data);
+        
 
       } catch (error) {
         console.error("Error fetching preferences:", error);
@@ -256,7 +259,9 @@ export default function Settings() {
       setClientSecret("");
       setBillingInfo({ 
           card_brand: newCardData.brand, 
-          card_last4: newCardData.last4 
+          card_last4: newCardData.last4 ,
+          card_exp_month: newCardData.exp_month,
+          card_exp_year: newCardData.exp_year
       });
       toast({ title: "Success", description: "Your payment method has been updated." });
   };
@@ -368,6 +373,24 @@ export default function Settings() {
     }
   };
   
+  // Save Notification Preferences
+  const handleSaveNotifications = async (p0: string) => {
+      setIsSaving(true);
+      try {
+        const payload = {
+        email_appointment_updates: notifications.emailAppointments,
+        email_new_messages: notifications.emailMessages,
+        email_appointment_reminders: notifications.emailReminders,
+        };
+        // We use the same 'preferences' endpoint to patch these values
+        await api.patch("settings/preferences/", payload);
+        toast({ title: "Saved", description: "Notification preferences updated." });
+      } catch (e) { 
+          toast({ variant: "destructive", title: "Error", description: "Failed to save settings." }); 
+      } finally { 
+          setIsSaving(false); 
+      }
+  };
 
   // --- NEW: Handle Password Change ---
   const handleSavePassword = async () => {
@@ -419,18 +442,44 @@ export default function Settings() {
     }
   };
 
+  const handleSaveSession = async (value: string) => {
+      setIsSaving(true);
+      setSessionDuration(value);
+      try {
+          // Re-use the preferences endpoint since we added the field there
+          await api.patch("settings/preferences/", { session_duration: parseInt(value) });
+          toast({ title: "Updated", description: "Session timeout updated successfully." });
+      } catch (error) {
+          toast({ title: "Error", description: "Failed to update session settings.", variant: "destructive" });
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       <div className="flex-1 pr-16">
         <div className="container mx-auto px-6 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Settings</h1>
-            <p className="text-muted-foreground">
-              Manage your account preferences and configurations
-            </p>
-          </div>
+          {/* --- HEADER SECTION SETTINGS.TSX--- */}
+            <Card className="mb-8 shadow-sm bg-card">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-full bg-muted">
+                      <SettingsIcon className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold">Manage Settings</CardTitle>
+                      <CardDescription className="mt-1">
+                        View and manage all your settings.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+            {/* --- END HEADER --- */}
 
           <Tabs defaultValue="preferences" className="space-y-6">
             <TabsList className="grid w-full grid-cols-5">
@@ -472,10 +521,10 @@ export default function Settings() {
                           id="email-appointments"
                           checked={notifications.emailAppointments}
                           onCheckedChange={(checked) =>
-                            setNotifications({
-                              ...notifications,
+                            setNotifications(prev=>({
+                              ...prev,notifications,
                               emailAppointments: checked,
-                            })
+                            }))
                           }
                         />
                       </div>
@@ -494,10 +543,10 @@ export default function Settings() {
                           id="email-messages"
                           checked={notifications.emailMessages}
                           onCheckedChange={(checked) =>
-                            setNotifications({
-                              ...notifications,
+                            setNotifications(prev =>({
+                              ...prev,
                               emailMessages: checked,
-                            })
+                            }))
                           }
                         />
                       </div>
@@ -518,10 +567,10 @@ export default function Settings() {
                           id="email-reminders"
                           checked={notifications.emailReminders}
                           onCheckedChange={(checked) =>
-                            setNotifications({
-                              ...notifications,
+                            setNotifications(prev =>({
+                              ...prev,notifications,
                               emailReminders: checked,
-                            })
+                            }))
                           }
                         />
                       </div>
@@ -581,7 +630,7 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  <Button onClick={() => handleSaveSettings("notification")}>
+                  <Button onClick={() => handleSaveNotifications("notification")}>
                     <Save className="w-4 h-4 mr-2" />
                     Save Notification Settings
                   </Button>
@@ -633,9 +682,8 @@ export default function Settings() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="en">English</SelectItem>
-                          <SelectItem value="es">Spanish</SelectItem>
-                          <SelectItem value="fr">French</SelectItem>
-                          <SelectItem value="de">German</SelectItem>
+                          <SelectItem value="sn">Sinhala</SelectItem>
+                          <SelectItem value="tm">Tamil</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -769,21 +817,6 @@ export default function Settings() {
                         }
                       />
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Anonymous Analytics</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Help improve our service with usage data
-                        </p>
-                      </div>
-                      <Switch
-                        checked={privacy.dataSharing}
-                        onCheckedChange={(checked) =>
-                          setPrivacy({ ...privacy, dataSharing: checked })
-                        }
-                      />
-                    </div>
                   </div>
 
                   <Button onClick={() => handleSaveSettings("privacy")}>
@@ -876,16 +909,14 @@ export default function Settings() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="session-timeout">
-                          Session Timeout (minutes)
+                          Session Timeout
                         </Label>
                         <Select
-                          value={security.sessionTimeout}
-                          onValueChange={(value) =>
-                            setSecurity({ ...security, sessionTimeout: value })
-                          }
+                          value={sessionDuration} // Bound to state
+                          onValueChange={handleSaveSession}  // Triggers Auto-Save
                         >
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="Select Duration"/>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="15">15 minutes</SelectItem>
@@ -977,10 +1008,20 @@ export default function Settings() {
                             💳
                           </div>
                           <div>
-                            <p className="font-medium">•••• •••• •••• 4242</p>
+                            {/* <p className="font-medium">•••• •••• •••• 4242</p>
                             <p className="text-sm text-muted-foreground">
                               Expires 12/27
+                            </p> */}
+                            <p className="text-sm text-muted-foreground uppercase font-bold">
+                                {billingInfo.card_last4 
+                                   ? `**** **** ***** ${billingInfo.card_last4}`
+                                   : "No card saved"}
                             </p>
+                            {billingInfo.card_exp_month && (
+                              <p className="text-xs text-muted-foreground">
+                                  Expires {billingInfo.card_exp_month}/{billingInfo.card_exp_year}
+                              </p>
+                            )}
                           </div>
                         </div>
 

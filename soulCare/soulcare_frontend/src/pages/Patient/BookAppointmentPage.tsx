@@ -58,7 +58,7 @@ const ProviderCard: React.FC<{ provider: Provider }> = ({ provider }) => {
   const ProviderIcon = provider.role === "doctor" ? Stethoscope : Brain;
 
   // Helper to access profile properties safely since 'Provider' type might be a union
-  const profile = provider.profile as {
+  const profile = (provider.profile ??{}) as {
     profile_picture?: string;
     full_name?: string;
     specialization?: string;
@@ -71,7 +71,11 @@ const ProviderCard: React.FC<{ provider: Provider }> = ({ provider }) => {
     <Card className="flex flex-col hover:shadow-md transition-shadow">
       <CardHeader className="items-center text-center pb-2">
         <Avatar className="w-24 h-24 mb-4 border-2 border-primary/10">
-          <AvatarImage src={profile.profile_picture} alt={profile.full_name} />
+          {/* <AvatarImage src={profile.profile_picture} alt={profile.full_name} /> */}
+          <AvatarImage
+            src={profile?.profile_picture ?? "/default-profile.png"}
+            alt={profile?.full_name ?? "Unknown User"}
+          />
           <AvatarFallback className="text-3xl bg-primary/10 text-primary">
             {profile.full_name ? (
               profile.full_name.charAt(0).toUpperCase()

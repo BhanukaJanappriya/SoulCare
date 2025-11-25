@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     'content',
     'reviews',
     'user_settings',
-    'reviews',
 
 
 
@@ -176,7 +175,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 MEDIA_URL = '/soulcare_backend/media/'
 
-
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51SWUjLBPhjlkALLUm7vDDMvMUSY3RWastKIsNgwRbBEoqyA6Ftqff7pB9fuuMLGCFOJlTsJIydkYkL0IvoQoAd2300gsUr1vjz' 
+STRIPE_SECRET_KEY ='sk_test_51SWUjLBPhjlkALLU84KXLhpmQxU5w73KF5dpPCknpaeQFYz3ADK9ueMZcNUYaUJIsLv5SCmdGeyftiLarSWPKhv600mGlifUl7'
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",

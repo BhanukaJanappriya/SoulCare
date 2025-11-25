@@ -13,7 +13,7 @@ class UserPreferencesSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserSettings
         # These fields must match the names in your models.py exactly
-        fields = ['theme', 'language', 'timezone', 'date_format', 'time_format']
+        fields = ['theme', 'language', 'timezone', 'date_format', 'time_format', 'session_duration','email_appointment_updates', 'email_new_messages', 'email_appointment_reminders']
 
 
 class UserPrivacySerializer(serializers.ModelSerializer):
@@ -46,4 +46,4 @@ class TwoFactorVerifySerializer(serializers.Serializer):
 class BillingInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserSettings
-        fields = ['card_brand', 'card_last4']
+        fields = ['card_brand', 'card_last4', 'card_exp_month', 'card_exp_year']

@@ -73,20 +73,20 @@ export interface AdminUserListItem {
 
 
 export interface User {
-  id: number; // Corrected to number
+  id: number;
   username: string;
   email: string;
   role: UserRole;
   is_verified: boolean;
   profile_visibility: 'public' | 'private' | 'patients_only';
   show_online_status: boolean;
-  // The nested profile object
   profile: DoctorProfile | CounselorProfile | PatientProfile | null;
 }
 
 export interface UserSettings {
   profile_visibility: 'public' | 'private' | 'patients_only';
   show_online_status: boolean;
+  session_duration?: number;
 }
 
 export interface BasicUserInfo {

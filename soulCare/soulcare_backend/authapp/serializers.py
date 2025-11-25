@@ -17,6 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'role', 'is_verified', 
             'profile', 'profile_visibility', 'show_online_status'
         ]
+        read_only_fields = ['provider']
 
     def get_profile(self, obj):
         if obj.role == 'doctor' and hasattr(obj, 'doctorprofile'):
