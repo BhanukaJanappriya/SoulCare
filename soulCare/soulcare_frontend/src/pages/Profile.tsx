@@ -280,7 +280,7 @@ export default function Profile() {
     display: 'inline-block',
   };
   const avatarRingStyle: React.CSSProperties = {
-    boxShadow: '0 0 0 4px #22c55e',
+    boxShadow: '0 0 0 4px #22c53bff',
     borderRadius: '9999px',
   };
   const verifiedBadgeStyle: React.CSSProperties = {
@@ -289,7 +289,7 @@ export default function Profile() {
     right: '4px',
     height: '24px',
     width: '24px',
-    backgroundColor: '#22c55e',
+    backgroundColor: '#23b319ff',
     borderRadius: '9999px',
     border: '2px solid white',
     display: 'flex',

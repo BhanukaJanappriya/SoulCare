@@ -125,7 +125,7 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-1">
-            Welcome back, Dr. {user?.profile?.full_name?.split(" ")[0]}!
+            Welcome back,{user?.profile?.full_name?.split(" ")[0]}!
           </h1>
           <p className="text-muted-foreground">
             Here's what's happening with your practice today.

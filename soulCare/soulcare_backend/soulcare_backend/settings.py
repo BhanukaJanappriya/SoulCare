@@ -17,6 +17,7 @@ load_dotenv()
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -122,9 +123,9 @@ ASGI_APPLICATION = 'soulcare_backend.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'soulcare_db',
+        'NAME': 'Soulcare',
         'USER': 'root',
-        'PASSWORD': 'GDR@1101',
+        'PASSWORD': 'Giha#1234',
         'HOST': 'localhost',
         'PORT': '3306',
     }

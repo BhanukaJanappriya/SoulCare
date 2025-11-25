@@ -601,6 +601,8 @@ export interface BlogAggregates {
 
 // Update the main BlogPost interface to include the new aggregated fields
 export interface BlogPost {
+  ratingCount: number;
+  averageRating: any;
   id: string;
   authorId: string;
   title: string;
@@ -618,6 +620,7 @@ export interface BlogPost {
   rating_count: number;
   comment_count: number;
   reaction_counts: {
+    [x: string]: number;
     like: number;
     love: number;
     insightful: number;
