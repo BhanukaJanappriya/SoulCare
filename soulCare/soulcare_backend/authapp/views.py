@@ -23,6 +23,14 @@ from .utils import send_account_pending_email, send_account_verified_email,send_
 from content.models import ContentItem
 from prescriptions.models import Prescription
 
+# forget password imports
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.core.mail import send_mail
+from django.conf import settings
+from .serializers import PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+
 
 class LoginView(APIView):
     def post(self, request):
@@ -609,3 +617,60 @@ class PatientDashboardStatsView(APIView):
             'next_appointment': next_appointment_data, # Now always defined
             'daily_progress_percentage': daily_progress_percentage, # Now always defined
         })
+
+
+# Forgot password Views
+
+class PasswordResetRequestView(APIView):
+    """
+    Step 1: User submits email. We generate a token and send a link.
+    """
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            user = User.objects.get(email=email)
+            
+            # Generate Token
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Construct Link (Point to your Frontend Route)
+            # NOTE: Adjust the domain if your frontend runs on a different port
+            reset_link = f"http://localhost:5173/auth/reset-password/{uid}/{token}"
+            
+            # Send Email
+            subject = "SoulCare - Reset Your Password"
+            message = f"""
+            Hello {user.username},
+
+            You requested to reset your password.
+            Click the link below to set a new password:
+
+            {reset_link}
+
+            If you didn't ask for this, please ignore this email.
+            """
+            
+            # Using your utility function or direct send_mail
+            # Since this is a simple text email, send_mail is fine, or reuse your utility if preferred.
+            # For simplicity here:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+            
+            return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Step 2: User submits new password along with the UID and Token from the email.
+    """
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    

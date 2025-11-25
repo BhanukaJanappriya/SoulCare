@@ -533,9 +533,9 @@ export default function Content() {
   }, [content, searchTerm, selectedType, activeTab]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground mr-16">
       <RightSidebar />
-      <div className=" container mx-auto space-y-8 p-6 md:p-8 min-h-screen bg-background mr-16 md:mr-24">
+      <div className=" container mx-auto space-y-8 p-6 md:p-8 min-h-screen bg-background ">
         
         {/* --- HEADER SECTION --- */}
         <Card className="mb-8 shadow-sm bg-card">

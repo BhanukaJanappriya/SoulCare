@@ -1,5 +1,5 @@
 from django.urls import path,include
-from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView,ProviderScheduleViewSet,ProviderAvailabilityView,ProviderDetailView,DoctorPatientsView,PatientDetailView, ProviderDashboardStatsView,PatientDashboardStatsView,CurrentUserView
+from .views import CounselorRegisterView, DoctorRegisterView, LoginView, PatientRegisterView,UserDetailView,AdminUserViewSet,AdminDashboardStatsView,ProviderListView,ProviderScheduleViewSet,ProviderAvailabilityView,ProviderDetailView,DoctorPatientsView,PatientDetailView, ProviderDashboardStatsView,PatientDashboardStatsView,CurrentUserView,PasswordResetRequestView,PasswordResetConfirmView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -10,6 +10,8 @@ router.register('schedules', ProviderScheduleViewSet,basename='provider-schedule
 urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     # path('users/me/', CurrentUserView.as_view(), name='current-user'),
+    path('password-reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('register/patient/', PatientRegisterView.as_view(), name='patient-register'),
     path('register/doctor/', DoctorRegisterView.as_view(), name='doctor-register'),
     path('register/counselor/', CounselorRegisterView.as_view(), name='counselor-register'),
@@ -31,6 +33,8 @@ urlpatterns = [
     path('provider/dashboard-stats/', ProviderDashboardStatsView.as_view(), name='provider-dashboard-stats'),
 
     path('patient/dashboard-stats/', PatientDashboardStatsView.as_view(), name='patient-dashboard-stats'),
+    
+    
 
 ]
 

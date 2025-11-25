@@ -46,7 +46,12 @@ import {
   BlogComment,
   BlogReactionType,
   BlogSortBy,
-  BlogInputData
+  BlogInputData,
+  AssessmentQuestion,
+  AssessmentResponseInput,
+  AssessmentResult,
+  Feedback,
+  FeedbackInput,
 
 } from '@/types';
 
@@ -102,7 +107,8 @@ const handleResponseError = (error: AxiosError) => {
 };
 
 // --- Apply Interceptors ---
-
+axiosInstance.interceptors.request.use(addAuthToken, Promise.reject);
+axiosInstance.interceptors.response.use((response) => response, handleResponseError);
 // FIX 3: Apply the interceptors to BOTH 'api' AND 'axiosInstance'
 // This will fix all your 401 errors.
 
@@ -908,4 +914,103 @@ export const unreactToBlogPostAPI = async (blogId: string | number): Promise<voi
 // DELETE /api/blogs/{blog_pk}/ratings/unrate/
 export const unrateBlogPostAPI = async (blogId: string | number): Promise<void> => {
     await api.delete(`blogs/${blogId}/ratings/unrate/`);
+};
+
+
+
+// =================================================================
+// --- Basic Questionnaire ---
+// =================================================================
+
+/**
+ * Fetches the list of questions for the latest active assessment (e.g., Depression Test).
+ * The endpoint is GET /api/assessments/latest-questions/
+ */
+export const getAssessmentQuestionsAPI = async (): Promise<AssessmentQuestion[]> => {
+  try {
+    const response = await api.get<AssessmentQuestion[]>('assessments/latest_questions/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching assessment questions:', error);
+    throw error;
+  }
+};
+
+/**
+ * Submits the patient's responses and receives the calculated result.
+ * The endpoint is POST /api/assessments/submit-response/
+ */
+export const submitAssessmentResponseAPI = async (
+  data: AssessmentResponseInput[]
+): Promise<AssessmentResult> => {
+  try {
+    // Note: The backend expects an object with a 'responses' key: { responses: [...] }
+    const response = await api.post<AssessmentResult>('assessments/submit_response/', { responses: data });
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting assessment response:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetches the patient's history of assessment results.
+ * The endpoint is GET /api/assessments/history/
+ */
+export const getAssessmentHistoryAPI = async (): Promise<AssessmentResult[]> => {
+  try {
+    const response = await api.get<AssessmentResult[]>('assessments/history/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching assessment history:', error);
+    throw error;
+  }
+};
+
+
+// =================================================================
+// --- AI CHATBOT FUNCTIONS ---
+// =================================================================
+
+export const sendChatbotMessageAPI = async (message: string): Promise<string> => {
+  try {
+    // This automatically uses the Bearer token from the interceptors
+    const response = await api.post<{ response: string }>('chatbot/message/', { message });
+    return response.data.response;
+  } catch (error) {
+    console.error("Error sending chatbot message:", error);
+    throw error;
+  }
+};
+// =================================================================
+// --- FEEDBACK API ---
+// =================================================================
+
+export const getPublicFeedbackAPI = async (): Promise<Feedback[]> => {
+    // Use 'api' instance (public endpoint if configured, or standard)
+    // Backend logic handles filtering for non-admins automatically
+    const response = await api.get<Feedback[]>('feedback/');
+    return response.data;
+};
+
+export const createFeedbackAPI = async (data: FeedbackInput): Promise<Feedback> => {
+    const response = await api.post<Feedback>('feedback/', data);
+    return response.data;
+};
+
+// Admin functions
+export const getAdminFeedbackAPI = async (): Promise<Feedback[]> => {
+    // GET /api/feedback/?mode=admin -> Returns ALL items (if user is admin)
+    const response = await api.get<Feedback[]>('feedback/', {
+        params: { mode: 'admin' } 
+    });
+    return response.data;
+};
+
+export const approveFeedbackAPI = async (id: number): Promise<void> => {
+    await api.patch(`feedback/${id}/approve/`);
+};
+
+export const rejectFeedbackAPI = async (id: number): Promise<void> => {
+    await api.patch(`feedback/${id}/reject/`);
 };

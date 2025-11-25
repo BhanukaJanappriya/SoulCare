@@ -14,6 +14,7 @@ import {
   SelectItem,
   SelectGroup,
 } from "../ui/select";
+import { toast, useToast } from "@/hooks/use-toast";
 
 // --- Constants ---
 type Color = "red" | "blue" | "green" | "yellow";
@@ -53,6 +54,7 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ onGameEnd }) => {
   });
 
   const isMounted = useRef(true);
+  const {toast} = useToast()
 
   // --- Game Logic ---
   const generateNextSequence = useCallback((currentSequence: Color[]) => {
@@ -185,7 +187,10 @@ const MemoryGame: React.FC<MemoryGameProps> = ({ onGameEnd }) => {
 
     try {
       await saveMemoryGameResult(payload);
-      alert("Memory Game result and mood matrix saved successfully!");
+      toast({
+        title: "Success! 🧠",
+        description: "Memory Game result and mood matrix saved successfully!",
+      });
       setGameState("initial");
       setScore(0);
       setAttempts(0);

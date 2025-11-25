@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,6 +14,8 @@ import {
   Bell,
   LogOut,
   Library,
+
+
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -25,6 +27,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+
 
 // ✅ Define proper TypeScript interfaces
 interface BaseProfile {
@@ -51,6 +54,8 @@ const PatientSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  
 
   const navigationItems = [
     { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
@@ -135,21 +140,7 @@ const PatientSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* Notifications */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button className="w-12 h-12 p-0 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 flex items-center justify-center relative mb-2">
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
-                <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-              </span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left" className="mr-2">
-            Notifications
-          </TooltipContent>
-        </Tooltip>
-
+    
         {/* ✅ Logout Button */}
         <Tooltip>
           <TooltipTrigger asChild>

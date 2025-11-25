@@ -19,6 +19,7 @@ import {
   TrendingUp,
   TrendingDown,
   Tag as TagIcon,
+  FileText,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -349,15 +350,25 @@ const MoodTracker: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-8xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Mood Tracker
-            </h1>
-            <p className="text-muted-foreground">
-              Track your emotional well-being and identify patterns over time
-            </p>
+            <Card className="shadow-sm bg-card">
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  <Heart className="h-8 w-8 text-primary" />
+                  <div>
+                    <CardTitle className="text-2xl font-bold">
+                      Mood Tracker
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Track your emotional well-being and identify patterns over
+                      time
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
           </div>
 
           <Tabs defaultValue="track" className="space-y-6">

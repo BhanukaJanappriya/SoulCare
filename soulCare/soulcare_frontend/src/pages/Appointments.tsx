@@ -252,7 +252,7 @@ const Appointments: React.FC = () => {
     );
 
     return (
-        <div className="p-6 md:p-8 mx-auto bg-background mr-16 md:mr-24"> {/* Adjusted background to match Prescriptions */}
+        <div className="p-6 md:p-8 mx-auto bg-background mr-16 md"> {/* Adjusted background to match Prescriptions */}
             <RightSidebar />
             
             {/* --- HEADER SECTION MATCHING PRESCRIPTIONS.TSX --- */}

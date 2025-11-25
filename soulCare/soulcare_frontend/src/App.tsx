@@ -14,6 +14,10 @@ import DoctorRegister from "./pages/Registration/DoctorRegister";
 import PatientRegister from "./pages/Registration/PatientRegister";
 import Dashboard from "./pages/Dashboard";
 
+// forgot password imports
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+
 import Patients from "./pages/Patients";
 import Appointments from "./pages/Appointments";
 import Profile from "./pages/Profile";
@@ -26,6 +30,7 @@ import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import PatientDetailPage from "./pages/PatientDetailPage";
+import PatientChatBot from "./pages/Patient/PatientChatBot";
 
 //admin imports
 import AdminLayout from "./components/layout/AdminLayout";
@@ -35,6 +40,7 @@ import ManageCounselorsPage from "./pages/admin/ManageCounselorsPage";
 import ManagePatientsPage from "./pages/admin/ManagePatientsPage";
 import ManageBlogsPage from "./pages/admin/ManageBlogsPage";
 import ManageContentPage from "./pages/admin/ManageContentPage";
+import ManageFeedbackPage from "./pages/admin/ManageFeedbackPage";
 
 //Patient imports
 import PatientLayout from "./components/layout/PatientLayout";
@@ -53,6 +59,7 @@ import PatientMessages from "./pages/Patient/PatientMessages";
 import PatientContent from "./pages/Patient/PatientContent";
 import PatientProfile from "./pages/Patient/PatientProfile";
 
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -70,6 +77,8 @@ const App = () => (
             <Route path="/auth/signup" element={<PatientRegister />} />
             <Route path="/counselor-register" element={<CounselorRegister />} />
             <Route path="/doctor-register" element={<DoctorRegister />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/reset-password/:uid/:token" element={<ResetPassword />} />
 
             <Route
               path="/patient-details/:patientId"
@@ -211,6 +220,7 @@ const App = () => (
               <Route path="mood" element={<MoodTracker />} />
               <Route path="messages" element={<PatientMessages />} />
               <Route path="content" element={<PatientContent />} />
+              <Route path="/patient/chatbot" element={<PatientChatBot />} />
             </Route>
 
             {/* --- Admin Routes --- */}
@@ -233,6 +243,8 @@ const App = () => (
               <Route path="manage-patients" element={<ManagePatientsPage />} />
               <Route path="manage-blogs" element={<ManageBlogsPage />} />
               <Route path="manage-content" element={<ManageContentPage />} />
+              <Route path="manage-feedback" element={<ManageFeedbackPage />} />
+
             </Route>
 
             {/* --- Not Found Route --- */}

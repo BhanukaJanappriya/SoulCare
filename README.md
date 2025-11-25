@@ -1,9 +1,8 @@
-
----
-
 # 🧠 SoulCare – Online Stress and Depression Detection System
 
-**SoulCare** is an intelligent web application that helps users detect and manage stress and depression through digital self-assessments, AI-driven analytics, and access to professional mental health support. Designed for **patients**, **doctors**, **counselors**, and **admins**, SoulCare blends psychological science with scalable technology to improve mental well-being.
+**SoulCare** is an intelligent web application that helps users detect and manage stress and depression through digital self-assessments, AI-driven analytics, and access to professional mental health support.
+
+**New in v2.0:** SoulCare now features a **Local AI Companion**. Powered by a lightweight Llama 3.2 model running locally on your machine via Ollama, the assistant provides private, secure, and empathetic support with real-time voice interaction and safety overrides for crisis situations.
 
 🔗 **Project URL**: [https://github.com/BhanukaJanappriya/SoulCare](https://github.com/BhanukaJanappriya/SoulCare)
 
@@ -16,8 +15,9 @@
 - [How It Works](#-how-it-works)
 - [Getting Started: Setup Guide](#-getting-started-setup-guide)
   - [Prerequisites](#prerequisites)
-  - [Backend Setup](#1--backend-setup)
-  - [Frontend Setup](#2--frontend-setup)
+  - [1. Local AI Setup (Ollama)](#1--local-ai-setup-ollama)
+  - [2. Backend Setup](#2--backend-setup)
+  - [3. Frontend Setup](#3--frontend-setup)
 - [Running the Application](#-running-the-application)
 - [Project Modules](#-project-modules)
 
@@ -25,29 +25,27 @@
 
 ## ✨ Key Features
 
-- 🔐 **Secure Login & Role-Based Access**  
-  Patients, doctors, counselors, and admins get unique, secure access based on their role.
+- 🔐 **Secure Login & Role-Based Access** Patients, doctors, counselors, and admins get unique, secure access based on their role.
 
-- 🧠 **Stress & Depression Detection**  
-  Interactive assessments (e.g., word associations, reaction tests, color therapy) to analyze mental health.
+- 🤖 **SoulCare AI Assistant (New!)** A private, local AI chatbot that offers:
+    - **Empathetic Conversation:** Powered by Llama 3.2.
+    - **Crisis Safety System:** NLTK-based keyword detection immediately overrides the AI to provide emergency hotline numbers during crisis inputs.
+    - **Interactive Tools:** Integrated breathing exercises and mood tracking shortcuts.
+    - **Accessibility:** Text-to-speech (Voice) and customizable UI themes/font sizes.
 
-- 📈 **Personalized Progress Reports**  
-  Users can track their emotional trends and receive data-driven feedback.
+- 🧠 **Stress & Depression Detection** Interactive assessments (e.g., word associations, reaction tests, color therapy) to analyze mental health.
 
-- 📅 **Appointment Management**  
-  Patients can book video sessions; doctors and counselors can accept/reschedule appointments.
+- 📈 **Personalized Progress Reports** Users can track their emotional trends and receive data-driven feedback.
 
-- 💬 **Real-Time Chat**
-  Secure, real-time messaging between patients and providers powered by WebSockets.
+- 📅 **Appointment Management** Patients can book video sessions; doctors and counselors can accept/reschedule appointments.
 
-- 💊 **Medical Records & Journals**  
-  Secure access to reports, daily journal entries, and treatment suggestions.
+- 💬 **Real-Time Chat** Secure, real-time messaging between patients and providers powered by WebSockets.
 
-- 📣 **Community Support Forum**  
-  Safe space for anonymous discussions, moderated by professionals.
+- 💊 **Medical Records & Journals** Secure access to reports, daily journal entries, and treatment suggestions.
 
-- 🔒 **Privacy by Design**  
-  End-to-end encryption, anonymized data handling, and compliance with health privacy standards.
+- 📣 **Community Support Forum** Safe space for anonymous discussions, moderated by professionals.
+
+- 🔒 **Privacy by Design** End-to-end encryption, anonymized data handling, and **100% local AI processing** (your chat data never leaves your computer).
 
 ---
 
@@ -55,33 +53,33 @@
 
 | Role        | Capabilities |
 |-------------|-------------|
-| **Patient** | Self-assessments, appointments, journals, reports, real-time chat, forum access |
-| **Doctor**  | View patient data, schedule sessions, prescribe, communicate securely via chat |
+| **Patient** | AI Chatbot access, Self-assessments, appointments, journals, reports, forum access |
+| **Doctor** | View patient data, schedule sessions, prescribe, communicate securely via chat |
 | **Counselor** | Provide therapy, monitor progress, join discussions, communicate via chat |
-| **Admin**   | Manage users, moderate content, verify doctors/counselors |
+| **Admin** | Manage users, moderate content, verify doctors/counselors |
 
 ---
 
 ## ⚙️ Tech Stack
 
+The system utilizes a modern, hybrid architecture to handle real-time communication and local AI processing efficiently.
+
 | Layer        | Technology |
 |--------------|------------|
-| **Backend**  | **Django (Python)**, Django REST Framework, **Django Channels** |
-| **Frontend** | **React.js**, TypeScript, Tailwind CSS |
+| **Backend** | **Django (Python)**, Django REST Framework, **Django Channels** |
+| **AI & NLP** | **Ollama** (Local LLM Host), **Llama 3.2** (Model), **NLTK** (Safety Logic) |
+| **Frontend** | **React.js**, TypeScript, Tailwind CSS, Web Speech API |
 | **Database** | **MySQL** |
 | **Real-time**| **WebSockets** (Chat), WebRTC (Video) |
-| **Messaging/Cache** | **Redis** |
-| **Containerization** | Docker (supported) |
+| **Messaging**| **Redis** |
 
 ---
 
 ## 🚀 How It Works
 
-1. Users register and complete self-assessments.
-2. Results are analyzed and stored securely.
-3. Based on trends, users can book appointments, journal their progress, or chat with providers.
-4. Doctors and counselors provide feedback, reports, or interventions through the platform.
-5. The forum and real-time features enhance long-term engagement and support.
+1. **Local Intelligence:** The backend connects to a local Ollama instance to generate AI responses without external API calls, ensuring privacy and zero latency issues.
+2. **Safety First:** Before the AI generates a response, the user's input passes through an NLTK-based safety filter. If self-harm keywords are detected, the system intercepts the request and provides emergency resources.
+3. **User Journey:** Users register, complete assessments, and use the AI assistant for daily support. Based on results, they can book appointments with real doctors/counselors via the platform.
 
 ---
 
@@ -94,123 +92,109 @@ Follow these steps to set up and run the project locally.
 Make sure you have the following software installed on your system:
 - **Python** (3.10+)
 - **Node.js** and **npm** (v18+)
-- **MySQL Server** (e.g., from XAMPP, WAMP, or a standalone installation)
+- **MySQL Server** (e.g., from XAMPP, WAMP)
 - **Redis**
+- **Ollama** (For the AI Chatbot)
 - **Git**
 
-### 1. Backend Setup
+---
 
-This will prepare the Django server, database, and real-time messaging service.
+### 1. 🦙 Local AI Setup (Ollama)
+
+This is required for the Chatbot to function.
+
+1.  Download and install **Ollama** from [ollama.com](https://ollama.com).
+2.  Open your terminal and run the following command to download the lightweight model (this fits in standard laptop memory):
+    ```bash
+    ollama run llama3.2:1b
+    ```
+3.  Wait for the download to finish. Once you see the chat prompt, type `/bye` to exit.
+4.  Ensure the Ollama app is running in your background/taskbar.
+
+---
+
+### 2. 🐍 Backend Setup
 
 #### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/BhanukaJanappriya/SoulCare.git
+git clone [https://github.com/BhanukaJanappriya/SoulCare.git](https://github.com/BhanukaJanappriya/SoulCare.git)
 cd SoulCare/soulcare_backend
 ```
 
-#### Step 2: Create a Virtual Environment & Install Dependencies
-It's highly recommended to use a virtual environment.
-
+#### Step 2: Create Environment & Install Dependencies
+##### Create and activate virtual environment
 ```bash
-# Create a virtual environment
-python -m venv venv
-
-# Activate it
-# On Windows:
-.\venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-# Install all required packages
+python -m venv .venv
+source .venv/bin/activate  # (Use .venv\Scripts\activate on Windows)
+```
+##### Install dependencies
+```bash
 pip install -r requirements.txt
 ```
-
-The `requirements.txt` file includes:
+#### Step 3: Configure Environment Variables
+##### Database Config
+```bash
+DB_NAME=soulcare_db
+DB_USER=root
+DB_PASSWORD=your_password
 ```
-# Core Django Dependencies
-asgiref==3.10.0
-Django==5.2.7
-django-cors-headers==4.9.0
-djangorestframework==3.16.1
-djangorestframework_simplejwt==5.5.1
-pillow==12.0.0
-PyJWT==2.10.1
-PyMySQL==1.1.1
-sqlparse==0.5.3
-tzdata==2025.2
-
-# New Chat & ASGI Dependencies
-channels==4.0.0
-channels_redis==4.2.0
-daphne==4.1.2
-cryptography==43.0.0
+##### AI Config (Points to your local Ollama)
+```bash
+OPENAI_API_KEY="ollama"
+OPENAI_BASE_URL="http://localhost:11434/v1" Database Config
+DB_NAME=soulcare_db
+DB_USER=root
+DB_PASSWORD=your_password
 ```
 
-#### Step 3: Set Up the Database
-1. Make sure your **MySQL server is running**.
-2. Create a new database in MySQL named `soulcare_db`.
-3. Configure your database connection in `soulcare_backend/settings.py`.
+#### Step 4: Database & Redis
+###### 1.Ensure MySQL is running and create a database named soulcare_db.
 
-#### Step 4: Install and Run Redis
-The chat system requires a running Redis server.
+##### 2.Ensure Redis is running.
 
-* **On Windows:**
-    1.  Download the `.msi` installer from the [official Microsoft archive on GitHub](https://github.com/microsoftarchive/redis/releases).
-    2.  Run the installer with default settings. It will automatically run as a background service.
-* **On macOS (using Homebrew):**
-    1.  `brew install redis`
-    2.  `brew services start redis`
-
-#### Step 5: Run Database Migrations
-This command creates the necessary tables in your `soulcare_db` database.
+##### 3.Run migrations:
 ```bash
 python manage.py migrate
 ```
-
-### 2. Frontend Setup
-
-This will prepare the React client application.
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd ../soulcare_frontend
-   ```
-2. Install the necessary Node.js packages:
-   ```bash
-   npm install
-   ```
-
 ---
 
-## 🏃 Running the Application
+# ⚛️ Frontend Setup
+## Navigate to the frontend directory:
+### Install dependencies:
 
-To run the full application, you need **four services running simultaneously**: MySQL, Redis, the Backend Server, and the Frontend Server.
+```bash
+npm install
+```
 
-1.  **Ensure MySQL is running** (from XAMPP, etc.).
-2.  **Ensure Redis is running** (as a background service).
-3.  **Run the Backend Server** (from the `soulcare_backend` directory):
-    
-    **Important**: Use the `daphne` command now to support both HTTP and WebSockets for chat.
-    ```bash
-    daphne -p 8000 soulcare_backend.asgi:application
-    ```
-4.  **Run the Frontend Server** (from the `soulcare_frontend` directory in a **new terminal**):
-    ```bash
-    npm run dev
-    ```
+### 🏃 Running the Application
+- To run the full application, you need Ollama plus the three services running simultaneously.
+- Start Ollama: Ensure the Ollama icon is visible in your system tray.
+- Start Redis: Ensure the Redis service is active.
 
-You can now access the application at `http://localhost:5173`.
+### Run Backend:
 
+```bash
+cd soulcare_backend
+daphne -p 8000 soulcare_backend.asgi:application
+```
+Run Frontend:
+
+```bash
+cd soulcare_frontend
+npm run dev
+You can now access SoulCare at http://localhost:5173.
+```
 ---
-
 ## 📌 Project Modules
+* AI Assistant: Local Llama 3.2 integration with voice and typing effects.
 
-- User authentication & verification
-- Real-time chat with WebSockets
-- Assessment tools with adaptive logic
-- Result visualization (charts, trends)
-- Appointment booking and video consultation
-- Blog and forum systems
-- Role-based dashboards for all users
-- Admin moderation panel
-- Content and account management tools
+* User Auth: JWT-based secure login.
+
+* Real-time Chat: WebSocket communication between patients and providers.
+
+* Assessments: Logic-based mental health tests.
+
+* Video Consultations: Integrated appointment system.
+
+* Admin Panel: Content moderation and user management.
+---

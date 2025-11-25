@@ -224,13 +224,20 @@ export default function PatientJournal() {
   return (
     <div className="container mx-auto px-6 py-8">
       <header className="mb-8">
-        <div className="flex items-center mb-2">
-          <BookOpen className="w-8 h-8 text-primary mr-3" />
-          <h1 className="text-3xl font-bold text-text-dark">My Journal</h1>
-        </div>
-        <p className="text-text-muted">
-          A safe space for your thoughts, feelings, and reflections
-        </p>
+        <Card className="shadow-sm bg-card">
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <BookOpen className="h-8 w-8 text-primary" />
+              <div>
+                <CardTitle className="text-2xl font-bold">My Journal</CardTitle>
+                <CardDescription className="mt-1">
+                  A safe space for your thoughts, feelings, and reflections
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        <p className="text-text-muted"></p>
       </header>
 
       {/* Action Buttons */}

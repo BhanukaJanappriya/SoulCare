@@ -13,6 +13,7 @@ import {
   SelectItem,
   SelectGroup,
 } from "../ui/select";
+import { useToast } from "@/hooks/use-toast";
 // --- Constants ---
 type ColorName = "RED" | "BLUE" | "GREEN" | "YELLOW";
 type ColorCode =
@@ -71,6 +72,7 @@ const StroopGame: React.FC<StroopGameProps> = ({ onGameEnd }) => {
   });
 
   const gameStartTimeRef = useRef(0);
+  const { toast } = useToast();
 
   // --- Game Logic ---
   const generateTrials = useCallback(() => {
@@ -231,7 +233,10 @@ const StroopGame: React.FC<StroopGameProps> = ({ onGameEnd }) => {
 
     try {
       await saveStroopGameResult(payload);
-      alert("Stroop Game result and matrix saved successfully!");
+      toast({
+        title: "Success! 🧠",
+        description: "Stroop Game result and matrix saved successfully!",
+      });
       setGameState("initial");
       setMetrics({ correct: 0, totalTime: 0, interference: 0 });
       setMatrixData({

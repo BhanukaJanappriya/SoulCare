@@ -5,6 +5,8 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { saveReactionTimeResult } from "../../api"; // The corrected API function
 import { ReactionTimePayload } from "../../types"; // The new type
+import { useToast } from "@/hooks/use-toast";
+
 import {
   Select,
   SelectTrigger,
@@ -13,7 +15,6 @@ import {
   SelectItem,
   SelectGroup,
 } from "../ui/select";
-
 // --- State Definitions ---
 type GameState = "initial" | "waiting" | "ready" | "too_early" | "finished";
 
@@ -25,12 +26,14 @@ interface ReactionTimeGameProps {
   onGameEnd: () => void;
 }
 
+
 const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ onGameEnd }) => {
   const [gameState, setGameState] = useState<GameState>("initial");
   const [result, setResult] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const { toast } = useToast();
   // Initialize matrix data with default neutral values
   const [matrixData, setMatrixData] = useState<MatrixData>({
     post_game_mood: 3,
@@ -138,7 +141,10 @@ const ReactionTimeGame: React.FC<ReactionTimeGameProps> = ({ onGameEnd }) => {
 
     try {
       await saveReactionTimeResult(payload);
-      alert("Game result and mood matrix saved successfully!");
+      toast({
+        title: "Success! 🧠",
+        description: "Your reaction time and matrix data have been saved.",
+      });
       // Reset to initial state after successful save
       setGameState("initial");
       setResult(null);

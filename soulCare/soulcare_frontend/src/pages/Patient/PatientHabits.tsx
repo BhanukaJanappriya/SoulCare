@@ -45,6 +45,7 @@ import {
   Users,
   Zap,
   LucideIcon,
+  FileText,
 } from "lucide-react";
 
 import api, {
@@ -445,19 +446,26 @@ const PatientHabits: React.FC = () => {
   const bestStreak = Math.max(...habits.map((h) => h.streak), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <main className="p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <div className="p-6 space-y-6 min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <main>
+        <div className="max-w-8xl mx-auto space-y-6">
           {/* Header */}
+          <Card className="shadow-sm bg-card">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <Target className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-2xl font-bold">
+                    Habits Tracker
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Break down habits into tasks and stay on track
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Habits Tracker
-              </h1>
-              <p className="text-muted-foreground">
-                Break down habits into tasks and stay on track
-              </p>
-            </div>
             <div className="flex gap-2">
               <Button
                 variant="secondary"
