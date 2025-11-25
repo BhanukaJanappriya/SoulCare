@@ -23,6 +23,8 @@ import {
   Calendar,
   FileText,
   CreditCard,
+  Heart,
+  DollarSign,
   MessageSquare,
   Star,
   Loader2,
@@ -170,6 +172,27 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
     </Dialog>
   );
 };
+
+// --- CONSTANTS FOR SELECTS ---
+const GENDER_OPTIONS = [
+  { value: "M", label: "Male" },
+  { value: "F", label: "Female" },
+  { value: "O", label: "Other/Non-binary" },
+  { value: "P", label: "Prefer not to say" },
+];
+const MARITAL_OPTIONS = [
+  { value: "S", label: "Single/Never Married" },
+  { value: "M", label: "Married/Cohabiting" },
+  { value: "D", label: "Divorced/Separated" },
+  { value: "W", label: "Widowed" },
+];
+const EMPLOYMENT_OPTIONS = [
+  { value: "E", label: "Employed" },
+  { value: "U", label: "Unemployed/Seeking" },
+  { value: "S", label: "Student" },
+  { value: "R", label: "Retired" },
+  { value: "H", label: "Homemaker" },
+];
 
 export default function PatientProfilePage() {
   const { user, fetchUser, isLoading: isAuthLoading } = useAuth();

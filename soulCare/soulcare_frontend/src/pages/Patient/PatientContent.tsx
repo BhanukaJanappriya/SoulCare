@@ -1,6 +1,13 @@
-import React, { useState } from "react";
-import { useQuery, UseQueryResult } from "@tanstack/react-query";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getSharedContentForPatient, getAssessmentHistoryAPI } from "@/api";
+
+// --- NEW IMPORTS REQUIRED FOR ADAPTIVE LOGIC ---
+import { useAuth } from "@/contexts/AuthContext";
+import { PatientProfile } from "@/types";
+import AdaptiveAssessmentCard from "@/components/content/AdaptiveAssessmentCard";
+// ----------------------------------------------
+
 import { ContentItem, AssessmentResult } from "@/types";
 import {
   Card,
@@ -26,15 +33,16 @@ import {
   Download,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { format, parseISO } from "date-fns"; // Added for content card formatting
+import { format, parseISO } from "date-fns";
 
-// New Component Imports (Assumed to be defined elsewhere in your project)
 import AssessmentQuiz from "@/components/assessments/AssessmentQuiz";
 import AssessmentResultsCard from "@/components/assessments/AssessmentResultsCard";
 
-// --- GLOBAL HELPERS (Extracted from second file) ---
+const isValueSet = (value:string|number|null) =>
+  value !== null && value !== undefined && value !== "";
 
-const getTypeIcon = (type: ContentItem["type"]) => {
+/* Icons */
+const getTypeIcon = (type: ContentItem["type"]): JSX.Element => {
   switch (type) {
     case "video":
       return <Video className="w-5 h-5" />;
@@ -49,7 +57,7 @@ const getTypeIcon = (type: ContentItem["type"]) => {
   }
 };
 
-const getTypeColor = (type: ContentItem["type"]) => {
+const getTypeColor = (type: ContentItem["type"]): string => {
   switch (type) {
     case "video":
       return "bg-blue-100 text-blue-800";
@@ -64,8 +72,7 @@ const getTypeColor = (type: ContentItem["type"]) => {
   }
 };
 
-// --- REUSABLE PRESENTATION COMPONENT (Extracted from second file) ---
-
+/* UI Card */
 const PatientContentCard: React.FC<{ item: ContentItem }> = ({ item }) => {
   return (
     <Card className="shadow-sm flex flex-col h-full hover:shadow-lg transition-shadow">
@@ -107,8 +114,7 @@ const PatientContentCard: React.FC<{ item: ContentItem }> = ({ item }) => {
   );
 };
 
-// --- MAIN PAGE LOGIC ---
-
+/* MAIN COMPONENT */
 type PatientContentView =
   | "ContentLibrary"
   | "AssessmentQuiz"
@@ -116,59 +122,91 @@ type PatientContentView =
   | "AssessmentHistory";
 
 const PatientContent: React.FC = () => {
+  const { user } = useAuth();
   const [currentView, setCurrentView] =
     useState<PatientContentView>("ContentLibrary");
   const [latestResult, setLatestResult] = useState<AssessmentResult | null>(
     null
   );
 
-  // 1. Fetch existing Content Library items
+  // Profile Complete Check
+  const isAdaptiveProfileComplete = useMemo(() => {
+    if (!user || !user.profile) return false;
+    const profile = user.profile as PatientProfile;
+
+    return (
+      isValueSet(profile.gender) &&
+      isValueSet(profile.marital_status) &&
+      isValueSet(profile.employment_status) &&
+      isValueSet(profile.financial_stress_level)
+    );
+  }, [user]);
+
+  /* Queries */
   const {
     data: contentItemsData,
     isLoading: isLoadingContent,
     error: contentError,
-  } = useQuery<ContentItem[]>({
+    refetch: refetchSharedContentOriginal,
+  } = useQuery({
     queryKey: ["sharedContent"],
     queryFn: getSharedContentForPatient,
+    enabled: false,
   });
+
+  const stableRefetchSharedContent = useCallback(() => {
+    refetchSharedContentOriginal();
+  }, [refetchSharedContentOriginal]);
+
   const contentItems = contentItemsData || [];
 
-  // 2. Fetch latest assessment result/history
   const {
     data: assessmentHistoryData = [],
     isLoading: isLoadingHistory,
     refetch: refetchHistory,
-  } = useQuery<AssessmentResult[], Error>({
+  } = useQuery({
     queryKey: ["assessmentHistory"],
     queryFn: getAssessmentHistoryAPI,
     staleTime: 5 * 60 * 1000,
   });
 
+  /* useEffect with FIXED dependency */
+  useEffect(() => {
+    if (currentView === "ContentLibrary") {
+      stableRefetchSharedContent();
+    }
+
+    if (assessmentHistoryData.length > 0) {
+      const sortedHistory = [...assessmentHistoryData].sort(
+        (a, b) =>
+          new Date(b.submitted_at).getTime() -
+          new Date(a.submitted_at).getTime()
+      );
+      setLatestResult(sortedHistory[0]);
+    } else {
+      setLatestResult(null);
+    }
+  }, [assessmentHistoryData, currentView, stableRefetchSharedContent]);
+
   const assessmentHistory = assessmentHistoryData || [];
 
-  // Derive state for simple rendering
+  /* Result helpers */
   const isAssessmentActive = currentView === "AssessmentQuiz";
   const isResultsActive = currentView === "AssessmentResult" && latestResult;
   const isHistoryActive = currentView === "AssessmentHistory";
-  const isLibraryActive = currentView === "ContentLibrary";
 
   const handleQuizComplete = (result: AssessmentResult) => {
     setLatestResult(result);
     setCurrentView("AssessmentResult");
-    refetchHistory(); // Refresh the history and latest result for the main card
+    refetchHistory();
   };
 
   const handleViewLatestResult = () => {
-    if (latestResult) {
-      setCurrentView("AssessmentResult");
-    } else {
-      // If no latest result, encourage starting a quiz
-      setCurrentView("AssessmentQuiz");
-    }
+    if (latestResult) setCurrentView("AssessmentResult");
+    else setCurrentView("AssessmentQuiz");
   };
 
-  // --- RENDER FUNCTION 1: Content Library View ---
-
+  /* Rendering */
   const renderContentLibrary = () => (
     <div className="space-y-6">
       <Card className="shadow-sm bg-card">
@@ -179,95 +217,94 @@ const PatientContent: React.FC = () => {
               <CardTitle className="text-2xl font-bold">
                 My Library & Tools
               </CardTitle>
-              <CardDescription className="mt-1">
-                Access articles, videos, and tools for your mental well-being.
+              <CardDescription>
+                Access articles, videos, and tools for your well-being.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* --- 1. Assessment Card --- */}
-      <Card className="shadow-lg border-2 border-primary/20 transition-all duration-300 hover:shadow-xl">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-2xl font-extrabold text-primary flex items-center gap-2">
-            <BrainCircuit className="w-6 h-6" /> Depression Assessment Test
-          </CardTitle>
-          {assessmentHistory.length > 0 && (
-            <Badge className="bg-green-500 hover:bg-green-600 text-white text-sm">
-              Last Score: {assessmentHistory[0].scaled_score}/100
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent>
-          <CardDescription className="text-base mb-4">
-            Take this confidential assessment to get a quick check on your
-            emotional well-being. Your results can help inform your counselor.
-          </CardDescription>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={() => setCurrentView("AssessmentQuiz")}
-              className="flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" /> Start Assessment
-            </Button>
-            {assessmentHistory.length > 0 && (
-              <Button
-                onClick={() => {
-                  setLatestResult(assessmentHistory[0]);
-                  handleViewLatestResult();
-                }}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                View Latest Result
-              </Button>
-            )}
-            <Button
-              onClick={() => setCurrentView("AssessmentHistory")}
-              variant="ghost"
-              className="flex items-center gap-2"
-            >
-              <History className="w-4 h-4" /> History
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Assessment Cards */}
+      <h2 className="text-xl font-bold text-gray-700">Assessment Tools</h2>
 
-      {/* --- 2. Shared Content Items --- */}
+      <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+        {/* <AdaptiveAssessmentCard isProfileComplete={isAdaptiveProfileComplete} /> */}
+
+        <Card className="shadow-lg border-2 border-muted hover:shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-xl font-bold text-primary flex items-center gap-2">
+              <BrainCircuit className="w-5 h-5" /> Basic Assessment
+            </CardTitle>
+
+            {assessmentHistory.length > 0 && (
+              <Badge className="bg-green-500 text-white">
+                Last: {assessmentHistory[0].scaled_score}/100
+              </Badge>
+            )}
+          </CardHeader>
+
+          <CardContent>
+            <CardDescription className="text-sm mb-4">
+              Take the standard Depression Assessment (PHQ-9).
+            </CardDescription>
+
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => setCurrentView("AssessmentQuiz")}>
+                <Zap className="w-4 h-4" /> Start
+              </Button>
+
+              {assessmentHistory.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setLatestResult(assessmentHistory[0]);
+                    handleViewLatestResult();
+                  }}
+                >
+                  View Latest
+                </Button>
+              )}
+
+              <Button
+                variant="ghost"
+                onClick={() => setCurrentView("AssessmentHistory")}
+              >
+                <History className="w-4 h-4" /> History
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Shared Content */}
       <h2 className="text-2xl font-bold text-gray-700 pt-4 border-t">
-        Shared Content ({contentItems.length || 0})
+        Shared Content ({contentItems.length})
       </h2>
 
       {isLoadingContent ? (
         <div className="flex justify-center items-center h-40">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       ) : contentError ? (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {(contentError as Error).message ||
-              "Could not load shared content."}
-          </AlertDescription>
+          <AlertDescription>Could not load shared content.</AlertDescription>
         </Alert>
       ) : contentItems.length > 0 ? (
-        // ✅ FIX: Use PatientContentCard here for styled rendering
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contentItems.map((item) => (
             <PatientContentCard key={item.id} item={item} />
           ))}
         </div>
       ) : (
-        <Card className="mt-6 bg-card border border-dashed">
+        <Card className="mt-6 border border-dashed">
           <CardContent className="text-center py-12">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-1">
-              No Content Shared
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              No content has been shared with you by your provider yet.
+            <h3 className="text-lg font-semibold">No Content Shared</h3>
+            <p className="text-sm text-muted-foreground">
+              Your provider has not shared any content yet.
             </p>
           </CardContent>
         </Card>
@@ -275,26 +312,23 @@ const PatientContent: React.FC = () => {
     </div>
   );
 
-  // --- RENDER FUNCTION 2: Assessment History View ---
-
   const renderAssessmentHistory = () => (
     <div className="space-y-6">
       <Button
         onClick={() => setCurrentView("ContentLibrary")}
         variant="outline"
-        className="mb-4"
       >
-        <CornerDownLeft className="w-4 h-4 mr-2" /> Back to Library
+        <CornerDownLeft className="w-4 h-4 mr-2" /> Back
       </Button>
-      <h1 className="text-3xl font-bold text-gray-800">Assessment History</h1>
+
+      <h1 className="text-3xl font-bold">Assessment History</h1>
 
       {isLoadingHistory ? (
         <div className="flex justify-center items-center h-40">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       ) : assessmentHistory.length > 0 ? (
         <div className="space-y-4">
-          {/* Sort history so newest is first in the list, but index logic remains */}
           {[...assessmentHistory]
             .sort(
               (a, b) =>
@@ -304,7 +338,7 @@ const PatientContent: React.FC = () => {
             .map((result, index) => (
               <Card
                 key={result.id}
-                className="hover:shadow-md transition-shadow cursor-pointer p-4"
+                className="p-4 hover:shadow-md cursor-pointer"
                 onClick={() => {
                   setLatestResult(result);
                   setCurrentView("AssessmentResult");
@@ -313,70 +347,53 @@ const PatientContent: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-semibold text-lg">
-                      {result.questionnaire_title} - Attempt{" "}
-                      {/* Use index + 1 for attempt number */}
-                      {index + 1}
+                      {result.questionnaire_title} – Attempt {index + 1}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Submitted:{" "}
                       {new Date(result.submitted_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <Badge
-                      className={
-                        result.level >= 4
-                          ? "bg-red-500"
-                          : result.level >= 3
-                          ? "bg-orange-500"
-                          : "bg-green-500"
-                      }
-                    >
-                      Score: {result.scaled_score}/100
-                    </Badge>
-                    <p className="text-sm font-medium mt-1">
-                      {result.level_display.split("(")[0].trim()}
-                    </p>
-                  </div>
+                  <Badge
+                    className={
+                      result.level >= 4
+                        ? "bg-red-500"
+                        : result.level >= 3
+                        ? "bg-orange-500"
+                        : "bg-green-500"
+                    }
+                  >
+                    {result.scaled_score}/100
+                  </Badge>
                 </div>
               </Card>
             ))}
         </div>
       ) : (
-        <p className="text-gray-500">
-          No assessment history found. Start your first test!
-        </p>
+        <p>No assessment history found.</p>
       )}
     </div>
   );
 
-  // --- Main Render Logic ---
-
-  if (isAssessmentActive) {
+  if (isAssessmentActive)
     return (
       <AssessmentQuiz
         onComplete={handleQuizComplete}
         onCancel={() => setCurrentView("ContentLibrary")}
       />
     );
-  }
 
-  if (isResultsActive) {
+  if (isResultsActive)
     return (
       <AssessmentResultsCard
-        // Ensure latestResult is not null before passing (guarded by isResultsActive)
         result={latestResult!}
         onRetake={() => setCurrentView("AssessmentQuiz")}
         onViewHistory={() => setCurrentView("AssessmentHistory")}
       />
     );
-  }
 
-  if (isHistoryActive) {
+  if (isHistoryActive)
     return <div className="p-4 md:p-8">{renderAssessmentHistory()}</div>;
-  }
 
-  // Default: Content Library
   return <div className="p-4 md:p-8">{renderContentLibrary()}</div>;
 };
 

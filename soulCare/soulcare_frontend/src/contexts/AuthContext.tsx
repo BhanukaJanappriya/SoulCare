@@ -10,6 +10,7 @@ import axios from "axios";
 import { User } from "@/types/index";
 import { axiosInstance, api } from "@/api";
 
+
 interface LoginResponse {
   access: string;
   refresh: string;

@@ -59,7 +59,9 @@ import MoodTracker from "./pages/Patient/MoodTracker";
 import PatientMessages from "./pages/Patient/PatientMessages";
 import PatientContent from "./pages/Patient/PatientContent";
 import PatientProfile from "./pages/Patient/PatientProfile";
-
+import PatientProfileSetup from "./pages/Patient/PatientProfileSetup";
+import AdaptiveAssessmentPage from "./pages/Patient/AdaptiveAssessmentPage";
+import AssessmentResultsPage from "./components/layout/AssessmentResultsPage";
 
 const queryClient = new QueryClient();
 
@@ -79,7 +81,10 @@ const App = () => (
             <Route path="/counselor-register" element={<CounselorRegister />} />
             <Route path="/doctor-register" element={<DoctorRegister />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-            <Route path="/auth/reset-password/:uid/:token" element={<ResetPassword />} />
+            <Route
+              path="/auth/reset-password/:uid/:token"
+              element={<ResetPassword />}
+            />
 
             <Route
               path="/patient-details/:patientId"
@@ -222,6 +227,15 @@ const App = () => (
               <Route path="messages" element={<PatientMessages />} />
               <Route path="content" element={<PatientContent />} />
               <Route path="/patient/chatbot" element={<PatientChatBot />} />
+              <Route path="profile-setup" element={<PatientProfileSetup />} />
+              <Route
+                path="adaptive-assessment"
+                element={<AdaptiveAssessmentPage />}
+              />
+              <Route
+                path="assessment-results"
+                element={<AssessmentResultsPage />}
+              />
             </Route>
 
             {/* --- Admin Routes --- */}

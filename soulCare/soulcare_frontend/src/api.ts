@@ -52,6 +52,8 @@ import {
   AssessmentResult,
   Feedback,
   FeedbackInput,
+  AdaptiveSubmissionResponse,
+  AdaptiveQuestionSet,
 
 } from '@/types';
 
@@ -968,6 +970,42 @@ export const getAssessmentHistoryAPI = async (): Promise<AssessmentResult[]> => 
 };
 
 
+/// =========================================================================
+// ADAPTIVE ASSESSMENT API CALLS (Used by AdaptiveAssessmentPage.tsx)
+// =========================================================================
+
+// Endpoint for fetching personalized questions: /api/adaptive/questions/
+export const getAdaptiveQuestionsAPI = async (): Promise<AdaptiveQuestionSet> => {
+    try {
+        const response = await api.get('/adaptive/questions/');
+        const data = response.data;
+
+        // Ensure data integrity before returning (Prevents 'reduce' errors)
+        if (!data || typeof data !== 'object' || !Array.isArray(data.questions)) {
+            throw new Error("Invalid structure received for personalized questions.");
+        }
+        // Safely cast to the expected type
+        return data as AdaptiveQuestionSet;
+    } catch (error) {
+        console.error("Error fetching adaptive questions:", error);
+        throw new Error("Failed to load personalized assessment.");
+    }
+};
+
+// Endpoint for submitting personalized responses: /api/adaptive/submit/
+export const submitAdaptiveAssessmentAPI = async (responses: AssessmentResponseInput[]): Promise<AdaptiveSubmissionResponse> => {
+    try {
+        const response = await api.post('/adaptive/submit/', { responses });
+        // Response data includes assessment_result and content_recommendations
+        return response.data as AdaptiveSubmissionResponse;
+    } catch (error) {
+        console.error("Error submitting adaptive assessment:", error);
+        throw error;
+    }
+};
+
+
+
 // =================================================================
 // --- AI CHATBOT FUNCTIONS ---
 // =================================================================
@@ -1002,7 +1040,7 @@ export const createFeedbackAPI = async (data: FeedbackInput): Promise<Feedback> 
 export const getAdminFeedbackAPI = async (): Promise<Feedback[]> => {
     // GET /api/feedback/?mode=admin -> Returns ALL items (if user is admin)
     const response = await api.get<Feedback[]>('feedback/', {
-        params: { mode: 'admin' } 
+        params: { mode: 'admin' }
     });
     return response.data;
 };
