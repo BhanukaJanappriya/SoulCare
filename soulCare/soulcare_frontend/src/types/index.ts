@@ -609,7 +609,7 @@ export interface BlogAggregates {
 // Update the main BlogPost interface to include the new aggregated fields
 export interface BlogPost {
   ratingCount: number;
-  averageRating: any;
+  averageRating: number;
   id: string;
   authorId: string;
   title: string;
