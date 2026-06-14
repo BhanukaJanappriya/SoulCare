@@ -258,7 +258,7 @@ const Patients: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-foreground pr-[5.5rem] pl-[1.0rem]">
       <RightSidebar />
-      <div className="p-6">
+      <div className="p-6 page-transition">
         
         {/* --- HEADER / FILTER CARD --- */}
         <Card className="mb-8 shadow-sm bg-card">

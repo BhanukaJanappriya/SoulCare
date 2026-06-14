@@ -308,13 +308,16 @@ class ProviderAvailabilityView(APIView):
                             formatted_time = slot_time_obj.strftime('%H:%M')
                         else:
                             formatted_time = slot_time_obj.strftime('%I:%M %p')
-                        day_slots.append(formatted_time)
+                        # Append a tuple containing the naive time object for chronological sorting,
+                        # and the formatted string for presentation.
+                        day_slots.append((slot_time_obj, formatted_time))
 
                     temp_dt += slot_duration
 
             if day_slots:
-                day_slots.sort()
-                available_slots[current_date.isoformat()] = day_slots
+                # Sort chronologically by the time object (first element of tuple)
+                day_slots.sort(key=lambda x: x[0])
+                available_slots[current_date.isoformat()] = [time_str for _, time_str in day_slots]
 
             current_date += timedelta(days=1)
 

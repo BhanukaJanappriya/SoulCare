@@ -12,7 +12,7 @@ const AdminLayout: React.FC = () => {
         {/* pl-64 to offset the width of the sidebar */}
         {/* The Greeting Header is placed at the top of the main area, sticky */}
         {/* The content below the header */}
-        <div className="p-6">
+        <div className="p-6 page-transition">
           <Outlet />
         </div>
       </main>

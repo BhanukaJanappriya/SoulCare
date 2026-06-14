@@ -121,14 +121,21 @@ ASGI_APPLICATION = 'soulcare_backend.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'soulcare_db',
+#         'USER': 'root',
+#         'PASSWORD': 'GDR@1101',
+#         'HOST': 'localhost',
+#         'PORT': '3306',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'soulcare_db',
-        'USER': 'root',
-        'PASSWORD': 'GDR@1101',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -182,6 +189,7 @@ MEDIA_URL = '/soulcare_backend/media/'
 
 STRIPE_PUBLISHABLE_KEY = 'pk_test_51SWUjLBPhjlkALLUm7vDDMvMUSY3RWastKIsNgwRbBEoqyA6Ftqff7pB9fuuMLGCFOJlTsJIydkYkL0IvoQoAd2300gsUr1vjz' 
 STRIPE_SECRET_KEY ='sk_test_51SWUjLBPhjlkALLU84KXLhpmQxU5w73KF5dpPCknpaeQFYz3ADK9ueMZcNUYaUJIsLv5SCmdGeyftiLarSWPKhv600mGlifUl7'
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -190,6 +198,12 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels.layers.InMemoryChannelLayer",
+#     },
+# }
 
 
 # --- EMAIL CONFIGURATION ---

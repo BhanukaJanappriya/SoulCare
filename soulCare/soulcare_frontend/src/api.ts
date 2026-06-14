@@ -61,7 +61,7 @@ import {
 const TOKEN_KEY = 'accessToken';
 
 // Base API URL
-const API_BASE_URL = 'http://localhost:8000/api/';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
 
 // --- Auth Instance ---
 export const axiosInstance = axios.create({
@@ -355,9 +355,20 @@ export const getContactList = async (): Promise<Conversation[]> => {
   }
 };
 
-export const getMessageHistory = async (conversationId: number): Promise<ChatMessage[]> => {
+export const getMessageHistory = async (
+  conversationId: number,
+  limit?: number,
+  beforeId?: number
+): Promise<ChatMessage[]> => {
   try {
-    const response = await api.get<ChatMessage[]>(`chat/conversations/${conversationId}/messages/`);
+    let url = `chat/conversations/${conversationId}/messages/`;
+    const params: string[] = [];
+    if (limit !== undefined) params.push(`limit=${limit}`);
+    if (beforeId !== undefined) params.push(`before_id=${beforeId}`);
+    if (params.length > 0) {
+      url += `?${params.join("&")}`;
+    }
+    const response = await api.get<ChatMessage[]>(url);
     return response.data;
   } catch (error) {
     console.error(`Error fetching messages for conversation ${conversationId}:`, error);

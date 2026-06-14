@@ -151,7 +151,7 @@ const LandingPage = () => {
   ];
 
   return (
-    <>
+    <div className="page-transition">
       <div className="min-h-[110vh] healthcare-gradient flex flex-col p-4">
         <div className="w-full max-w-6xl mx-auto flex-grow flex flex-col justify-center">
           
@@ -331,7 +331,7 @@ const LandingPage = () => {
         isOpen={isArticleDialogOpen}
         onOpenChange={setIsArticleDialogOpen}
         showEngagement={false} onReact={undefined} onRate={undefined} onComment={undefined}      />
-    </>
+    </div>
   );
 };
 

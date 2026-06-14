@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       {/* Wrap AuthProvider with ThemeProvider */}
-      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme" attribute="class">
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme" attribute="class">
         <AuthProvider>
           <App />
           <Toaster />

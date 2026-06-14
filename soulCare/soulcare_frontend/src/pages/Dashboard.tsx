@@ -121,7 +121,7 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen healthcare-gradient pr-[5.5rem]">
       <RightSidebar />
 
-      <div className="p-6">
+      <div className="p-6 page-transition">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-1">

@@ -30,11 +30,15 @@ class ContactListView(APIView):
         if user.role == 'user':
             # 1. Patient: Find all providers they have appointments with
             provider_ids = Appointment.objects.filter(patient=user).values_list('provider_id', flat=True).distinct()
-            contacts = User.objects.filter(id__in=provider_ids)
             
-            # 2. Find or create conversations for each provider
-            for provider in contacts:
-                Conversation.objects.get_or_create(patient=user, provider=provider)
+            # 2. Find or create conversations in bulk
+            existing_provider_ids = Conversation.objects.filter(patient=user).values_list('provider_id', flat=True)
+            missing_provider_ids = set(provider_ids) - set(existing_provider_ids)
+            
+            if missing_provider_ids:
+                Conversation.objects.bulk_create([
+                    Conversation(patient=user, provider_id=pid) for pid in missing_provider_ids
+                ], ignore_conflicts=True)
             
             # 3. Get all conversations for this patient
             conversations = Conversation.objects.filter(patient=user)\
@@ -44,11 +48,15 @@ class ContactListView(APIView):
         elif user.role in ['doctor', 'counselor']:
             # 1. Provider: Find all patients they have appointments with
             patient_ids = Appointment.objects.filter(provider=user).values_list('patient_id', flat=True).distinct()
-            contacts = User.objects.filter(id__in=patient_ids)
             
-            # 2. Find or create conversations for each patient
-            for patient in contacts:
-                Conversation.objects.get_or_create(patient=patient, provider=user)
+            # 2. Find or create conversations in bulk
+            existing_patient_ids = Conversation.objects.filter(provider=user).values_list('patient_id', flat=True)
+            missing_patient_ids = set(patient_ids) - set(existing_patient_ids)
+            
+            if missing_patient_ids:
+                Conversation.objects.bulk_create([
+                    Conversation(patient_id=pid, provider=user) for pid in missing_patient_ids
+                ], ignore_conflicts=True)
                 
             # 3. Get all conversations for this provider
             conversations = Conversation.objects.filter(provider=user)\
@@ -68,8 +76,8 @@ class ContactListView(APIView):
 
 class MessageListView(APIView):
     """
-    API endpoint to get all messages for a specific conversation
-    and mark them as read.
+    API endpoint to get messages for a specific conversation
+    with support for cursor-based pagination.
     """
     permission_classes = [IsAuthenticated]
 
@@ -85,9 +93,31 @@ class MessageListView(APIView):
             # Mark all messages sent by OTHERS as read
             conversation.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
             
-            # Get all messages for the conversation, ordered by time
-            messages = conversation.messages.order_by('timestamp').select_related('sender')
-            serializer = MessageSerializer(messages, many=True)
+            # Get all messages for the conversation
+            messages = conversation.messages.select_related('sender')
+            
+            # Cursor-based pagination parameters
+            limit_str = request.query_params.get('limit')
+            before_id_str = request.query_params.get('before_id')
+            
+            if limit_str:
+                try:
+                    limit = int(limit_str)
+                    messages = messages.order_by('-id')
+                    if before_id_str:
+                        before_id = int(before_id_str)
+                        messages = messages.filter(id__lt=before_id)
+                    
+                    # Fetch only the requested limit of messages and reverse to chronological order
+                    messages_list = list(messages[:limit])
+                    messages_list.reverse()
+                except ValueError:
+                    # Fallback to listing all chronologically if parsing fails
+                    messages_list = list(messages.order_by('timestamp'))
+            else:
+                messages_list = list(messages.order_by('timestamp'))
+            
+            serializer = MessageSerializer(messages_list, many=True)
             return Response(serializer.data)
             
         except Conversation.DoesNotExist:

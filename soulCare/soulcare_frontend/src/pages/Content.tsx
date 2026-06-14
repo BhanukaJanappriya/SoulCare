@@ -535,7 +535,7 @@ export default function Content() {
   return (
     <div className="min-h-screen bg-background text-foreground mr-16">
       <RightSidebar />
-      <div className=" container mx-auto space-y-8 p-6 md:p-8 min-h-screen bg-background ">
+      <div className=" container mx-auto space-y-8 p-6 md:p-8 min-h-screen bg-background page-transition">
         
         {/* --- HEADER SECTION --- */}
         <Card className="mb-8 shadow-sm bg-card">

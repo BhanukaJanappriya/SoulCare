@@ -23,5 +23,7 @@ python-dotenv==1.0.1
 # --- NEW: Payments ---
 stripe>=5.0.0
 
-# --- NEW: Chatbot Dependencies (NLTK) ---
+# --- NEW: Chatbot Dependencies (NLTK & OpenAI client) ---
 nltk==3.8.1
+openai>=1.0.0
+

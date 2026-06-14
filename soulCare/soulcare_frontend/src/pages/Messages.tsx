@@ -24,10 +24,9 @@ const Messages: React.FC = () => {
   }
 
   return (
-    // The pr-[5.5rem] assumes a w-16 sidebar + p-6 content padding
     <div className="min-h-screen bg-background text-foreground pr-[5.5rem] pl-[1.5rem]">
       <RightSidebar />
-      <div className="p-6">
+      <div className="p-6 page-transition">
         {/* --- UPDATED HEADER --- */}
         <Card className="mb-8 shadow-sm bg-card">
           <CardHeader>

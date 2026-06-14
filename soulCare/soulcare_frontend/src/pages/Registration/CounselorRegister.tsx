@@ -139,7 +139,7 @@ const CounselorRegister: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen healthcare-gradient flex items-center justify-center p-4">
+    <div className="min-h-screen healthcare-gradient flex items-center justify-center p-4 page-transition">
       <div className="w-full max-w-md">
         <Card className="healthcare-card">
           <CardHeader className="text-center">

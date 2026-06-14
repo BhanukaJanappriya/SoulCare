@@ -87,9 +87,9 @@ const Schedule: React.FC = () => {
     const sortedDays = Object.keys(groupedSchedules).map(Number).sort((a, b) => a - b);
 
     return (
-        <div className="min-h-screen bg-background text-foreground ">
+        <div className="min-h-screen bg-background text-foreground">
             <RightSidebar />
-            <div className="space-y-8 p-6 md:p-8 min-h-screen bg-background mr-16 ">
+            <div className="space-y-8 p-6 md:p-8 min-h-screen bg-background mr-16 page-transition">
                 
                 {/* --- HEADER --- */}
                 <Card className="shadow-sm bg-card">

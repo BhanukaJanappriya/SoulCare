@@ -459,7 +459,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      <div className="flex-1 pr-16">
+      <div className="flex-1 pr-16 page-transition">
         <div className="container mx-auto px-6 py-8">
           {/* --- HEADER SECTION SETTINGS.TSX--- */}
             <Card className="mb-8 shadow-sm bg-card">

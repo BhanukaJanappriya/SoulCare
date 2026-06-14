@@ -198,11 +198,37 @@ const PatientRegister: React.FC = () => {
 
   const handleNext = () => {
     setErrors([]);
+    const validationErrors: string[] = [];
+
     if (step === 1) {
-      if (!isStepOneValid()) {
-        setErrors([
-          "Please fill out all required fields and ensure the password meets all requirements.",
-        ]);
+      if (!formData.full_name) validationErrors.push("Full Name is required.");
+      if (!formData.username) validationErrors.push("Username is required.");
+      if (!formData.email) validationErrors.push("Email is required.");
+      if (!formData.password) {
+        validationErrors.push("Password is required.");
+      } else {
+        const missingRequirements = [];
+        if (!passwordValidation.minLength) missingRequirements.push("at least 8 characters");
+        if (!passwordValidation.hasLowercase) missingRequirements.push("a lowercase letter (a-z)");
+        if (!passwordValidation.hasUppercase) missingRequirements.push("an uppercase letter (A-Z)");
+        if (!passwordValidation.hasNumber) missingRequirements.push("a number (0-9)");
+
+        if (missingRequirements.length > 0) {
+          validationErrors.push(`Password must contain: ${missingRequirements.join(", ")}.`);
+        }
+      }
+
+      if (formData.password !== formData.confirm_password) {
+        validationErrors.push("Passwords do not match.");
+      }
+
+      if (!formData.nic) validationErrors.push("NIC is required.");
+      if (!formData.contact_number) validationErrors.push("Contact Number is required.");
+      if (!formData.address) validationErrors.push("Address is required.");
+      if (!formData.dob) validationErrors.push("Date of Birth is required.");
+
+      if (validationErrors.length > 0) {
+        setErrors(validationErrors);
         return;
       }
       setStep(2);
@@ -268,7 +294,7 @@ const PatientRegister: React.FC = () => {
   const progressValue = (step / 2) * 100;
 
   return (
-    <div className="min-h-screen healthcare-gradient flex items-center justify-center p-4">
+    <div className="min-h-screen healthcare-gradient flex items-center justify-center p-4 page-transition">
       <div className="w-full max-w-md">
         <Card className="healthcare-card">
           <CardHeader className="text-center">
@@ -661,7 +687,7 @@ const PatientRegister: React.FC = () => {
                     type="button"
                     className="ml-auto"
                     onClick={handleNext}
-                    disabled={isLoading || !isStepOneValid()}
+                    disabled={isLoading}
                   >
                     Next Step <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>

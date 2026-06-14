@@ -118,7 +118,13 @@
   }
 
   body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
     @apply bg-background text-foreground;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+    @apply tracking-tight;
   }
 
   /* Healthcare Platform Specific Styles */
@@ -127,26 +133,48 @@
   }
 
   .healthcare-card {
-    @apply bg-card/80 backdrop-blur-sm border border-border/20 shadow-lg;
+    @apply bg-card/80 backdrop-blur-md border border-border/30 shadow-lg rounded-2xl transition-all duration-300;
+  }
+
+  /* Glassmorphism Styles */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+    @apply rounded-2xl transition-all duration-300;
+  }
+
+  .dark .glass-card {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
   }
 
   .healthcare-button-primary {
-    @apply bg-primary hover:bg-primary-hover text-primary-foreground transition-all duration-300 shadow-md hover:shadow-lg;
+    @apply bg-primary hover:bg-primary-hover text-primary-foreground transition-all duration-300 shadow-md hover:shadow-lg rounded-xl;
   }
 
   .healthcare-button-success {
-    @apply bg-success hover:bg-success/90 text-success-foreground;
+    @apply bg-success hover:bg-success/90 text-success-foreground rounded-xl;
   }
 
   .healthcare-button-warning {
-    @apply bg-warning hover:bg-warning/90 text-warning-foreground;
+    @apply bg-warning hover:bg-warning/90 text-warning-foreground rounded-xl;
   }
 
   .healthcare-button-danger {
-    @apply bg-destructive hover:bg-destructive/90 text-destructive-foreground;
+    @apply bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl;
   }
 
-  /* Smooth animations */
+  /* Smooth animations & page transitions */
+  .page-transition {
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
@@ -160,24 +188,35 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   @keyframes slideIn {
     from { transform: translateX(100%); }
     to { transform: translateX(0); }
   }
 
   @keyframes reaction-pop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); } /* Slightly stronger pop */
-  100% { transform: scale(1); }
-}
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
 
-.animate-reaction-pop {
-  animation: reaction-pop 0.3s ease-out;
-}
+  .animate-reaction-pop {
+    animation: reaction-pop 0.3s ease-out;
+  }
 
   /* Role card hover effects */
   .role-card {
-    @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer;
+    @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer rounded-2xl;
   }
 
   .role-card:hover {

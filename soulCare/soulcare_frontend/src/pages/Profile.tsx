@@ -301,7 +301,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-page-bg flex">
-      <div className="flex-1 pr-[5.5rem]">
+      <div className="flex-1 pr-[5.5rem] page-transition">
         <div className="container mx-auto px-6 py-8">
           
           {/* --- HEADER SECTION (UPDATED) --- */}

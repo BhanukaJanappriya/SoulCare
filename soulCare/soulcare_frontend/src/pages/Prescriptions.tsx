@@ -182,6 +182,7 @@ const PrescriptionsPage: React.FC = () => {
       {" "}
       {/* Added padding */}
       <RightSidebar />
+      <div className="page-transition">
       {/* --- STYLED HEADER --- */}
       <Card className="mb-8 shadow-sm bg-card">
         <CardHeader>
@@ -367,6 +368,7 @@ const PrescriptionsPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 };

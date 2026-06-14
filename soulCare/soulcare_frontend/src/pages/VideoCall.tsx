@@ -160,7 +160,7 @@ export default function VideoCall() {
 
   return (
     <div className="min-h-screen bg-page-bg flex">
-      <div className="flex-1 pr-16">
+      <div className="flex-1 pr-16 page-transition">
         <div className="container mx-auto px-6 py-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">

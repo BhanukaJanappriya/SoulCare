@@ -270,15 +270,18 @@ class UserDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'role', 'is_verified', 'profile']
 
     def get_profile(self, obj):
-        if obj.role == 'doctor':
-            profile = DoctorProfile.objects.get(user=obj)
-            return DoctorProfileSerializer(profile,context=self.context).data
-        if obj.role == 'counselor':
-            profile = CounselorProfile.objects.get(user=obj)
-            return CounselorProfileSerializer(profile,context=self.context).data
-        if obj.role == 'user': # 'user' is the role for patients in your model
-            profile = PatientProfile.objects.get(user=obj)
-            return PatientProfileSerializer(profile,context=self.context).data
+        try:
+            if obj.role == 'doctor':
+                profile = DoctorProfile.objects.get(user=obj)
+                return DoctorProfileSerializer(profile,context=self.context).data
+            if obj.role == 'counselor':
+                profile = CounselorProfile.objects.get(user=obj)
+                return CounselorProfileSerializer(profile,context=self.context).data
+            if obj.role == 'user': # 'user' is the role for patients in your model
+                profile = PatientProfile.objects.get(user=obj)
+                return PatientProfileSerializer(profile,context=self.context).data
+        except (DoctorProfile.DoesNotExist, CounselorProfile.DoesNotExist, PatientProfile.DoesNotExist):
+            return None
         return None
 
 

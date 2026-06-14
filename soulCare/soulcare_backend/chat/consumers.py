@@ -6,6 +6,8 @@ from channels.db import database_sync_to_async
 from .models import Conversation, Message
 from .serializers import MessageSerializer
 from authapp.models import User
+from django.contrib.auth.models import AnonymousUser
+from .middleware import get_user_from_token
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     
@@ -15,40 +17,22 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         # Get the conversation ID from the URL
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
-        # Get the user from our auth middleware
-        self.user = self.scope['user']
-
-        # Check if the user is authenticated
-        if self.user.is_anonymous:
-            await self.close()
-            return
-
-        # Check if the user belongs to this conversation
-        is_member = await self.is_user_member_of_conversation(self.user, self.conversation_id)
         
-        if not is_member:
-            # Reject the connection if the user is not part of the chat
-            await self.close()
-            return
-
-        # If authorized, accept the connection
+        # Accept the connection first anonymously
         await self.accept()
-
+        
+        self.authenticated = False
+        self.user = AnonymousUser()
+        
         # Create a unique "group" name for this conversation
         self.conversation_group_name = f"chat_{self.conversation_id}"
-
-        # Add this user's channel to the conversation's group
-        await self.channel_layer.group_add(
-            self.conversation_group_name,
-            self.channel_name # This is the user's unique WebSocket ID
-        )
 
     async def disconnect(self, close_code):
         """
         Called when the WebSocket connection is closed.
         """
-        # Remove this user's channel from the conversation's group
-        if hasattr(self, 'conversation_group_name'):
+        # Remove this user's channel from the conversation's group if they were authenticated
+        if self.authenticated and hasattr(self, 'conversation_group_name'):
             await self.channel_layer.group_discard(
                 self.conversation_group_name,
                 self.channel_name
@@ -58,12 +42,52 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         """
         Called when we receive a message from the client (as JSON).
         """
-        message_content = content.get('message','type')
-        
-        if message_content == 'chat_message':
-            message_content = content.get('message')
-            if not message_content or not self.user.is_authenticated:
+        msg_type = content.get('type')
+
+        # If not authenticated, we expect the first message to be 'auth'
+        if not self.authenticated:
+            if msg_type != 'auth':
+                await self.close()
                 return
+
+            token_key = content.get('token')
+            if not token_key:
+                await self.close()
+                return
+
+            # Authenticate the user
+            user = await get_user_from_token(token_key)
+            if user.is_anonymous:
+                await self.close()
+                return
+
+            # Check if the user belongs to this conversation
+            is_member = await self.is_user_member_of_conversation(user, self.conversation_id)
+            if not is_member:
+                await self.close()
+                return
+
+            # Set authentication parameters
+            self.user = user
+            self.authenticated = True
+
+            # Add this user's channel to the conversation's group now that they are authenticated
+            await self.channel_layer.group_add(
+                self.conversation_group_name,
+                self.channel_name
+            )
+
+            # Send auth success confirmation to client
+            await self.send_json({"type": "auth_ok"})
+            return
+
+        # Ordinary message logic (only processed if authenticated)
+        if msg_type != 'chat_message':
+            return
+
+        message_content = content.get('message')
+        if not message_content or not self.user.is_authenticated:
+            return
 
         # --- FIX: Create AND Serialize in async-safe blocks ---
 

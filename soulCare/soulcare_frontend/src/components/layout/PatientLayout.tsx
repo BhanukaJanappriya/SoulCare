@@ -14,7 +14,7 @@ const PatientLayout: React.FC<PatientLayoutProps> = ({ children }) => {
       <PatientSidebar />
 
       <main className="pr-16">
-        <div className="p-6">
+        <div className="p-6 page-transition">
           {children}
           <Outlet /> {/* ⭐ This ensures router pages render */}
         </div>

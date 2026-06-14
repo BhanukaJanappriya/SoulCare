@@ -48,8 +48,8 @@ interface ChatUIProps {
 }
 
 const getWebSocketURL = (conversationId: number) => {
-  const token = localStorage.getItem("accessToken");
-  return `ws://localhost:8000/ws/chat/${conversationId}/?token=${token}`;
+  const wsUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
+  return `${wsUrl}/ws/chat/${conversationId}/`;
 };
 
 const formatTimestamp = (isoString: string) => {
@@ -69,6 +69,11 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const [messageToDelete, setMessageToDelete] = useState<ChatMessage | null>(null);
 
+  // Pagination states
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
+
   const {
     data: conversations,
     isLoading: isLoadingContacts,
@@ -78,11 +83,41 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
     queryFn: getContactList,
   });
 
-  const { data: messages, isLoading: isLoadingMessages } = useQuery<ChatMessage[]>({
+  const { data: messages = [], isLoading: isLoadingMessages } = useQuery<ChatMessage[]>({
     queryKey: ["messages", selectedConvo?.id],
-    queryFn: () => getMessageHistory(selectedConvo!.id),
+    queryFn: () => getMessageHistory(selectedConvo!.id, 50),
     enabled: !!selectedConvo,
   });
+
+  // Reset pagination state when conversation changes
+  useEffect(() => {
+    setHasMore(true);
+  }, [selectedConvo]);
+
+  const handleLoadOlderMessages = async () => {
+    if (!selectedConvo || messages.length === 0) return;
+    setIsLoadingMore(true);
+    try {
+      const oldestId = messages[0].id;
+      const olderMessages = await getMessageHistory(selectedConvo.id, 50, oldestId);
+      if (olderMessages.length < 50) {
+        setHasMore(false);
+      }
+      queryClient.setQueryData<ChatMessage[]>(
+        ["messages", selectedConvo.id],
+        (oldMessages = []) => [...olderMessages, ...oldMessages]
+      );
+    } catch (error) {
+      console.error("Failed to load older messages:", error);
+      toast({
+        title: "Error",
+        description: "Could not load older messages.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const deleteMessageMutation = useMutation({
     mutationFn: (messageId: number) => deleteMessageAPI(messageId),
@@ -104,15 +139,29 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
 
   useEffect(() => {
     if (webSocket.current) {
-      webSocket.current.close();
+      webSocket.current.close(1000);
     }
+    let reconnectTimer: NodeJS.Timeout;
     if (selectedConvo) {
       const ws = new WebSocket(getWebSocketURL(selectedConvo.id));
-      ws.onopen = () =>
+      ws.onopen = () => {
         console.log(`WebSocket connected for conversation ${selectedConvo.id}`);
+        const token = localStorage.getItem("accessToken");
+        ws.send(
+          JSON.stringify({
+            type: "auth",
+            token: token,
+          })
+        );
+      };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+
+        if (data.type === "auth_ok") {
+          console.log("WebSocket authentication successful");
+          return;
+        }
 
         if (data.type === "delete_message") {
           const deletedMessageId = data.message_id;
@@ -147,16 +196,33 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
         }
       };
 
-      ws.onclose = () => console.log("WebSocket disconnected");
-      ws.onerror = (error) => console.error("WebSocket error:", error);
+      ws.onclose = (e) => {
+        console.log("WebSocket disconnected", e);
+        // Only reconnect if not closed normally (code 1000)
+        if (e.code !== 1000) {
+          console.log("Scheduling reconnection in 3 seconds...");
+          reconnectTimer = setTimeout(() => {
+            setRetryTrigger((prev) => prev + 1);
+          }, 3000);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        ws.close();
+      };
+      
       webSocket.current = ws;
     }
     return () => {
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
       if (webSocket.current) {
-        webSocket.current.close();
+        webSocket.current.close(1000);
       }
     };
-  }, [selectedConvo, queryClient]);
+  }, [selectedConvo, retryTrigger, queryClient]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -355,7 +421,28 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                       <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     </div>
                   ) : (
-                    messages?.map((message) => (
+                    <>
+                      {hasMore && messages.length >= 50 && (
+                        <div className="flex justify-center pb-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleLoadOlderMessages}
+                            disabled={isLoadingMore}
+                            className="text-xs"
+                          >
+                            {isLoadingMore ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                Loading older...
+                              </>
+                            ) : (
+                              "Load older messages"
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                      {messages.map((message) => (
                       <div
                         key={message.id}
                         className={cn(
@@ -409,7 +496,8 @@ export const ChatUI: React.FC<ChatUIProps> = ({ user }) => {
                           </p>
                         </div>
                       </div>
-                    ))
+                    ))}
+                    </>
                   )}
                 </div>
               </ScrollArea>
