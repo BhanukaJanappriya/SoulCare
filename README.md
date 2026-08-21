@@ -1,4 +1,4 @@
-# 🧠 SoulCare — Online Stress and Depression Detection System
+# 🧠 SoulCare - Online Stress and Depression Detection System
 
 **SoulCare** is a comprehensive, full-stack mental health ecosystem designed to address the challenges of fragmented mental healthcare. It bridges the gap between individuals seeking support and professional care providers (doctors and counselors). The platform provides a secure, unified space where patients can self-assess their mental wellness through interactive games, keep emotional health journals, schedule video consultations, and securely message clinicians. Simultaneously, it equips healthcare professionals with practice dashboards, scheduling tools, progress notes, and digital prescriptions to deliver high-quality care efficiently.
 
